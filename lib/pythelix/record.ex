@@ -28,7 +28,8 @@ defmodule Pythelix.Record do
           %Record.Key{entity_id: entity_id} -> get_entity(entity_id)
         end
 
-      {:ok, entity} -> entity
+      {:ok, entity} ->
+        entity
     end
   end
 
@@ -45,7 +46,9 @@ defmodule Pythelix.Record do
           )
 
         case entity_with_key do
-          nil -> nil
+          nil ->
+            nil
+
           %{entity: entity, key: key} ->
             entity =
               entity
@@ -57,7 +60,8 @@ defmodule Pythelix.Record do
             entity
         end
 
-      {:ok, entity} -> entity
+      {:ok, entity} ->
+        entity
     end
   end
 
@@ -88,6 +92,7 @@ defmodule Pythelix.Record do
 
       # Create the entity
       attrs = %{location_id: location_id, parent_id: parent_id}
+
       entity_changeset =
         %Record.Entity{}
         |> Record.Entity.changeset(attrs)
@@ -174,10 +179,6 @@ defmodule Pythelix.Record do
         :ok
     end
   end
-
-  defp from_cache_entity({:ok, entity}), do: entity
-  defp from_cache_entity({:commit, entity}), do: entity
-  defp from_cache_entity({:ignore, nil}), do: nil
 
   defp cache_entity(%Entity{} = entity) do
     Cachex.put(:px_cache, entity.id, entity)

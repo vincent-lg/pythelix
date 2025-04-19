@@ -34,7 +34,7 @@ defmodule Pythelix.MixProject do
     [
       {:codepagex, "~> 0.1.9"},
       {:nimble_parsec, "~> 1.4"},
-      {:unicode_set, "~> 1.1.0"},
+      {:unicode_set, "~> 1.5.0"},
       {:cachex, "~> 4.0"},
       {:phoenix, "~> 1.7.21"},
       {:phoenix_ecto, "~> 4.5"},

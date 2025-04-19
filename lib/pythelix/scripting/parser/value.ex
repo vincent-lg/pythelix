@@ -90,22 +90,13 @@ defmodule Pythelix.Scripting.Parser.Value do
     choice([str_single, str_double])
     |> label("string")
 
-  id_value =
-    choice([
-      ignore(string("-")) |> concat(id()) |> tag(:neg),
-      id()
-    ])
-    |> label("variable")
-
   defcombinator(
     :arg,
     choice([
-      (
-        id()
-        |> ignore(equal())
-        |> parsec({Pythelix.Scripting.Parser.Expression, :expr})
-        |> tag(:kwarg)
-      ),
+      id()
+      |> ignore(equal())
+      |> parsec({Pythelix.Scripting.Parser.Expression, :expr})
+      |> tag(:kwarg),
       parsec({Pythelix.Scripting.Parser.Expression, :expr})
     ])
   )

@@ -165,7 +165,6 @@ defmodule Pythelix.Scripting.Interpreter.Script do
     |> put_stack(operation.(value1, value2))
   end
 
-
   defp handle(script, {:put_dict, key, :no_reference}) do
     {script, to_put} = get_stack(script)
     {script, dict} = get_stack(script)

@@ -19,15 +19,15 @@ defmodule Pythelix.Scripting.Callable do
   @doc """
   Call the namespace.
   """
-  def call(script, %Callable{} = callable, args \\ [], kwargs \\ %{}) do
+  def call(%Script{} = script, %Callable{} = callable, args \\ [], kwargs \\ %{}) do
     apply(callable.module, callable.name, find_arguments(script, callable, args, kwargs))
   end
 
-  defp find_arguments(script, %{object: nil} = callable, args, kwargs) do
+  defp find_arguments(%Script{} = script, %{object: nil}, args, kwargs) do
     [script, args, kwargs]
   end
 
-  defp find_arguments(script, callable, args, kwargs) do
+  defp find_arguments(%Script{} = script, callable, args, kwargs) do
     [script, callable.object, args, kwargs]
   end
 end

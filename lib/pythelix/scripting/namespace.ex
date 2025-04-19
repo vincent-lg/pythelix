@@ -33,7 +33,8 @@ defmodule Pythelix.Scripting.Namespace do
                         false -> name
                       end
 
-                    {aname, String.to_existing_atom("a_#{name}")} end)
+                    {aname, String.to_existing_atom("a_#{name}")}
+                  end)
                   |> Map.new()
       @functions @function
                  |> Enum.map(fn name ->
@@ -44,7 +45,7 @@ defmodule Pythelix.Scripting.Namespace do
                      end
 
                    {fname, String.to_existing_atom("f_#{name}")}
-                  end)
+                 end)
                  |> Map.new()
       @methods @method
                |> Enum.map(fn name ->
@@ -86,6 +87,11 @@ defmodule Pythelix.Scripting.Namespace do
             apply(__MODULE__, attribute, [script, self])
         end
       end
+      @doc false
+
+      def setattr(script, _, _, _) do
+        {%{script | error: "can't set attribute"}, :none}
+      end
     end
   end
 
@@ -113,10 +119,13 @@ defmodule Pythelix.Scripting.Namespace do
       def unquote(String.to_atom("f_#{name}"))(script, args, kwargs) do
         {script, namespace} =
           validate(script, to_string(unquote(name)), unquote(constraints), args, kwargs)
+
         {unquote_splicing(args)} = {script, namespace}
 
         case script do
-          %Script{error: error} when is_binary(error) -> {script, nil}
+          %Script{error: error} when is_binary(error) ->
+            {script, nil}
+
           _ ->
             unquote(block)
         end
@@ -130,11 +139,14 @@ defmodule Pythelix.Scripting.Namespace do
       def unquote(String.to_atom("m_#{name}"))(script, self, args, kwargs) do
         {script, namespace} =
           validate(script, to_string(unquote(name)), unquote(constraints), args, kwargs)
+
         namespace = Map.put(namespace, :self, self)
         {unquote_splicing(args)} = {script, namespace}
 
         case script do
-          %Script{error: error} when is_binary(error) -> {script, nil}
+          %Script{error: error} when is_binary(error) ->
+            {script, nil}
+
           _ ->
             unquote(block)
         end
@@ -168,7 +180,7 @@ defmodule Pythelix.Scripting.Namespace do
   @doc """
   Validate constraints and fills out an argument map if valid.
   """
-  def validate(script, name, constraints, args, kwargs) do
+  def validate(script, _, constraints, args, kwargs) do
     {script, _, _, namespace} =
       Enum.reduce(constraints, {script, args, kwargs, %{}}, &build_arg/2)
 
@@ -197,11 +209,12 @@ defmodule Pythelix.Scripting.Namespace do
     keyword = opts[:keyword]
 
     from_pos = (index && Enum.at(args, index)) || nil
-    from_keyword = (keyword && Map.get(kwargs, keyword)) || :nil
+    from_keyword = (keyword && Map.get(kwargs, keyword)) || nil
 
     cond do
       from_pos && from_keyword ->
-        message = "positional argument #{index} has also been specified as keyword argument #{keyword}"
+        message =
+          "positional argument #{index} has also been specified as keyword argument #{keyword}"
 
         {%{script | error: message}, :error}
 

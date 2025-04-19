@@ -1,6 +1,6 @@
 defmodule Pythelix.Scripting.Namespace.Builtin do
   @moduledoc """
-  Bulitin module, containing builtin functions in particular."""
+  Bulitin module, containing builtin functions in particular.\"""
   """
 
   use Pythelix.Scripting.Namespace

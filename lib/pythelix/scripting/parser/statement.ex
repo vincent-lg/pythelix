@@ -39,7 +39,7 @@ defmodule Pythelix.Scripting.Parser.Statement do
     |> label("assignment")
 
   defp reduce_assign([{[{:nested, nested}], {line, offset}}, opeq, value]) do
-    names = for {var, name} <- nested, do: name
+    names = for {_, name} <- nested, do: name
     {opeq, names, value, {line, offset}}
   end
 

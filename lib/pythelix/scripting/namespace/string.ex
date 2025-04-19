@@ -97,7 +97,7 @@ defmodule Pythelix.Scripting.Namespace.String do
     prefix <> string <> suffix
   end
 
-  defp count(string, sub, start \\ 0, d_end \\ nil) do
+  defp count(string, sub, start, d_end) do
     length =
       if d_end == nil do
         String.length(string) - start
@@ -108,7 +108,6 @@ defmodule Pythelix.Scripting.Namespace.String do
     chunk =
       string
       |> String.slice(start, length)
-      |> IO.inspect(label: "intro")
 
     {_, number} = count_chunks(chunk, sub, 0)
 
