@@ -9,10 +9,10 @@ defmodule Pythelix.Entity do
   defstruct [:id, :parent_id, :location_id, key: nil, attributes: %{}, methods: %{}]
 
   @type t() :: %{
-          id: integer(),
-          key: binary(),
-          parent_id: integer(),
-          location_id: integer(),
+          id: integer() | :virtual,
+          key: binary() | nil,
+          parent_id: integer() | nil,
+          location_id: integer() | nil,
           attributes: map(),
           methods: map()
         }

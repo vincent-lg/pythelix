@@ -20,6 +20,8 @@ defmodule Pythelix.Record do
       nil
 
   """
+  def get_entity(:virtual), do: nil
+
   def get_entity(key) when is_binary(key) do
     case Cachex.get(:px_cache, key) do
       {:ok, nil} ->
@@ -78,6 +80,34 @@ defmodule Pythelix.Record do
 
   """
   def create_entity(opts \\ []) do
+    case opts[:virtual] do
+      nil -> create_stored_entity(opts)
+      _ -> create_virtual_entity(opts)
+    end
+  end
+
+  defp create_virtual_entity(opts) do
+    parent_id = (opts[:parent] && opts[:parent].id) || nil
+    location_id = (opts[:location] && opts[:location].id) || nil
+
+    entity =
+      %Entity{
+        id: :virtual,
+        key: opts[:key],
+        parent_id: parent_id,
+        location_id: location_id,
+        attributes: %{},
+        methods: %{}
+      }
+
+    entity =
+      entity
+      |> cache_entity()
+
+    {:ok, entity}
+  end
+
+  defp create_stored_entity(opts) do
     parent_id = (opts[:parent] && opts[:parent].id) || nil
     location_id = (opts[:location] && opts[:location].id) || nil
 
@@ -140,9 +170,9 @@ defmodule Pythelix.Record do
   * value (any): the value to set.
 
   """
-  @spec set_attribute(integer(), String.t(), any()) :: :ok | :invalid_entity
-  def set_attribute(id, name, value) do
-    case get_entity(id) do
+  @spec set_attribute(integer() | binary(), String.t(), any()) :: :ok | :invalid_entity
+  def set_attribute(id_or_key, name, value) do
+    case get_entity(id_or_key) do
       nil -> :invalid_entity
       entity -> set_entity_attribute(entity, name, value)
     end
@@ -163,6 +193,27 @@ defmodule Pythelix.Record do
   def delete_entity(entity_id_or_key) do
     entity = get_entity(entity_id_or_key)
 
+    case entity do
+      nil ->
+        {:error, "invalid entity"}
+
+      %Entity{id: :virtual} ->
+        delete_virtual_entity(entity)
+
+      _ ->
+        delete_stored_entity(entity)
+    end
+  end
+
+  defp delete_virtual_entity(%Entity{key: nil}) do
+    {:error, "cannot remove virtual entity with no key"}
+  end
+
+  defp delete_virtual_entity(entity) do
+    Cachex.del(:px_cache, entity.key)
+  end
+
+  defp delete_stored_entity(entity) do
     case Repo.get(Record.Entity, entity.id) do
       nil ->
         :error
@@ -181,11 +232,23 @@ defmodule Pythelix.Record do
   end
 
   defp cache_entity(%Entity{} = entity) do
+    entity
+    |> maybe_cache_entity_id()
+    |> maybe_cache_entity_key()
+  end
+
+  defp maybe_cache_entity_id(%Entity{id: :virtual} = entity), do: entity
+
+  defp maybe_cache_entity_id(%Entity{} = entity) do
     Cachex.put(:px_cache, entity.id, entity)
 
-    if entity.key do
-      Cachex.put(:px_cache, entity.key, entity)
-    end
+    entity
+  end
+
+  defp maybe_cache_entity_key(%Entity{key: nil} = entity), do: entity
+
+  defp maybe_cache_entity_key(%Entity{} = entity) do
+    Cachex.put(:px_cache, entity.key, entity)
 
     entity
   end
@@ -200,6 +263,13 @@ defmodule Pythelix.Record do
   end
 
   defp cache_entity_attributes(%Record.Entity{} = entity), do: entity
+
+  defp set_entity_attribute(%Entity{id: :virtual} = entity, name, value) do
+    attributes = Map.put(entity.attributes, name, value)
+
+    %{entity | attributes: attributes}
+    |> cache_entity()
+  end
 
   defp set_entity_attribute(%Entity{attributes: attributes} = entity, name, value) do
     case Map.fetch(attributes, name) do
