@@ -56,6 +56,7 @@ defmodule Pythelix.Record do
               entity
               |> Repo.preload([:attributes, :methods])
               |> cache_entity_attributes()
+              |> cache_entity_methods()
               |> Entity.new(key)
               |> cache_entity()
 
@@ -87,8 +88,8 @@ defmodule Pythelix.Record do
   end
 
   defp create_virtual_entity(opts) do
-    parent_id = (opts[:parent] && opts[:parent].id) || nil
-    location_id = (opts[:location] && opts[:location].id) || nil
+    parent_id = (opts[:parent] && opts[:parent].key) || nil
+    location_id = (opts[:location] && opts[:location].key) || nil
 
     entity =
       %Entity{
@@ -179,6 +180,24 @@ defmodule Pythelix.Record do
   end
 
   @doc """
+  Set an entity method's code.
+
+  Arguments:
+
+  * id (integer) or key (binary): the entity ID.
+  * name (binary): the method's name to set (might exist).
+  * code (binary): the method code.
+
+  """
+  @spec set_method(integer() | binary(), String.t(), String.t()) :: :ok | :invalid_entity
+  def set_method(id_or_key, name, code) do
+    case get_entity(id_or_key) do
+      nil -> :invalid_entity
+      entity -> set_entity_method(entity, name, code)
+    end
+  end
+
+  @doc """
   Deletes an entity.
 
   ## Examples
@@ -264,6 +283,17 @@ defmodule Pythelix.Record do
 
   defp cache_entity_attributes(%Record.Entity{} = entity), do: entity
 
+  defp cache_entity_methods(%Record.Entity{methods: methods} = entity)
+       when is_list(methods) do
+    for method <- methods do
+      Cachex.put(:px_cache, {:method, entity.id, method.name}, method.id)
+    end
+
+    entity
+  end
+
+  defp cache_entity_methods(%Record.Entity{} = entity), do: entity
+
   defp set_entity_attribute(%Entity{id: :virtual} = entity, name, value) do
     attributes = Map.put(entity.attributes, name, value)
 
@@ -314,6 +344,60 @@ defmodule Pythelix.Record do
         end
 
         %{entity | attributes: Map.put(entity.attributes, name, value)}
+        |> cache_entity()
+    end
+  end
+
+  defp set_entity_method(%Entity{id: :virtual} = entity, name, code) do
+    method = %Pythelix.Method{name: name, code: code}
+    methods = Map.put(entity.methods, name, method)
+
+    %{entity | methods: methods}
+    |> cache_entity()
+  end
+
+  defp set_entity_method(%Entity{methods: methods} = entity, name, code) do
+    case Map.fetch(methods, name) do
+      :error ->
+        create_entity_method_code(entity, name, code)
+
+      {:ok, _} ->
+        set_entity_method_code(entity, name, code)
+    end
+  end
+
+  defp create_entity_method_code(%Entity{} = entity, name, code) do
+    attrs = %{entity_id: entity.id, name: name, value: code}
+
+    %Record.Method{}
+    |> Record.Method.changeset(attrs)
+    |> Repo.insert()
+    |> case do
+      {:ok, method} ->
+        Cachex.put(:px_cache, {:method, entity.id, method.name}, method.id)
+        entity_method = %Pythelix.Method{name: name, code: code}
+
+        %{entity | methods: Map.put(entity.methods, name, entity_method)}
+        |> cache_entity()
+
+      error ->
+        error
+    end
+  end
+
+  defp set_entity_method_code(%Entity{} = entity, name, code) do
+    case Cachex.get(:px_cache, {:method, entity.id, name}) do
+      {:ok, nil} ->
+        create_entity_method_code(entity, name, code)
+
+      {:ok, method_id} ->
+        Repo.get(Record.Method, method_id)
+        |> Record.Method.changeset(%{value: code})
+        |> Repo.update()
+
+        method = %Pythelix.Method{name: name, code: code}
+
+        %{entity | methods: Map.put(entity.methods, name, method)}
         |> cache_entity()
     end
   end

@@ -87,8 +87,8 @@ defmodule Pythelix.Scripting.Namespace do
             apply(__MODULE__, attribute, [script, self])
         end
       end
-      @doc false
 
+      @doc false
       def setattr(script, _, _, _) do
         {%{script | error: "can't set attribute"}, :none}
       end

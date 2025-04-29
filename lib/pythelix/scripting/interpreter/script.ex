@@ -19,6 +19,7 @@ defmodule Pythelix.Scripting.Interpreter.Script do
     debugger: nil
   ]
 
+  alias Pythelix.Method
   alias Pythelix.Scripting.Callable
   alias Pythelix.Scripting.Interpreter.{Debugger, Iterator, Script}
   alias Pythelix.Scripting.Namespace
@@ -42,10 +43,12 @@ defmodule Pythelix.Scripting.Interpreter.Script do
   @doc """
   Write a variable in the script, overriding a variable of the same name.
 
-  If the variavle value should have a reference, creates one.
+  If the variable value should have a reference, creates one.
   """
   @spec write_variable(t(), binary(), term()) :: t()
   def write_variable(script, variable, value) do
+    {script, value} = (references?(value) && reference(script, value)) || {script, value}
+
     script
     |> store(variable, value)
   end
@@ -266,7 +269,7 @@ defmodule Pythelix.Scripting.Interpreter.Script do
   end
 
   defp handle(%{variables: variables} = script, {:read, variable}) do
-    value = Map.get(variables, variable)
+    value = Map.get(variables, variable, :no_var)
 
     script
     |> put_stack(value)
@@ -381,6 +384,13 @@ defmodule Pythelix.Scripting.Interpreter.Script do
 
   defp put_stack(%{stack: stack} = script, {:getattr, entity_id, name, value}) do
     value = Map.get(script.bound, {entity_id, name}, value)
+
+    value =
+      case value do
+        {:extended, module, fun} -> {:extended, entity_id, module, fun}
+        _ -> value
+      end
+
     {script, value} = (references?(value) && reference(script, value)) || {script, value}
 
     script =
@@ -452,6 +462,7 @@ defmodule Pythelix.Scripting.Interpreter.Script do
   end
 
   defp references?(value) when is_atom(value), do: false
+  defp references?(%Method{}), do: false
   defp references?(%Callable{}), do: false
   defp references?(value) when is_reference(value), do: false
   defp references?(value) when is_number(value), do: false

@@ -9,6 +9,10 @@ defmodule Pythelix.Application do
   def start(_type, _args) do
     children = [
       {Cachex, name: :px_cache},
+      Pythelix.ExecutorSupervisor,
+      {DynamicSupervisor, strategy: :one_for_one, name: Pythelix.Network.TCP.ClientSupervisor},
+      Pythelix.Network.TCP.Server,
+      Pythelix.Command.Hub,
       PythelixWeb.Telemetry,
       Pythelix.Repo,
       {Ecto.Migrator,

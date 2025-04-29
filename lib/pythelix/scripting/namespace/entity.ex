@@ -16,11 +16,9 @@ defmodule Pythelix.Scripting.Namespace.Entity do
         entity.id
 
       other_name ->
-        Map.get(entity.attributes, other_name)
-        |> case do
-          nil -> :none
-          value -> {:getattr, entity.id, name, value}
-        end
+        entity
+        |> get_attribute(name)
+        |> maybe_get_method(entity, name)
     end
   end
 
@@ -42,4 +40,27 @@ defmodule Pythelix.Scripting.Namespace.Entity do
         {script, {:setattr, entity.id, name, to_ref}}
     end
   end
+
+  defp get_attribute(entity, name) do
+    case Map.get(entity.attributes, name) do
+      nil ->
+        {:error, :attribute_not_found}
+
+      value ->
+        id_or_key = Pythelix.Entity.get_id_or_key(entity)
+
+        {:getattr, id_or_key, name, value}
+    end
+  end
+
+  defp maybe_get_method({:error, :attribute_not_found}, entity, name) do
+    id = Pythelix.Entity.get_id_or_key(entity)
+
+    case Map.get(entity.methods, name) do
+      nil -> :none
+      method -> method
+    end
+  end
+
+  defp maybe_get_method(other, _entity, _name), do: other
 end

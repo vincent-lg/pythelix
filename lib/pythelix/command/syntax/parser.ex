@@ -36,7 +36,7 @@ defmodule Pythelix.Command.Syntax.Parser do
     :unit,
     choice([
       parsec(:arg),
-      parsec(:keyword_or_symbol),
+      parsec(:keyword_or_symbol)
     ])
   )
 
@@ -52,10 +52,10 @@ defmodule Pythelix.Command.Syntax.Parser do
   defcombinatorp(
     :branch,
     choice([
-      #ignore(ascii_char([?(]))
+      # ignore(ascii_char([?(]))
       ignore(lparen())
       |> parsec(:branch)
-      #|> ignore(ascii_char([?)]))
+      # |> ignore(ascii_char([?)]))
       |> ignore(rparen())
       |> tag(:opt),
       parsec(:units)

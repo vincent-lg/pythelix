@@ -69,7 +69,13 @@ defmodule Pythelix.Command.Parser do
       {:ok, int_value, start, finish} ->
         new_acc = [{start, finish, {:int, name, int_value}} | acc]
         namespace = Map.put(namespace, String.to_atom(name), int_value)
-        parse_fixed_size(rest, string, new_acc, Map.put(namespace, String.to_atom(name), int_value))
+
+        parse_fixed_size(
+          rest,
+          string,
+          new_acc,
+          Map.put(namespace, String.to_atom(name), int_value)
+        )
 
       :nomatch ->
         parse_fixed_size(rest, string, acc, namespace)
@@ -92,14 +98,13 @@ defmodule Pythelix.Command.Parser do
     candidates = Regex.scan(~r/(?:^|\s)(\d+)(?=\s|$)/, string, return: :index)
 
     Enum.find_value(candidates, :nomatch, fn
-    # [{block_start, _block_len}, {start, length}] ->
+      # [{block_start, _block_len}, {start, length}] ->
       [_, {start, length}] ->
         finish = start + length
 
         if Enum.all?(known_ranges, fn {kstart, kfinish} ->
              finish <= kstart or start >= kfinish
            end) do
-
           int =
             String.slice(string, start, length)
             |> String.trim()
@@ -120,9 +125,9 @@ defmodule Pythelix.Command.Parser do
 
   # ----------------------------------------------------
   # STEP 3: Remove optional branches
-  #defp remove_optional([], _anchors, namespace), do: {:ok, [], namespace}
+  # defp remove_optional([], _anchors, namespace), do: {:ok, [], namespace}
 
-  #defp remove_optional([{:opt, branch} | rest], anchors, namespace) do
+  # defp remove_optional([{:opt, branch} | rest], anchors, namespace) do
   #  case remove_optional(branch, anchors, namespace) do
   #    {:ok, [], namespace} ->
   #      remove_optional(rest, anchors, namespace)
@@ -131,12 +136,12 @@ defmodule Pythelix.Command.Parser do
   #      {:ok, cleaned, namespace} = remove_optional(rest, anchors, namespace)
   #      {:ok, branch ++ cleaned, namespace}
   #  end
-  #end
+  # end
 
-  #defp remove_optional([x | rest], anchors, namespace) do
+  # defp remove_optional([x | rest], anchors, namespace) do
   #  {:ok, cleaned, namespace} = remove_optional(rest, anchors, namespace)
   #  {:ok, [x | cleaned], namespace}
-  #end
+  # end
 
   defp remove_optional([], _anchors, namespace), do: {:ok, [], namespace}
 
@@ -154,7 +159,7 @@ defmodule Pythelix.Command.Parser do
         {:ok, cleaned_branch, namespace} = remove_optional(branch, anchors, namespace)
         {:ok, cleaned_rest, namespace} = remove_optional(rest, anchors, namespace)
 
-        #{:ok, cleaned_branch ++ cleaned_rest, namespace}
+        # {:ok, cleaned_branch ++ cleaned_rest, namespace}
         {:ok, [{:branch, cleaned_branch} | cleaned_rest], namespace}
       else
         # Some keywords missing: skip the whole branch
@@ -195,15 +200,17 @@ defmodule Pythelix.Command.Parser do
       {_start, _end, _anything, _data} -> false
     end)
     |> Enum.map(fn {start, _end, _} -> start end)
-    |> Enum.min(fn -> 9999999 end) # If no keyword, push to end
+    # If no keyword, push to end
+    |> Enum.min(fn -> 9_999_999 end)
   end
 
   # Step 4: reorder arguments
   def reorder_args(pattern, anchors) do
-    {branches, normal} = Enum.split_with(pattern, fn
-      {:branch, _} -> true
-      _ -> false
-    end)
+    {branches, normal} =
+      Enum.split_with(pattern, fn
+        {:branch, _} -> true
+        _ -> false
+      end)
 
     sorted_branches =
       branches
@@ -239,7 +246,7 @@ defmodule Pythelix.Command.Parser do
     [{0, 0, :start} | anchors ++ [{len, len, :end}]]
     |> Enum.chunk_every(2, 1, :discard)
     |> Enum.map(fn [{_start1, end1, _}, {start2, _end2, _}] ->
-      if end1 + 1< start2, do: [end1, start2], else: nil
+      if end1 + 1 < start2, do: [end1, start2], else: nil
     end)
     |> Enum.reject(&is_nil/1)
   end

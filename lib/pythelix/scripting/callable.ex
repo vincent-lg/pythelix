@@ -6,6 +6,8 @@ defmodule Pythelix.Scripting.Callable do
   @enforce_keys [:module, :object, :name]
   defstruct [:module, :object, :name]
 
+  alias Pythelix.Method
+  alias Pythelix.Record
   alias Pythelix.Scripting.Callable
   alias Pythelix.Scripting.Interpreter.Script
 
@@ -19,7 +21,22 @@ defmodule Pythelix.Scripting.Callable do
   @doc """
   Call the namespace.
   """
-  def call(%Script{} = script, %Callable{} = callable, args \\ [], kwargs \\ %{}) do
+  def call(script, method_or_callable, args \\ [], kwargs \\ %{})
+
+  def call(%Script{} = script, {:extended, id_or_key, namespace, name}, args, kwargs) do
+    entity = Record.get_entity(id_or_key)
+
+    apply(namespace, name, [script, entity, args, kwargs])
+  end
+
+  def call(%Script{} = script, %Method{} = method, args, kwargs) do
+    case Method.call(method, kwargs) do
+      :ok -> {script, :none}
+      {:error, error} -> {%{script | error: error}, :none}
+    end
+  end
+
+  def call(%Script{} = script, %Callable{} = callable, args, kwargs) do
     apply(callable.module, callable.name, find_arguments(script, callable, args, kwargs))
   end
 

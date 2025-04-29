@@ -18,6 +18,7 @@ defmodule Pythelix.Command.ParserTest do
 
     test "parses full command with number, source, destination", %{pattern: pattern} do
       input = "get 9 red apples from old tree into leather backpack"
+
       expected = %{
         number: 9,
         item: "red apples",
@@ -31,6 +32,7 @@ defmodule Pythelix.Command.ParserTest do
 
     test "parses full command with no number, but source and destination", %{pattern: pattern} do
       input = "get red apples from old tree into leather backpack"
+
       expected = %{
         item: "red apples",
         source: "old tree",
@@ -43,6 +45,7 @@ defmodule Pythelix.Command.ParserTest do
 
     test "parses command with nmber and destination only", %{pattern: pattern} do
       input = "get 15 red apples into leather backpack"
+
       expected = %{
         number: 15,
         item: "red apples",
@@ -55,6 +58,7 @@ defmodule Pythelix.Command.ParserTest do
 
     test "parses command with nmber and source only", %{pattern: pattern} do
       input = "get 31 red apples from apple tree"
+
       expected = %{
         number: 31,
         item: "red apples",
@@ -67,6 +71,7 @@ defmodule Pythelix.Command.ParserTest do
 
     test "parses full command with number, reversed source and destination", %{pattern: pattern} do
       input = "get 9 red apples into leather backpack from old tree"
+
       expected = %{
         number: 9,
         item: "red apples",
@@ -78,8 +83,11 @@ defmodule Pythelix.Command.ParserTest do
       assert obtained == {:ok, expected}
     end
 
-    test "parses full command with no number, but reversed source and destination", %{pattern: pattern} do
+    test "parses full command with no number, but reversed source and destination", %{
+      pattern: pattern
+    } do
       input = "get red apples into leather backpack from old tree"
+
       expected = %{
         item: "red apples",
         source: "old tree",

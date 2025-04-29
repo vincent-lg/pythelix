@@ -11,8 +11,8 @@ defmodule Pythelix.Entity do
   @type t() :: %{
           id: integer() | :virtual,
           key: binary() | nil,
-          parent_id: integer() | nil,
-          location_id: integer() | nil,
+          parent_id: integer() | binary() | nil,
+          location_id: integer() | binary() | nil,
           attributes: map(),
           methods: map()
         }
@@ -42,9 +42,13 @@ defmodule Pythelix.Entity do
 
   defp new_methods(methods) when is_list(methods) do
     Map.new(methods, fn method ->
-      {method.name, method.value}
+      {method.name, %Pythelix.Method{name: method.name, code: method.value}}
     end)
   end
 
   defp new_methods(_), do: %{}
+
+  def get_id_or_key(entity) do
+    (entity.id != :virtual && entity.id) || entity.key
+  end
 end
