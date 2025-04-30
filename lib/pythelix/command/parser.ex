@@ -114,7 +114,7 @@ defmodule Pythelix.Command.Parser do
             {int, _} ->
               {:ok, int, start, finish}
 
-            err ->
+            _ ->
               false
           end
         else

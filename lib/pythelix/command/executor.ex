@@ -8,7 +8,6 @@ defmodule Pythelix.Command.Executor do
   """
 
   alias Pythelix.Entity
-  alias Pythelix.Method
   alias Pythelix.Record
 
   @doc """

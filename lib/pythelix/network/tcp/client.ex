@@ -6,7 +6,6 @@ defmodule Pythelix.Network.TCP.Client do
   end
 
   def init(socket) do
-    # :inet.setopts(socket, active: :once)
     {:ok, {socket, nil}, {:continue, :assign_id}}
   end
 
@@ -16,10 +15,9 @@ defmodule Pythelix.Network.TCP.Client do
     {:noreply, {socket, client_id}}
   end
 
-  def handle_info({:tcp, socket, data}, {socket_state, client_id}) do
+  def handle_info({:tcp, _socket, data}, {socket_state, client_id}) do
     Pythelix.Command.Hub.send_command(client_id, String.trim(data))
 
-    # :inet.setopts(socket, active: :once)
     {:noreply, {socket_state, client_id}}
   end
 

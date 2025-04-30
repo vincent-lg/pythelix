@@ -40,9 +40,7 @@ defmodule Pythelix.Executor do
 
   def process(executor_id, handler, args) do
     case handler.execute(args) do
-      {:ok, result} ->
-        # send(Pythelix.Command.Hub, {:executor_done, executor_id, {:ok, result}})
-
+      {:ok, _} ->
         {:stop, :normal, {handler, {executor_id, args}}}
 
       {:pause, ms} ->

@@ -29,7 +29,7 @@ defmodule Pythelix.Scripting.Callable do
     apply(namespace, name, [script, entity, args, kwargs])
   end
 
-  def call(%Script{} = script, %Method{} = method, args, kwargs) do
+  def call(%Script{} = script, %Method{} = method, _args, kwargs) do
     case Method.call(method, kwargs) do
       :ok -> {script, :none}
       {:error, error} -> {%{script | error: error}, :none}

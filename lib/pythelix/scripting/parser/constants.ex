@@ -51,13 +51,13 @@ defmodule Pythelix.Scripting.Parser.Constants do
     |> label("variable")
   end
 
-  def to_varname(_rest, acc, context, _line, _offset) do
+  def to_varname(rest, acc, context, _line, _offset) do
     name = acc |> Enum.reverse() |> List.to_string()
 
     if name in @reserved_sym do
       {:error, name <> " is a reserved symbol"}
     else
-      {[name], context}
+      {rest, [name], context}
     end
   end
 end

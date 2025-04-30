@@ -15,7 +15,7 @@ defmodule Pythelix.Scripting.Namespace.Entity do
       "id" ->
         entity.id
 
-      other_name ->
+      _ ->
         entity
         |> get_attribute(name)
         |> maybe_get_method(entity, name)
@@ -54,8 +54,6 @@ defmodule Pythelix.Scripting.Namespace.Entity do
   end
 
   defp maybe_get_method({:error, :attribute_not_found}, entity, name) do
-    id = Pythelix.Entity.get_id_or_key(entity)
-
     case Map.get(entity.methods, name) do
       nil -> :none
       method -> method

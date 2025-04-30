@@ -3,7 +3,6 @@ defmodule Pythelix.Command.Hub do
 
   require Logger
 
-  alias Pythelix.Command.Executor
   alias Pythelix.Entity
   alias Pythelix.Method
   alias Pythelix.Scripting.Namespace.Extended
@@ -88,7 +87,7 @@ defmodule Pythelix.Command.Hub do
     end
   end
 
-  def handle_info({:executor_done, executor_id, result}, state) do
+  def handle_info({:executor_done, executor_id, _result}, state) do
     {running, _} = state.running
 
     if executor_id == running do
@@ -152,7 +151,7 @@ defmodule Pythelix.Command.Hub do
       :no_method -> {:error, "no method #{name} on #{id_or_key}"}
     end
     |> case do
-      {:ok, result} ->
+      {:ok, state} ->
         state
 
       {:error, error} ->

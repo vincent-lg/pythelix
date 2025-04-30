@@ -3,9 +3,7 @@ defmodule Pythelix.Scripting.Executor do
   Execute a script, handle pauses.
   """
 
-  alias Pythelix.Entity
   alias Pythelix.Method
-  alias Pythelix.Record
   alias Pythelix.Scripting.Interpreter.Script
 
   @doc """

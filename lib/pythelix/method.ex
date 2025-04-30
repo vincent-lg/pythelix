@@ -45,7 +45,7 @@ defmodule Pythelix.Method do
 
   def maybe_fetch_script(%Pythelix.Method{script: script}), do: script
 
-  defp maybe_run({:error, _} = error, args), do: error
+  defp maybe_run({:error, _} = error, _args), do: error
 
   defp maybe_run(%Script{} = script, args) do
     script

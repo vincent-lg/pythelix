@@ -26,6 +26,8 @@ defmodule Pythelix.Scripting.Parser.Value do
   import Pythelix.Scripting.Parser.Constants, only: [id: 0, isolate: 1]
   import Pythelix.Scripting.Parser.Operator
 
+  alias Pythelix.Scripting.Parser
+
   globals =
     choice([
       string("true") |> replace(true),
@@ -62,33 +64,20 @@ defmodule Pythelix.Scripting.Parser.Value do
     choice([float, int])
     |> label("number")
 
-  str_single =
-    ignore(ascii_char([?']))
-    |> repeat_while(
-      utf8_char([{:not, ?\n}]),
-      {Pythelix.Scripting.Parser.String, :handle_single, []}
-    )
-    |> ignore(ascii_char([?']))
-    |> reduce({List, :to_string, []})
-    |> post_traverse({Pythelix.Scripting.Parser.String, :process, []})
-    |> label("string")
+  defcombinator :string,
+    choice([
+      Parser.String.quoted("'''", multiline: true, label: "triple-quote with ticks"),
+      Parser.String.quoted(~s/"""/, multiline: true, label: "triple-quote with double quotes"),
+      Parser.String.quoted("'", label: "single quote"),
+      Parser.String.quoted(~s/"/, label: "double quote")
+    ])
     |> isolate()
 
-  str_double =
-    ignore(ascii_char([?"]))
-    |> repeat_while(
-      utf8_char([{:not, ?\n}]),
-      {Pythelix.Scripting.Parser.String, :handle_double, []}
-    )
-    |> ignore(ascii_char([?"]))
-    |> reduce({List, :to_string, []})
-    |> post_traverse({Pythelix.Scripting.Parser.String, :process, []})
-    |> label("string")
-    |> isolate()
-
-  str =
-    choice([str_single, str_double])
-    |> label("string")
+  def escape(chars) do
+    chars
+    |> Enum.join("")
+    |> String.replace("\\n", "\n")
+  end
 
   defcombinator(
     :arg,
@@ -138,7 +127,9 @@ defmodule Pythelix.Scripting.Parser.Value do
     choice([
       globals,
       number,
-      str,
+      #str,
+      parsec(:string),
+      #parsec({Pythelix.Parser.Group, :string}) |> isolate(),
       ignore(string("-")) |> concat(parsec(:function)) |> tag(:neg),
       ignore(string("-")) |> concat(id()) |> tag(:neg),
       parsec(:function),
