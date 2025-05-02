@@ -19,6 +19,8 @@ defmodule Pythelix.World.File do
         {:error, message}
 
       %{entities: entities} ->
+        entities = Enum.map(entities, &Map.put(&1, :file, path))
+
         {:ok, entities}
     end
   end
@@ -68,14 +70,13 @@ defmodule Pythelix.World.File do
         parse_lines(rest, state)
 
       line =~ @pattern_entity ->
-        state = parse_entity_key(state, line)
+        state = parse_entity_key(state, line, index)
         parse_lines(rest, state)
 
       String.trim(line) == "" ->
         parse_lines(rest, state)
 
       true ->
-        IO.puts("Should error")
         put_error(state, {line, index}, "Syntax error")
     end
   end
@@ -123,21 +124,22 @@ defmodule Pythelix.World.File do
     end
   end
 
-  defp parse_entity_key(state, line) do
+  defp parse_entity_key(state, line, index) do
     current = state.current
     entities = state.entities
 
     entities = (current != nil && [set_entity(current) | entities]) || entities
-    current = new_entity()
+    current = new_entity(index)
     key_name = Regex.replace(@pattern_entity, line, "\\1")
     current = put_in(current.key, key_name)
 
     %{state | entities: entities, current: current, multiline_key: nil, method_name: nil}
   end
 
-  defp new_entity() do
+  defp new_entity(index) do
     %{
       key: nil,
+      line: index + 1,
       attributes: %{},
       methods: %{}
     }

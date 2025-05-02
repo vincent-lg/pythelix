@@ -10,7 +10,7 @@ defmodule Pythelix.Scripting.Parser.String do
     allowed = (opts[:multiline] && []) || [{:not, ?\n}]
     but_not =
       if opts[:multiline] do
-        string("delimiter")
+        string(delimiter)
       else
         choice([string(delimiter), string("\n")])
       end
@@ -21,7 +21,6 @@ defmodule Pythelix.Scripting.Parser.String do
 
     ignore(string(delimiter))                # open delim
     |> repeat(choice([escaped, normal]))
-    #|> reduce({Enum, :join, [""]})
     |> reduce({Pythelix.Scripting.Parser.Value, :escape, []})
     |> ignore(string(delimiter))             # close delim
     |> label(opts[:label] || "quoted(#{inspect delimiter})")

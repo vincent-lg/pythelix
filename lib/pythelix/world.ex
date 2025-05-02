@@ -12,42 +12,183 @@ defmodule Pythelix.World do
   @worldlet_pattern "*.txt"
 
   alias Pythelix.Record
-  alias Pythelix.Scripting.Namespace.Extendded
+  alias Pythelix.Scripting.Parser
 
   def init() do
-    create_base_command()
-    create_base_client()
-    process_worldlets()
-  end
-
-  defp create_base_command() do
-    Record.create_entity(virtual: true, key: @generic_command)
-  end
-
-  defp create_base_client() do
-    Record.create_entity(virtual: true, key: @generic_client)
-
-    Record.set_attribute(@generic_client, "msg", {:extended, Extended.Client, :msg})
+    if Application.get_env(:pythelix, :worldlets) do
+      process_worldlets()
+    end
   end
 
   defp process_worldlets() do
     Path.wildcard("#{@worldlet_dir}/**/#{@worldlet_pattern}")
-    |> Enum.map(fn path ->
-      case Pythelix.World.File.parse_file(path) do
-        {:ok, entities} -> create_worldlet(entities)
-        error -> error
-      end
+    |> Enum.map(&Pythelix.World.File.parse_file/1)
+    |> Enum.reduce_while([], fn
+      {:ok, entities}, acc ->
+        {:cont, acc ++ entities}
+
+      {:error, reason}, _acc ->
+        {:halt, {:error, reason}}
     end)
+    |> case do
+      {:error, reason} -> {:error, reason}
+      entities -> {:ok, entities}
+    end
+    |> maybe_add_base_entities()
+    |> maybe_deduce_parents()
+    |> maybe_sort_entities()
+    |> maybe_create_entities()
   end
 
-  defp create_worldlet(entities) do
+  defp maybe_add_base_entities({:error, _} = error), do: error
+
+  defp maybe_add_base_entities({:ok, entities}) do
+    {:ok,
+      entities
+      |> add_base_client_entity()
+      |> add_base_command_entity()
+    }
+  end
+
+  defp add_base_client_entity(entities) do
+    [
+      %{
+        virtual: true,
+        key: @generic_client,
+        attributes: %{"msg" => {:extended, Extended.Client, :msg}},
+        methods: %{},
+      } | entities
+    ]
+  end
+
+  defp add_base_command_entity(entities) do
+    [
+      %{
+        virtual: true,
+        key: @generic_command,
+        attributes: %{},
+        methods: %{},
+      } | entities
+    ]
+  end
+
+  defp maybe_deduce_parents({:error, error}), do: {:error, error}
+
+  defp maybe_deduce_parents({:ok, entities}) do
+    Enum.map(entities, fn entity ->
+      attributes = entity.attributes
+      parent = attributes["parent"]
+
+      parent =
+        if parent do
+          {:ok, parent} = Pythelix.Scripting.Parser.eval(parent)
+
+          parent
+        else
+          nil
+        end
+
+      attributes = Map.put(attributes, "parent", parent)
+      %{entity | attributes: attributes}
+    end)
+    |> then(&{:ok, &1})
+  end
+
+  defp maybe_sort_entities({:error, error}), do: error
+
+  defp maybe_sort_entities({:ok, entities}) do
+    entity_map = Map.new(entities, &{&1.key, &1})
+
+    graph = for entity <- entities, into: %{} do
+      parent_key = entity.attributes["parent"]
+
+      {entity.key, List.wrap(parent_key)}
+    end
+
+    case topo_sort(graph) do
+      {:ok, sorted_keys} ->
+        sorted_entities = Enum.map(sorted_keys, &Map.get(entity_map, &1, empty_entity(&1)))
+        {:ok, sorted_entities}
+
+      {:error, :cyclic} ->
+        {:error, :cyclic_dependency}
+    end
+  end
+
+  defp empty_entity(key) do
+    %{
+      key: key,
+      attributes: %{},
+      methods: %{},
+    }
+  end
+
+  defp topo_sort(graph) do
+    try do
+      {:ok,
+       do_topo_sort(graph, [], MapSet.new(), MapSet.new())
+       |> Enum.uniq()
+    }
+    catch
+      :cycle -> {:error, :cyclic}
+    end
+  end
+
+  defp do_topo_sort(graph, sorted, visited, visiting) do
+    Enum.reduce(graph, sorted, fn {node, _}, acc ->
+      if node in visited do
+        acc
+      else
+        visit(node, graph, acc, visited, visiting)
+      end
+    end)
+    |> Enum.reverse()
+  end
+
+  defp visit(node, graph, sorted, visited, visiting) do
+    cond do
+      node in visiting ->
+        throw(:cycle)
+
+      node in visited ->
+        sorted
+
+      true ->
+        visiting = MapSet.put(visiting, node)
+        deps = Map.get(graph, node, [])
+
+        sorted =
+          Enum.reduce(deps, sorted, fn dep, acc ->
+            visit(dep, graph, acc, visited, visiting)
+          end)
+
+        visited = MapSet.put(visited, node)
+        [node | sorted]
+    end
+  end
+
+  defp maybe_create_entities({:error, _} = error), do: error
+
+  defp maybe_create_entities({:ok, entities}) do
     Enum.map(entities, fn entity -> create_entity(entity) end)
   end
 
   defp create_entity(entity) do
     {parent, attributes} = Map.pop(entity.attributes, "parent")
-    parent = Record.get_entity(parent)
-    Record.create_entity(key: entity.key, parent: parent)
+    parent = (parent && Record.get_entity(parent)) || nil
+    virtual_parent = (parent && parent.id == :virtual) || false
+    opts = [key: entity.key, parent: parent]
+
+    opts =
+      if Map.get(entity, :virtual, virtual_parent) do
+        [{:virtual, true} | opts]
+      else
+        opts
+      end
+
+    if Record.get_entity(entity.key) == nil do
+      {:ok, _} = Record.create_entity(opts)
+    end
 
     for {name, value} <- attributes do
       Record.set_attribute(entity.key, name, value)
@@ -56,5 +197,7 @@ defmodule Pythelix.World do
     for {name, code} <- entity.methods do
       Record.set_method(entity.key, name, code)
     end
+
+    Record.get_entity(entity.key)
   end
 end

@@ -21,6 +21,7 @@ defmodule Pythelix.Scripting do
     debug = Keyword.get(opts, :debug, false)
     call = Keyword.get(opts, :call, true)
     show_ast = Keyword.get(opts, :show_ast, false)
+    line = Keyword.get(opts, :line, 1)
 
     {:ok, ast} = Parser.exec(code)
 
@@ -33,6 +34,40 @@ defmodule Pythelix.Scripting do
     script =
       if debug do
         %{script | debugger: Interpreter.Debugger.new()}
+      else
+        script
+      end
+
+    script = %{script | line: line}
+
+    script =
+      if opts[:repl] do
+        bytecode = script.bytecode
+
+        bytecode =
+          if List.last(bytecode) == :pop do
+            {_, bytecode} = List.pop_at(bytecode, -1)
+
+            bytecode
+          else
+            bytecode
+          end
+
+        %{script | bytecode: bytecode}
+      else
+        script
+      end
+
+    script =
+      if opts[:line] do
+        bytecode =
+          script.bytecode
+          |> Enum.map(fn
+            {:line, old_line} -> {:line, old_line + line}
+            other -> other
+          end)
+
+        %{script | bytecode: bytecode}
       else
         script
       end

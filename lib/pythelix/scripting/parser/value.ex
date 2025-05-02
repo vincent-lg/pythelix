@@ -71,7 +71,6 @@ defmodule Pythelix.Scripting.Parser.Value do
       Parser.String.quoted("'", label: "single quote"),
       Parser.String.quoted(~s/"/, label: "double quote")
     ])
-    |> isolate()
 
   def escape(chars) do
     chars
@@ -127,9 +126,7 @@ defmodule Pythelix.Scripting.Parser.Value do
     choice([
       globals,
       number,
-      #str,
-      parsec(:string),
-      #parsec({Pythelix.Parser.Group, :string}) |> isolate(),
+      parsec(:string) |> isolate(),
       ignore(string("-")) |> concat(parsec(:function)) |> tag(:neg),
       ignore(string("-")) |> concat(id()) |> tag(:neg),
       parsec(:function),

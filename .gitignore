@@ -42,3 +42,6 @@ npm-debug.log
 *.db
 *.db-*
 
+# Pythelix worldlets
+/priv/worldlets/*
+!priv/worldlets/.gitkeep

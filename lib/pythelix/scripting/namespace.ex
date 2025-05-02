@@ -3,6 +3,7 @@ defmodule Pythelix.Scripting.Namespace do
   Defines a namespace, with methods and attributes, for an object.
   """
 
+  alias Pythelix.Entity
   alias Pythelix.Scripting.Callable
   alias Pythelix.Scripting.Namespace
   alias Pythelix.Scripting.Interpreter.Script
@@ -238,7 +239,7 @@ defmodule Pythelix.Scripting.Namespace do
   end
 
   defp enforce_arg_type(script, name, value, type) do
-    case check_arg_type(value, type) do
+    case check_arg_type(script, value, type) do
       :error ->
         message = "argument #{name} expects value of type #{type}"
 
@@ -249,9 +250,19 @@ defmodule Pythelix.Scripting.Namespace do
     end
   end
 
-  defp check_arg_type(value, :any), do: value
-  defp check_arg_type(value, :str) when not is_binary(value), do: :error
-  defp check_arg_type(value, :int) when not is_integer(value), do: :error
-  defp check_arg_type(value, :float) when not is_float(value), do: :error
-  defp check_arg_type(value, _), do: value
+  defp check_arg_type(_, value, :any), do: value
+  defp check_arg_type(_, value, :str) when not is_binary(value), do: :error
+  defp check_arg_type(_, value, :int) when not is_integer(value), do: :error
+  defp check_arg_type(_, value, :float) when not is_float(value), do: :error
+
+  defp check_arg_type(script, value, :entity) do
+    entity = Script.get_value(script, value) |> IO.inspect(label: "value")
+
+    case entity do
+      %Entity{} -> value
+      _ -> :error
+    end
+  end
+
+  defp check_arg_type(_, value, _), do: value
 end
