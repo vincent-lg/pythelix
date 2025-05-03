@@ -548,4 +548,118 @@ defmodule Pythelix.Scripting.Entity.ParentageTest do
       assert parent.methods["meth1"]
     end
   end
+
+  describe "change parentage" do
+    test "cyclical parentage should be forbidden, put a parent in a child" do
+      {:ok, parent} = Record.create_entity()
+      {:ok, child} = Record.create_entity(parent: parent)
+
+      assert match?({:error, _}, Record.change_parent(parent, child))
+      assert Record.get_children(parent) == [child]
+      assert Record.get_ancestors(parent) == []
+      assert Record.get_children(child) == []
+      assert Record.get_ancestors(child) == [parent]
+    end
+
+    test "cyclical parentage should be forbidden, put a parent in a grand child" do
+      {:ok, parent} = Record.create_entity()
+      {:ok, child} = Record.create_entity(parent: parent)
+      {:ok, grand_child} = Record.create_entity(parent: child)
+
+      assert match?({:error, _}, Record.change_parent(parent, grand_child))
+      assert Record.get_children(parent) == [child]
+      assert Record.get_ancestors(parent) == []
+      assert Record.get_children(child) == [grand_child]
+      assert Record.get_ancestors(child) == [parent]
+      assert Record.get_children(grand_child) == []
+      assert Record.get_ancestors(grand_child) == [child, parent]
+    end
+
+    test "indirect cycle: make grandchild the parent of root" do
+      {:ok, grandparent} = Record.create_entity()
+      {:ok, parent} = Record.create_entity(parent: grandparent)
+      {:ok, child} = Record.create_entity(parent: parent)
+
+      # Try to set grandparent's parent to child — should be rejected
+      assert match?({:error, _}, Record.change_parent(grandparent, child))
+
+      # Structure remains intact
+      assert Record.get_children(grandparent) == [parent]
+      assert Record.get_children(parent) == [child]
+      assert Record.get_ancestors(child) == [parent, grandparent]
+      assert Record.get_ancestors(grandparent) == []
+    end
+
+    test "non-cyclical move should succeed" do
+      {:ok, a} = Record.create_entity()
+      {:ok, b} = Record.create_entity()
+      {:ok, c} = Record.create_entity(parent: a)
+
+      # Move c from a → b
+      c = Record.change_parent(c, b)
+      assert !match?({:error, _}, c)
+
+      assert Record.get_children(a) == []
+      assert Record.get_children(b) == [c]
+      assert Record.get_ancestors(c) == [b]
+    end
+
+    test "a child can change parent without ancestry link" do
+      {:ok, parent} = Record.create_entity()
+      {:ok, child} = Record.create_entity(parent: parent)
+      {:ok, single} = Record.create_entity()
+
+      child = Record.change_parent(child, single)
+
+      assert Record.get_children(parent) == []
+      assert Record.get_ancestors(parent) == []
+      assert Record.get_children(child) == []
+      assert Record.get_ancestors(child) == [single]
+      assert Record.get_children(single) == [child]
+      assert Record.get_ancestors(single) == []
+    end
+
+    test "check that attributes are properly propagated when the parent changes" do
+      {:ok, parent} = Record.create_entity()
+      {:ok, child} = Record.create_entity(parent: parent)
+      {:ok, single} = Record.create_entity()
+      Record.set_attribute(parent.id, "a", 1)
+      child = Record.set_attribute(child.id, "b", 2)
+      single = Record.set_attribute(single.id, "c", 3)
+
+      child = Record.change_parent(child, single)
+
+      assert child.attributes == %{"b" => 2, "c" => {:parent, single.id}}
+    end
+
+    test "check that attributes are properly propagated when the parent changes on a second level" do
+      {:ok, parent} = Record.create_entity()
+      {:ok, child} = Record.create_entity(parent: parent)
+      {:ok, grand_child} = Record.create_entity(parent: child)
+      {:ok, single} = Record.create_entity()
+      Record.set_attribute(parent.id, "a", 1)
+      child = Record.set_attribute(child.id, "b", 2)
+      Record.set_attribute(grand_child.id, "c", 3)
+      single = Record.set_attribute(single.id, "d", 4)
+
+      child = Record.change_parent(child, single)
+
+      assert child.attributes == %{"b" => 2, "d" => {:parent, single.id}}
+    end
+
+    test "check that attributes are properly propagated when the parent changes on a second level, reversed" do
+      {:ok, parent} = Record.create_entity()
+      {:ok, single} = Record.create_entity()
+      {:ok, child} = Record.create_entity(parent: single)
+      {:ok, grand_child} = Record.create_entity(parent: parent)
+      parent = Record.set_attribute(parent.id, "a", 1)
+      child = Record.set_attribute(child.id, "b", 2)
+      grand_child = Record.set_attribute(grand_child.id, "c", 3)
+      Record.set_attribute(single.id, "d", 4)
+
+      child = Record.change_parent(child, grand_child)
+
+      assert child.attributes == %{"a" => {:parent, parent.id}, "b" => 2, "c" => {:parent, grand_child.id}}
+    end
+  end
 end

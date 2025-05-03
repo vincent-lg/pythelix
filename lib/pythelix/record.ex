@@ -7,6 +7,7 @@ defmodule Pythelix.Record do
   alias Pythelix.Repo
   alias Pythelix.Entity
   alias Pythelix.Record
+  alias Pythelix.Record.Cache
 
   @doc """
   Gets a single entity and returns it, `nil` if it doesn't exist.
@@ -23,21 +24,21 @@ defmodule Pythelix.Record do
   def get_entity(:virtual), do: nil
 
   def get_entity(key) when is_binary(key) do
-    case Cachex.get(:px_cache, key) do
-      {:ok, nil} ->
+    case Cache.get_cached_entity(key) do
+      nil ->
         case Repo.get_by(Record.Key, key: key) do
           nil -> nil
           %Record.Key{entity_id: entity_id} -> get_entity(entity_id)
         end
 
-      {:ok, entity} ->
+      entity ->
         entity
     end
   end
 
   def get_entity(id) when is_integer(id) do
-    case Cachex.get(:px_cache, id) do
-      {:ok, nil} ->
+    case Cache.get_cached_entity(id) do
+      nil ->
         entity_with_key =
           Repo.one(
             from e in Record.Entity,
@@ -55,15 +56,15 @@ defmodule Pythelix.Record do
             entity =
               entity
               |> Repo.preload([:attributes, :methods])
-              |> cache_entity_attributes()
-              |> cache_entity_methods()
+              |> Cache.cache_stored_entity_attributes()
+              |> Cache.cache_stored_entity_methods()
               |> Entity.new(key)
-              |> cache_entity()
+              |> Cache.cache_entity()
 
             entity
         end
 
-      {:ok, entity} ->
+      entity ->
         entity
     end
   end
@@ -80,15 +81,9 @@ defmodule Pythelix.Record do
   """
   @spec get_children(Entity.t()) :: [Entity.t()]
   def get_children(%Entity{} = parent) do
-    id_or_key = Entity.get_id_or_key(parent)
-
-    children_id_or_key =
-      case Cachex.get(:px_cache, {:children, id_or_key}) do
-        {:ok, nil} -> []
-        {:ok, children} -> children
-      end
-
-    children_id_or_key
+    parent
+    |> Entity.get_id_or_key()
+    |> Cache.get_children_id_or_key()
     |> Enum.map(&get_entity/1)
   end
 
@@ -104,15 +99,9 @@ defmodule Pythelix.Record do
   """
   @spec get_ancestors(Entity.t()) :: [Entity.t()]
   def get_ancestors(%Entity{} = entity) do
-    id_or_key = Entity.get_id_or_key(entity)
-
-    ancestors_id_or_key =
-      case Cachex.get(:px_cache, {:ancestors, id_or_key}) do
-        {:ok, nil} -> []
-        {:ok, ancestors} -> ancestors
-      end
-
-    ancestors_id_or_key
+    entity
+    |> Entity.get_id_or_key()
+    |> Cache.get_ancestors_id_or_key()
     |> Enum.map(&get_entity/1)
   end
 
@@ -133,6 +122,7 @@ defmodule Pythelix.Record do
       nil -> create_stored_entity(opts)
       _ -> create_virtual_entity(opts)
     end
+    |> maybe_build_entity()
   end
 
   defp create_virtual_entity(opts) do
@@ -148,10 +138,6 @@ defmodule Pythelix.Record do
         attributes: %{},
         methods: %{}
       }
-
-    entity =
-      entity
-      |> cache_entity()
 
     {:ok, entity}
   end
@@ -198,9 +184,7 @@ defmodule Pythelix.Record do
     end)
     |> case do
       {:ok, entity} ->
-        entity =
-          Entity.new(entity, opts[:key])
-          |> cache_entity()
+        entity = Entity.new(entity, opts[:key])
 
         {:ok, entity}
 
@@ -210,16 +194,96 @@ defmodule Pythelix.Record do
   end
 
   @doc """
+  Change the parent of the specified entity.
+
+  Check that this would not create cclical relations
+
+  Args:
+
+  * entity (entity): the entity whose parent is to change.
+  * parent (entity): the entity's new parent.
+  """
+  @spec change_parent(Entity.t(), Entity.t()) :: {:ok, Entity.t()} | {:error, binary()}
+  def change_parent(%Entity{} = entity, %Entity{} = new_parent) do
+    entity
+    |> can_have_parent?(new_parent)
+    |> maybe_change_parent(new_parent)
+  end
+
+  defp can_have_parent?(%Entity{} = entity, %Entity{} = new_parent) do
+    id_or_key = Entity.get_id_or_key(entity)
+    new_parent_id_or_key = Entity.get_id_or_key(new_parent)
+
+    if id_or_key == new_parent_id_or_key do
+      {:error, "An entity cannot be its own parent"}
+    else
+      is_ancestor? =
+        new_parent_id_or_key
+        |> Cache.get_ancestors_id_or_key()
+        |> Enum.member?(id_or_key)
+
+      if is_ancestor? do
+        {:error, "#{id_or_key} is an ancestor of #{new_parent_id_or_key}, would create a loop"}
+      else
+        # Prevent cycles from below (descendant -> parent)
+        if has_descendant?(entity, new_parent_id_or_key) do
+          {:error, "#{new_parent_id_or_key} is a descendant of #{id_or_key}, would create a loop"}
+        else
+          {:ok, entity}
+        end
+      end
+    end
+  end
+
+  defp has_descendant?(%Entity{} = entity, target_id_or_key) do
+    id_or_key = Entity.get_id_or_key(entity)
+
+    case Cache.get_children_id_or_key(id_or_key) do
+      [] -> false
+      children ->
+        Enum.any?(children, fn child_id ->
+          child_id == target_id_or_key or
+            has_descendant?(get_entity(child_id), target_id_or_key)
+        end)
+    end
+  end
+
+  defp maybe_change_parent({:error, _} = error, _), do: error
+
+  defp maybe_change_parent({:ok, %Entity{} = entity}, %Entity{} = parent) do
+
+    if entity.id != :virtual do
+      Repo.get(Record.Entity, entity.id)
+      |> Record.Entity.changeset(%{parent_id: parent.id})
+      |> Repo.update()
+    end
+
+    entity
+    |> Cache.change_parent(parent)
+    |> clear_parent_content()
+    |> pull_parent_attributes()
+    |> pull_parent_methods()
+    |> Cache.cache_entity()
+    |> then(&update_ancestry/1)
+  end
+
+  @doc """
   Set an entity attribute to any value.
 
   Arguments:
 
-  * id (integer): the entity ID.
+  * id_or_key (integer or string): the entity ID or key.
   * name (binary): the attribute's name to set (might exist).
   * value (any): the value to set.
+  * opts (keyword list): the optional options to set.
+
+  Options can be:
+
+  * `:new`: only set the attribute if it doesn't exist.
+  * `:cache`: just cache the attribute (never store it into the database).
 
   """
-  @spec set_attribute(integer() | binary(), String.t(), any()) :: Entity.t() | :invalid_entity
+  @spec set_attribute(integer() | binary(), String.t(), any(), [atom()]) :: Entity.t() | :invalid_entity
   def set_attribute(id_or_key, name, value, opts \\ []) do
     case get_entity(id_or_key) do
       nil ->
@@ -227,6 +291,7 @@ defmodule Pythelix.Record do
 
       entity ->
         set_entity_attribute(entity, name, value, opts)
+        |> Cache.cache_entity()
         |> set_child_attribute(name, value)
     end
   end
@@ -236,44 +301,40 @@ defmodule Pythelix.Record do
 
   Arguments:
 
-  * id (integer) or key (binary): the entity ID.
+  * id_or_key (integer or string) or key (binary): the entity ID or key.
   * name (binary): the method's name to set (might exist).
   * code (binary): the method code.
+  * opts (keyword list): additional options.
 
+  Options can be:
+
+  * `:new`: only set the method if it doesn't exist.
+  * `:cache`: just cache the method (never store it into the database).
   """
-  @spec set_method(integer() | binary(), String.t(), String.t(), list) :: :ok | :invalid_entity
+  @spec set_method(integer() | binary(), binary(), binary(), [atom()]) :: Entity.t() | :invalid_entity
   def set_method(id_or_key, name, code, opts \\ []) do
     case get_entity(id_or_key) do
       nil -> :invalid_entity
       entity ->
         set_entity_method(entity, name, code, opts)
+        |> Cache.cache_entity()
         |> set_child_method(name, code)
     end
   end
 
   @doc """
   Deletes an entity.
-
-  ## Examples
-
-      iex> delete_entity(5)
-      {:ok, %Entity{}}
-
-      iex> delete_entity(99)
-      {:error, %Ecto.Changeset{}}
-
   """
-  def delete_entity(entity_id_or_key) do
-    entity = get_entity(entity_id_or_key)
-
-    case entity do
+  @spec delete_entity(integer() | binary()) :: :ok | {:error, any()}
+  def delete_entity(id_or_key) do
+    case get_entity(id_or_key) do
       nil ->
         {:error, "invalid entity"}
 
-      %Entity{id: :virtual} ->
+      %Entity{id: :virtual} = entity ->
         delete_virtual_entity(entity)
 
-      _ ->
+      entity ->
         delete_stored_entity(entity)
     end
   end
@@ -283,96 +344,40 @@ defmodule Pythelix.Record do
   end
 
   defp delete_virtual_entity(entity) do
-    Cachex.del(:px_cache, entity.key)
+    Cache.uncache_entity(entity)
+
+    :ok
   end
 
   defp delete_stored_entity(entity) do
     case Repo.get(Record.Entity, entity.id) do
       nil ->
-        :error
+        {:error, "this entity does not exist in storage"}
 
       record ->
         Repo.delete(record)
 
-        Cachex.del(:px_cache, entity.id)
-
-        if entity.key do
-          Cachex.del(:px_cache, entity.key)
-        end
+        Cache.uncache_entity(entity)
 
         :ok
     end
   end
 
-  defp cache_entity(%Entity{} = entity) do
-    entity
-    |> maybe_cache_parent_attributes()
-    |> maybe_cache_parent_methods()
-    |> maybe_cache_entity_id()
-    |> maybe_cache_entity_key()
-    |> maybe_cache_parent_children()
-    |> maybe_cache_entity_ancestors()
+  defp maybe_build_entity({:ok, %Entity{} = entity}) do
+    entity =
+      entity
+      |> pull_parent_attributes()
+      |> pull_parent_methods()
+      |> Cache.cache_entity()
+
+    {:ok, entity}
   end
 
-  defp maybe_cache_entity_id(%Entity{id: :virtual} = entity), do: entity
+  defp maybe_build_entity(other), do: other
 
-  defp maybe_cache_entity_id(%Entity{} = entity) do
-    Cachex.put(:px_cache, entity.id, entity)
+  defp pull_parent_attributes(%Entity{parent_id: nil} = entity), do: entity
 
-    entity
-  end
-
-  defp maybe_cache_entity_key(%Entity{key: nil} = entity), do: entity
-
-  defp maybe_cache_entity_key(%Entity{} = entity) do
-    Cachex.put(:px_cache, entity.key, entity)
-
-    entity
-  end
-
-  defp maybe_cache_parent_children(%Entity{parent_id: nil} = entity), do: entity
-
-  defp maybe_cache_parent_children(%Entity{parent_id: parent} = entity) do
-    id_or_key = Entity.get_id_or_key(entity)
-
-    children =
-      case Cachex.get(:px_cache, {:children, parent}) do
-        {:ok, nil} ->
-          [id_or_key]
-
-        {:ok, former_children} ->
-          [id_or_key | former_children]
-          |> Enum.uniq()
-      end
-
-    Cachex.put(:px_cache, {:children, parent}, children)
-
-    entity
-  end
-
-  defp maybe_cache_entity_ancestors(%Entity{parent_id: nil} = entity), do: entity
-
-  defp maybe_cache_entity_ancestors(%Entity{parent_id: parent} = entity) do
-    id_or_key = Entity.get_id_or_key(entity)
-
-    ancestors =
-      case Cachex.get(:px_cache, {:ancestors, parent}) do
-        {:ok, nil} ->
-          [parent]
-
-        {:ok, former_ancestors} ->
-          [parent | former_ancestors]
-          |> Enum.uniq()
-      end
-
-    Cachex.put(:px_cache, {:ancestors, id_or_key}, ancestors)
-
-    entity
-  end
-
-  defp maybe_cache_parent_attributes(%Entity{parent_id: nil} = entity), do: entity
-
-  defp maybe_cache_parent_attributes(%Entity{parent_id: parent_id_or_key} = entity) do
+  defp pull_parent_attributes(%Entity{parent_id: parent_id_or_key} = entity) do
     parent = get_entity(parent_id_or_key)
 
     parent_attributes =
@@ -390,9 +395,9 @@ defmodule Pythelix.Record do
     %{entity | attributes: attributes}
   end
 
-  defp maybe_cache_parent_methods(%Entity{parent_id: nil} = entity), do: entity
+  defp pull_parent_methods(%Entity{parent_id: nil} = entity), do: entity
 
-  defp maybe_cache_parent_methods(%Entity{parent_id: parent_id_or_key} = entity) do
+  defp pull_parent_methods(%Entity{parent_id: parent_id_or_key} = entity) do
     parent = get_entity(parent_id_or_key)
 
     parent_methods =
@@ -410,28 +415,6 @@ defmodule Pythelix.Record do
     %{entity | methods: methods}
   end
 
-  defp cache_entity_attributes(%Record.Entity{attributes: attributes} = entity)
-       when is_list(attributes) do
-    for attribute <- attributes do
-      Cachex.put(:px_cache, {:attribute, entity.id, attribute.name}, attribute.id)
-    end
-
-    entity
-  end
-
-  defp cache_entity_attributes(%Record.Entity{} = entity), do: entity
-
-  defp cache_entity_methods(%Record.Entity{methods: methods} = entity)
-       when is_list(methods) do
-    for method <- methods do
-      Cachex.put(:px_cache, {:method, entity.id, method.name}, method.id)
-    end
-
-    entity
-  end
-
-  defp cache_entity_methods(%Record.Entity{} = entity), do: entity
-
   defp set_entity_attribute(%Entity{id: :virtual} = entity, name, value, opts) do
     attributes =
       case opts[:new] do
@@ -440,7 +423,6 @@ defmodule Pythelix.Record do
       end
 
     %{entity | attributes: attributes}
-    |> cache_entity()
   end
 
   defp set_entity_attribute(%Entity{attributes: attributes} = entity, name, value, opts) do
@@ -469,11 +451,10 @@ defmodule Pythelix.Record do
     |> case do
       {:ok, attribute} ->
         if attribute do
-          Cachex.put(:px_cache, {:attribute, entity.id, attribute.name}, attribute.id)
+          Cache.cache_stored_entity_attribute(entity, attribute)
         end
 
         %{entity | attributes: Map.put(entity.attributes, name, value)}
-        |> cache_entity()
 
       error ->
         error
@@ -481,11 +462,11 @@ defmodule Pythelix.Record do
   end
 
   defp set_entity_attribute_value(%Entity{} = entity, name, value, former, opts) do
-    case Cachex.get(:px_cache, {:attribute, entity.id, name}) do
-      {:ok, nil} ->
+    case Cache.get_cached_stored_entity_attribute(entity, name) do
+      nil ->
         create_entity_attribute_value(entity, name, value, opts)
 
-      {:ok, attribute_id} ->
+      attribute_id ->
         if opts[:cache] == nil do
           serialized = :erlang.term_to_binary(value)
 
@@ -497,7 +478,6 @@ defmodule Pythelix.Record do
         end
 
         %{entity | attributes: Map.put(entity.attributes, name, value)}
-        |> cache_entity()
     end
   end
 
@@ -530,7 +510,6 @@ defmodule Pythelix.Record do
       end
 
     %{entity | methods: methods}
-    |> cache_entity()
   end
 
   defp set_entity_method(%Entity{methods: methods} = entity, name, code, opts) do
@@ -559,7 +538,7 @@ defmodule Pythelix.Record do
     |> case do
       {:ok, method} ->
         if method do
-          Cachex.put(:px_cache, {:method, entity.id, method.name}, method.id)
+          Cache.cache_stored_entity_method(entity, method)
         end
 
         entity_method =
@@ -569,7 +548,6 @@ defmodule Pythelix.Record do
           end
 
         %{entity | methods: Map.put(entity.methods, name, entity_method)}
-        |> cache_entity()
 
       error ->
         error
@@ -577,11 +555,11 @@ defmodule Pythelix.Record do
   end
 
   defp set_entity_method_code(%Entity{} = entity, name, code, opts) do
-    case Cachex.get(:px_cache, {:method, entity.id, name}) do
-      {:ok, nil} ->
+    case Cache.get_cached_stored_entity_method(entity, name) do
+      nil ->
         create_entity_method_code(entity, name, code, opts)
 
-      {:ok, method_id} ->
+      method_id ->
         if opts[:cache] == nil do
           Repo.get(Record.Method, method_id)
           |> Record.Method.changeset(%{value: code})
@@ -595,7 +573,6 @@ defmodule Pythelix.Record do
           end
 
         %{entity | methods: Map.put(entity.methods, name, method)}
-        |> cache_entity()
     end
   end
 
@@ -612,5 +589,43 @@ defmodule Pythelix.Record do
     end
 
     entity
+  end
+
+  defp update_ancestry(entity) do
+    for child <- get_children(entity) do
+      child
+      |> Cache.update_ancestors()
+      |> clear_parent_content()
+      |> pull_parent_attributes()
+      |> pull_parent_methods()
+      |> Cache.cache_entity()
+      |> update_ancestry()
+    end
+
+    entity
+  end
+
+  defp clear_parent_content(%Entity{} = entity) do
+    entity
+    |> clear_parent_attributes()
+    |> clear_parent_methods()
+  end
+
+  defp clear_parent_attributes(%Entity{} = entity) do
+    attributes =
+      entity.attributes
+      |> Enum.reject(fn {_, value} -> match?({:parent, _}, value) end)
+      |> Map.new()
+
+    %{entity | attributes: attributes}
+  end
+
+  defp clear_parent_methods(%Entity{} = entity) do
+    methods =
+      entity.methods
+      |> Enum.reject(fn {_, value} -> match?({:parent, _}, value) end)
+      |> Map.new()
+
+    %{entity | methods: methods}
   end
 end

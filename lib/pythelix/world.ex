@@ -12,7 +12,6 @@ defmodule Pythelix.World do
   @worldlet_pattern "*.txt"
 
   alias Pythelix.Record
-  alias Pythelix.Scripting.Parser
 
   def init() do
     if Application.get_env(:pythelix, :worldlets) do
@@ -162,7 +161,7 @@ defmodule Pythelix.World do
             visit(dep, graph, acc, visited, visiting)
           end)
 
-        visited = MapSet.put(visited, node)
+        MapSet.put(visited, node)
         [node | sorted]
     end
   end
