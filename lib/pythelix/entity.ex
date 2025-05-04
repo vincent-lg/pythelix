@@ -21,14 +21,14 @@ defmodule Pythelix.Entity do
   Create an entity from a database record.
   """
   @spec new(struct()) :: t()
-  def new(%Pythelix.Record.Entity{} = entity, key \\ nil) do
+  def new(%Pythelix.Record.Entity{} = entity, key \\ nil, methods \\ %{}) do
     %Pythelix.Entity{
       id: entity.id,
       key: key,
       parent_id: entity.parent_id,
       location_id: entity.location_id,
       attributes: new_attributes(entity.attributes),
-      methods: new_methods(entity.methods)
+      methods: methods
     }
   end
 
@@ -39,14 +39,6 @@ defmodule Pythelix.Entity do
   end
 
   defp new_attributes(_), do: %{}
-
-  defp new_methods(methods) when is_list(methods) do
-    Map.new(methods, fn method ->
-      {method.name, %Pythelix.Method{name: method.name, code: method.value}}
-    end)
-  end
-
-  defp new_methods(_), do: %{}
 
   def get_id_or_key(entity) do
     (entity.id != :virtual && entity.id) || entity.key

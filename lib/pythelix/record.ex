@@ -9,6 +9,11 @@ defmodule Pythelix.Record do
   alias Pythelix.Record
   alias Pythelix.Record.Cache
 
+  def warmup() do
+    warmup_database()
+    warmup_cache()
+  end
+
   @doc """
   Gets a single entity and returns it, `nil` if it doesn't exist.
 
@@ -26,10 +31,8 @@ defmodule Pythelix.Record do
   def get_entity(key) when is_binary(key) do
     case Cache.get_cached_entity(key) do
       nil ->
-        case Repo.get_by(Record.Key, key: key) do
-          nil -> nil
-          %Record.Key{entity_id: entity_id} -> get_entity(entity_id)
-        end
+        Repo.get_by(Record.Entity, key: key)
+        |> maybe_load_stored_entity()
 
       entity ->
         entity
@@ -39,34 +42,27 @@ defmodule Pythelix.Record do
   def get_entity(id) when is_integer(id) do
     case Cache.get_cached_entity(id) do
       nil ->
-        entity_with_key =
-          Repo.one(
-            from e in Record.Entity,
-              left_join: ek in Record.Key,
-              on: ek.entity_id == e.id,
-              where: e.id == ^id,
-              select: %{entity: e, key: ek.key}
-          )
-
-        case entity_with_key do
-          nil ->
-            nil
-
-          %{entity: entity, key: key} ->
-            entity =
-              entity
-              |> Repo.preload([:attributes, :methods])
-              |> Cache.cache_stored_entity_attributes()
-              |> Cache.cache_stored_entity_methods()
-              |> Entity.new(key)
-              |> Cache.cache_entity()
-
-            entity
-        end
+        Repo.get(Record.Entity, id)
+        |> maybe_load_stored_entity()
 
       entity ->
         entity
     end
+  end
+
+  defp maybe_load_stored_entity(nil), do: nil
+
+  defp maybe_load_stored_entity(entity) do
+    key = entity.key
+    methods = Record.Entity.get_methods(entity)
+
+    entity
+    |> Repo.preload(:attributes)
+    |> Cache.cache_stored_entity_attributes()
+    |> Entity.new(key, methods)
+    |> pull_parent_attributes()
+    |> pull_parent_methods()
+    |> Cache.cache_entity()
   end
 
   @doc """
@@ -143,48 +139,27 @@ defmodule Pythelix.Record do
   end
 
   defp create_stored_entity(opts) do
+    key = opts[:key]
     parent_id = (opts[:parent] && opts[:parent].id) || nil
     location_id = (opts[:location] && opts[:location].id) || nil
 
     Repo.transaction(fn ->
       # Check if the key is present and unique
-      if opts[:key] do
-        case Repo.get_by(Record.Key, key: opts[:key]) do
-          nil -> :ok
-          _ -> Repo.rollback("Key already exists")
-        end
+      if key && Repo.get_by(Record.Entity, key: key) do
+        Repo.rollback("Key already exists")
       end
 
       # Create the entity
-      attrs = %{location_id: location_id, parent_id: parent_id}
+      attrs = %{location_id: location_id, parent_id: parent_id, key: key}
 
-      entity_changeset =
-        %Record.Entity{}
-        |> Record.Entity.changeset(attrs)
-
-      case Repo.insert(entity_changeset) do
-        {:ok, entity} ->
-          # If a key is provided, create the associated key record
-          if opts[:key] do
-            key_changeset =
-              %Record.Key{}
-              |> Record.Key.changeset(%{key: opts[:key], entity_id: entity.id})
-
-            case Repo.insert(key_changeset) do
-              {:ok, _entity_key} -> entity
-              {:error, changeset} -> Repo.rollback(changeset)
-            end
-          else
-            entity
-          end
-
-        {:error, changeset} ->
-          Repo.rollback(changeset)
-      end
+      %Record.Entity{}
+      |> Record.Entity.changeset(attrs)
+      |> Record.Entity.put_methods(%{})
+      |> Repo.insert()
     end)
     |> case do
-      {:ok, entity} ->
-        entity = Entity.new(entity, opts[:key])
+      {:ok, {:ok, entity}} ->
+        entity = Entity.new(entity, key)
 
         {:ok, entity}
 
@@ -251,7 +226,6 @@ defmodule Pythelix.Record do
   defp maybe_change_parent({:error, _} = error, _), do: error
 
   defp maybe_change_parent({:ok, %Entity{} = entity}, %Entity{} = parent) do
-
     if entity.id != :virtual do
       Repo.get(Record.Entity, entity.id)
       |> Record.Entity.changeset(%{parent_id: parent.id})
@@ -515,7 +489,7 @@ defmodule Pythelix.Record do
   defp set_entity_method(%Entity{methods: methods} = entity, name, code, opts) do
     case Map.fetch(methods, name) do
       :error ->
-        create_entity_method_code(entity, name, code, opts)
+        set_entity_method_code(entity, name, code, opts)
 
       {:ok, _} ->
         case opts[:new] do
@@ -525,55 +499,29 @@ defmodule Pythelix.Record do
     end
   end
 
-  defp create_entity_method_code(%Entity{} = entity, name, code, opts) do
-    attrs = %{entity_id: entity.id, name: name, value: code}
+  defp set_entity_method_code(%Entity{} = entity, name, code, _opts) do
+    method =
+      case code do
+        code when is_binary(code) -> %Pythelix.Method{name: name, code: code}
+        other -> other
+      end
 
-    if opts[:cache] do
-      {:ok, nil}
-    else
-      %Record.Method{}
-      |> Record.Method.changeset(attrs)
-      |> Repo.insert()
-    end
-    |> case do
-      {:ok, method} ->
-        if method do
-          Cache.cache_stored_entity_method(entity, method)
-        end
+    entity = %{entity | methods: Map.put(entity.methods, name, method)}
 
-        entity_method =
-          case code do
-            code when is_binary(code) -> %Pythelix.Method{name: name, code: code}
-            other -> other
-          end
+    to_store =
+      entity.methods
+      |> Enum.filter(fn
+        {_, {:parent, _}} -> false
+        {name, method} -> {name, method.code}
+      end)
+      |> Map.new()
 
-        %{entity | methods: Map.put(entity.methods, name, entity_method)}
+    Repo.get(Record.Entity, entity.id)
+    |> Record.Entity.changeset(%{})
+    |> Record.Entity.put_methods(to_store)
+    |> Repo.update()
 
-      error ->
-        error
-    end
-  end
-
-  defp set_entity_method_code(%Entity{} = entity, name, code, opts) do
-    case Cache.get_cached_stored_entity_method(entity, name) do
-      nil ->
-        create_entity_method_code(entity, name, code, opts)
-
-      method_id ->
-        if opts[:cache] == nil do
-          Repo.get(Record.Method, method_id)
-          |> Record.Method.changeset(%{value: code})
-          |> Repo.update()
-        end
-
-        method =
-          case code do
-            code when is_binary(code) -> %Pythelix.Method{name: name, code: code}
-            other -> other
-          end
-
-        %{entity | methods: Map.put(entity.methods, name, method)}
-    end
+    entity
   end
 
   defp set_child_method(entity, name, code) do
@@ -627,5 +575,13 @@ defmodule Pythelix.Record do
       |> Map.new()
 
     %{entity | methods: methods}
+  end
+
+  defp warmup_database() do
+    get_entity(0)
+  end
+
+  def warmup_cache() do
+    Cache.warmup()
   end
 end

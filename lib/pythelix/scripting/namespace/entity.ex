@@ -15,6 +15,17 @@ defmodule Pythelix.Scripting.Namespace.Entity do
       "id" ->
         entity.id
 
+      "parent" ->
+        id_or_key = Pythelix.Entity.get_id_or_key(entity)
+        parent =
+          if parent_id = entity.parent_id do
+            Pythelix.Record.get_entity(parent_id)
+          else
+            :none
+          end
+
+        {:getattr, id_or_key, "parent", parent}
+
       _ ->
         entity
         |> get_attribute(name)

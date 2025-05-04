@@ -6,6 +6,11 @@ defmodule Pythelix.Record.Cache do
   alias Pythelix.Entity
   alias Pythelix.Record
 
+  def warmup() do
+    Cachex.get(:px_cache, 0)
+  end
+
+
   @doc """
   Returns the entity if cached, or nil.
 
@@ -181,40 +186,6 @@ defmodule Pythelix.Record.Cache do
 
       {:ok, attribute_id} ->
         attribute_id
-    end
-  end
-
-  @doc """
-  Cache entity methods coming from the database.
-
-  Args:
-
-  * entity (Record.Entity): a stored entity.
-
-  """
-  @spec cache_stored_entity_methods(map()) :: map()
-  def cache_stored_entity_methods(%Record.Entity{methods: methods} = entity)
-       when is_list(methods) do
-    for method <- methods do
-      cache_stored_entity_method(entity, method)
-    end
-
-    entity
-  end
-
-  def cache_stored_entity_methods(%Record.Entity{} = entity), do: entity
-
-  def cache_stored_entity_method(entity, method) do
-    Cachex.put(:px_cache, {:method, entity.id, method.name}, method.id)
-  end
-
-  def get_cached_stored_entity_method(entity, name) do
-    case Cachex.get(:px_cache, {:method, entity.id, name}) do
-      {:ok, nil} ->
-        nil
-
-      {:ok, method_id} ->
-        method_id
     end
   end
 
