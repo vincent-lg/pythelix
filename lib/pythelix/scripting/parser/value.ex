@@ -95,6 +95,7 @@ defmodule Pythelix.Scripting.Parser.Value do
     |> utf8_string([{:not, ?!}], min: 1)
     |> ignore(string("!"))
     |> unwrap_and_tag(:entity)
+    |> isolate()
   )
 
   defcombinatorp(
@@ -112,6 +113,14 @@ defmodule Pythelix.Scripting.Parser.Value do
     |> ignore(rparen())
     |> tag(:function)
     |> reduce(:reduce_function)
+  )
+
+  defcombinatorp(
+    :formatted_string,
+    ignore(string("f"))
+    |> parsec(:string)
+    |> unwrap_and_tag(:formatted)
+    |> isolate()
   )
 
   def reduce_function([{:function, [{:var, name}]}]) do
@@ -134,6 +143,7 @@ defmodule Pythelix.Scripting.Parser.Value do
     choice([
       globals,
       number,
+      parsec(:formatted_string),
       parsec(:string) |> isolate(),
       ignore(string("-")) |> concat(parsec(:function)) |> tag(:neg),
       ignore(string("-")) |> concat(id()) |> tag(:neg),

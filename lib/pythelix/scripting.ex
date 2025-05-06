@@ -22,6 +22,7 @@ defmodule Pythelix.Scripting do
     call = Keyword.get(opts, :call, true)
     show_ast = Keyword.get(opts, :show_ast, false)
     line = Keyword.get(opts, :line, 1)
+    former_script = Keyword.get(opts, :script)
 
     {:ok, ast} = Parser.exec(code)
 
@@ -30,6 +31,12 @@ defmodule Pythelix.Scripting do
     script =
       [ast]
       |> Interpreter.AST.convert()
+
+    script =
+      case former_script do
+        nil -> script
+        new_script -> %{new_script | bytecode: script.bytecode}
+      end
 
     script =
       if debug do

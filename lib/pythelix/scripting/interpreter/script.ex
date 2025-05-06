@@ -22,6 +22,7 @@ defmodule Pythelix.Scripting.Interpreter.Script do
 
   alias Pythelix.Method
   alias Pythelix.Scripting.Callable
+  alias Pythelix.Scripting.Format
   alias Pythelix.Scripting.Interpreter.{Debugger, Iterator, Script}
   alias Pythelix.Scripting.Namespace
 
@@ -376,6 +377,13 @@ defmodule Pythelix.Scripting.Interpreter.Script do
   defp put_stack(%{stack: stack} = script, value, :no_reference) do
     %{script | stack: [value | stack]}
     |> debug("in stack: #{inspect(value)}")
+  end
+
+  defp put_stack(%{stack: stack} = script, {:formatted, string}) do
+    formatted = Format.String.new(script, string)
+
+    %{script | stack: [formatted | stack]}
+    |> debug("in stack: #{inspect(formatted)}")
   end
 
   defp put_stack(script, {:setattr, entity_id, name, value}) do

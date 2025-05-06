@@ -83,6 +83,11 @@ defmodule Pythelix.Scripting.Interpreter.AST do
     |> add({:put, str})
   end
 
+  defp read_ast(code, {:formatted, str} = f_string) when is_binary(str) do
+    code
+    |> add({:put, f_string})
+  end
+
   defp read_ast(code, seq) when is_list(seq) do
     Enum.reduce(seq, code, fn element, code -> read_ast(code, element) end)
     |> add({:list, length(seq)})
