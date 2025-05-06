@@ -31,7 +31,9 @@ defmodule Pythelix.Command.Hub do
     if Application.get_env(:pythelix, :worldlets) do
       Pythelix.World.init()
       init_elapsed = System.monotonic_time(:microsecond) - init_start_time
-      IO.puts("⏱️ World initialized in #{init_elapsed} µs")
+      if Application.get_env(:pythelix, :show_stats) do
+        IO.puts("⏱️ World initialized in #{init_elapsed} µs")
+      end
 
       cmd_start_time = System.monotonic_time(:microsecond)
       commands =
@@ -43,17 +45,17 @@ defmodule Pythelix.Command.Hub do
         |> Enum.flat_map(fn key ->
           key
           |> Command.get_command_names()
-          |> IO.inspect()
           |> Enum.flat_map(fn name ->
             1..String.length(name)
             |> Enum.map(fn len -> {String.slice(name, 0, len), key} end)
           end)
         end)
         |> Enum.into(%{})
-        |> IO.inspect(label: "commands")
 
       cmd_elapsed = System.monotonic_time(:microsecond) - cmd_start_time
-      IO.puts("⏱️ Commands loaded in #{cmd_elapsed} µs")
+      if Application.get_env(:pythelix, :show_stats) do
+        IO.puts("⏱️ Commands loaded in #{cmd_elapsed} µs")
+      end
 
       {:noreply, %{state | commands: commands}}
     else
@@ -65,8 +67,8 @@ defmodule Pythelix.Command.Hub do
     GenServer.call(__MODULE__, {:assign_client, from_pid})
   end
 
-  def send_command(client_id, command) do
-    GenServer.cast(__MODULE__, {:command, client_id, command})
+  def send_command(client_id, start_time, command) do
+    GenServer.cast(__MODULE__, {:command, client_id, start_time, command})
   end
 
   def handle_call({:assign_client, from_pid}, _from, %{client_id: client_id} = state) do
@@ -82,13 +84,13 @@ defmodule Pythelix.Command.Hub do
     {:reply, client_id, %{state | client_id: state.client_id + 1}}
   end
 
-  def handle_cast({:command, client_id, command}, state) do
+  def handle_cast({:command, client_id, start_time, command}, state) do
     if state.busy? do
-      queue = :queue.in(state.queue, {:command, client_id, command})
+      queue = :queue.in(state.queue, {:command, client_id, start_time, command})
 
       {:noreply, %{state | queue: queue}}
     else
-      {:noreply, run_command(state, client_id, command)}
+      {:noreply, run_command(state, client_id, start_time, command)}
     end
   end
 
@@ -126,8 +128,8 @@ defmodule Pythelix.Command.Hub do
       state = %{state | busy?: false, running: {nil, nil}, queue: queue}
 
       case next do
-        {:value, {:command, client_id, command}} ->
-          {:noreply, run_command(state, client_id, command)}
+        {:value, {:command, client_id, start_time, command}} ->
+          {:noreply, run_command(state, client_id, start_time, command)}
 
         {:value, {:script, id_or_key, name, args}} ->
           {:noreply, run_script(state, id_or_key, name, args)}
@@ -143,7 +145,7 @@ defmodule Pythelix.Command.Hub do
     end
   end
 
-  defp run_command(%{commands: commands} = state, client_id, command) do
+  defp run_command(%{commands: commands} = state, client_id, start_time, command) do
     key = "client/#{client_id}"
     client = Record.get_entity(key)
 
@@ -155,16 +157,16 @@ defmodule Pythelix.Command.Hub do
 
     command_key = Map.get(commands, command_name)
 
-    execute_command(state, client, command_key, command_args)
+    execute_command(state, client, start_time, command_key, command_args)
   end
 
-  defp execute_command(state, _, nil, _), do: state
+  defp execute_command(state, _, _, nil, _), do: state
 
-  defp execute_command(%{executor_id: executor_id} = state, client, command_key, command_args) do
+  defp execute_command(%{executor_id: executor_id} = state, client, start_time, command_key, command_args) do
     {:ok, pid} =
       Pythelix.Executor.start_child({
         Pythelix.Command.Executor,
-        {executor_id, {client, command_key, command_args}}
+        {executor_id, {client, start_time, command_key, command_args}}
       })
 
     Process.monitor(pid)

@@ -8,6 +8,7 @@ defmodule Mix.Tasks.Script do
 
   def run(_args) do
     System.put_env("MIX_SCRIPT", "true")
+    Application.put_env(:pythelix, :show_stats, false)
     repo_config = Application.get_env(:pythelix, Pythelix.Repo) || []
     new_config = Keyword.put(repo_config, :log, false)
     Application.put_env(:pythelix, Pythelix.Repo, new_config)

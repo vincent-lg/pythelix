@@ -89,6 +89,14 @@ defmodule Pythelix.Scripting.Parser.Value do
     ])
   )
 
+  defcombinator(
+    :entity,
+    ignore(string("!"))
+    |> utf8_string([{:not, ?!}], min: 1)
+    |> ignore(string("!"))
+    |> unwrap_and_tag(:entity)
+  )
+
   defcombinatorp(
     :function,
     id()
@@ -130,6 +138,7 @@ defmodule Pythelix.Scripting.Parser.Value do
       ignore(string("-")) |> concat(parsec(:function)) |> tag(:neg),
       ignore(string("-")) |> concat(id()) |> tag(:neg),
       parsec(:function),
+      parsec(:entity),
       id()
     ])
     |> optional(

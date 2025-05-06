@@ -24,21 +24,24 @@ defmodule Pythelix.Command.Executor do
 
   """
   @spec execute(map()) :: :ok
-  def execute({client, key, args}) do
+  def execute({client, start_time, key, args}) do
     key
     |> get_entity()
-    |> maybe_execute(args, client)
+    |> maybe_execute(args, client, start_time)
   end
 
   defp get_entity(key), do: Record.get_entity(key)
 
-  defp maybe_execute(nil, _, _), do: {:error, "unknown command"}
+  defp maybe_execute(nil, _, _, _), do: {:error, "unknown command"}
 
-  defp maybe_execute(%Entity{} = command, command_args, client) do
+  defp maybe_execute(%Entity{} = command, command_args, client, start_time) do
     with {:ok, pattern} <- get_command_syntax(command),
          {:ok, parsed} <- parse_command_syntax(pattern, command_args),
-         {:ok, refined} <- refine_command(command, parsed, client) do
-      run_command(command, refined, client)
+         {:ok, refined} <- refine_command(command, parsed, client),
+         {:ok, script} <- run_command(command, refined, client) do
+      elapsed = System.monotonic_time(:microsecond) - start_time
+      IO.puts("⏱️ Run in #{elapsed} µs")
+      {:ok, script}
     else
       :parse_error ->
         parse_error(command, command_args, client)

@@ -181,7 +181,6 @@ defmodule Pythelix.World do
     end
 
     for {name, value} <- attributes do
-      IO.inspect(value, label: "value")
 
       {:ok, value} =
         case value do

@@ -11,14 +11,14 @@ defmodule Pythelix.Network.TCP.Client do
 
   def handle_continue(:assign_id, {socket, _}) do
     client_id = Pythelix.Command.Hub.assign_client(self())
-    IO.inspect(client_id, label: "assigned")
 
     {:noreply, {socket, client_id}}
   end
 
   def handle_info({:tcp, _socket, data}, {socket_state, client_id}) do
-    IO.inspect(data, label: "received")
-    Pythelix.Command.Hub.send_command(client_id, String.trim(data))
+    start = System.monotonic_time(:microsecond)
+    command = String.trim_trailing(data, "\n")
+    Pythelix.Command.Hub.send_command(client_id, start, command)
 
     {:noreply, {socket_state, client_id}}
   end

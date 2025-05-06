@@ -29,6 +29,15 @@ defmodule Pythelix.Scripting.Interpreter.AST do
     |> add({:read, var})
   end
 
+  defp read_ast(code, {:entity, key}) do
+    code
+    |> add({:builtin, "entity"})
+    |> add({:dict, :no_reference})
+    |> add({:put, key})
+    |> add({:put_dict, "key", :no_reference})
+    |> add({:call, 0})
+  end
+
   defp read_ast(code, {:function, name, args, kwargs}) do
     code =
       code
