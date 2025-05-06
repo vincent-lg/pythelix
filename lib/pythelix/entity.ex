@@ -43,4 +43,20 @@ defmodule Pythelix.Entity do
   def get_id_or_key(entity) do
     (entity.id != :virtual && entity.id) || entity.key
   end
+
+  defimpl Inspect do
+    import Inspect.Algebra
+
+    alias Pythelix.Entity
+
+    def inspect(%Entity{id: id, key: key}, opts) do
+      header = (key && "Entity(key=") || "Entity(id="
+
+      concat([
+        header,
+        to_doc(key || id, opts),
+        ")"
+      ])
+    end
+  end
 end

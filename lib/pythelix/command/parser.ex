@@ -10,15 +10,14 @@ defmodule Pythelix.Command.Parser do
          {:ok, anchors, namespace} <- parse_fixed_size(pattern, string, anchors, %{}),
          {:ok, clean_pattern, namespace} <- remove_optional(pattern, anchors, namespace),
          {:ok, clean_pattern} <- reorder_args(clean_pattern, anchors),
-         {:ok, namespace} <- parse_args(clean_pattern, anchors, string, namespace) do
+         {:ok, namespace} <- parse_args(clean_pattern, anchors, string, namespace),
+         :ok <- check_mandatory_args(pattern, namespace) do
       {:ok, namespace}
     else
       err -> err
     end
   end
 
-  # ----------------------------------------------------
-  # STEP 1: Detect all keywords positions
   defp split_keywords([], _string, acc), do: {:ok, acc}
 
   defp split_keywords([{:keyword, [kw]} | rest], string, acc) do
@@ -60,21 +59,19 @@ defmodule Pythelix.Command.Parser do
     end
   end
 
-  # ----------------------------------------------------
-  # STEP 2: Parse fixed size (e.g., :int)
   defp parse_fixed_size([], _string, acc, namespace), do: {:ok, acc, namespace}
 
   defp parse_fixed_size([{:arg, [{:int, name}]} | rest], string, acc, namespace) do
     case parse_int(string, acc) do
       {:ok, int_value, start, finish} ->
         new_acc = [{start, finish, {:int, name, int_value}} | acc]
-        namespace = Map.put(namespace, String.to_atom(name), int_value)
+        namespace = Map.put(namespace, name, int_value)
 
         parse_fixed_size(
           rest,
           string,
           new_acc,
-          Map.put(namespace, String.to_atom(name), int_value)
+          Map.put(namespace, name, int_value)
         )
 
       :nomatch ->
@@ -123,26 +120,6 @@ defmodule Pythelix.Command.Parser do
     end)
   end
 
-  # ----------------------------------------------------
-  # STEP 3: Remove optional branches
-  # defp remove_optional([], _anchors, namespace), do: {:ok, [], namespace}
-
-  # defp remove_optional([{:opt, branch} | rest], anchors, namespace) do
-  #  case remove_optional(branch, anchors, namespace) do
-  #    {:ok, [], namespace} ->
-  #      remove_optional(rest, anchors, namespace)
-
-  #    {:ok, branch, namespace} ->
-  #      {:ok, cleaned, namespace} = remove_optional(rest, anchors, namespace)
-  #      {:ok, branch ++ cleaned, namespace}
-  #  end
-  # end
-
-  # defp remove_optional([x | rest], anchors, namespace) do
-  #  {:ok, cleaned, namespace} = remove_optional(rest, anchors, namespace)
-  #  {:ok, [x | cleaned], namespace}
-  # end
-
   defp remove_optional([], _anchors, namespace), do: {:ok, [], namespace}
 
   defp remove_optional([{:opt, branch} | rest], anchors, namespace) do
@@ -182,7 +159,6 @@ defmodule Pythelix.Command.Parser do
     end)
   end
 
-  # Helper: check if a keyword is matched among anchors
   defp keyword_matched?(kw, anchors) do
     Enum.any?(anchors, fn
       {_start, _end, {:keyword, matched_kw}} -> matched_kw == kw
@@ -204,7 +180,6 @@ defmodule Pythelix.Command.Parser do
     |> Enum.min(fn -> 9_999_999 end)
   end
 
-  # Step 4: reorder arguments
   def reorder_args(pattern, anchors) do
     {branches, normal} =
       Enum.split_with(pattern, fn
@@ -220,8 +195,6 @@ defmodule Pythelix.Command.Parser do
     {:ok, normal ++ sorted_branches}
   end
 
-  # ----------------------------------------------------
-  # STEP 5: Parse remaining arguments
   defp parse_args(pattern, anchors, string, namespace) do
     sorted_anchors = Enum.sort_by(anchors, fn {start, _end, _what} -> start end)
 
@@ -231,7 +204,7 @@ defmodule Pythelix.Command.Parser do
     |> Enum.reduce_while({gaps, namespace}, fn
       {:arg, [{:string, name}]}, {[[gstart, gend] | gaps], ns} ->
         value = String.slice(string, gstart, gend - gstart)
-        {:cont, {gaps, Map.put(ns, String.to_atom(name), String.trim(value))}}
+        {:cont, {gaps, Map.put(ns, name, String.trim(value))}}
 
       _other, acc ->
         {:cont, acc}
@@ -249,5 +222,26 @@ defmodule Pythelix.Command.Parser do
       if end1 + 1 < start2, do: [end1, start2], else: nil
     end)
     |> Enum.reject(&is_nil/1)
+  end
+
+  defp check_mandatory_args(pattern, namespace) do
+    pattern
+    |> Enum.reduce_while(nil, fn
+      {:arg, [{_, name}]}, _ ->
+        case Map.get(namespace, name) do
+          nil ->
+            {:halt, {:mandatory, name}}
+
+          _ ->
+            {:cont, nil}
+        end
+
+      _other, _ ->
+        {:cont, nil}
+    end)
+    |> then(fn
+      {:mandatory, _} = error -> error
+      _ -> :ok
+    end)
   end
 end

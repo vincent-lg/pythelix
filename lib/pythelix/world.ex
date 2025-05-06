@@ -6,12 +6,14 @@ defmodule Pythelix.World do
 
   """
 
-  @generic_command "generic/command"
   @generic_client "generic/client"
   @worldlet_dir "priv/worldlets"
   @worldlet_pattern "*.txt"
 
+  alias Pythelix.Command
   alias Pythelix.Record
+  alias Pythelix.Scripting
+  alias Pythelix.Scripting.Namespace.Extended
 
   def init() do
     if Application.get_env(:pythelix, :worldlets) do
@@ -45,7 +47,7 @@ defmodule Pythelix.World do
     {:ok,
       entities
       |> add_base_client_entity()
-      |> add_base_command_entity()
+      |> Command.add_base_command_entity()
     }
   end
 
@@ -54,18 +56,7 @@ defmodule Pythelix.World do
       %{
         virtual: true,
         key: @generic_client,
-        attributes: %{"msg" => {:extended, Extended.Client, :msg}},
-        methods: %{},
-      } | entities
-    ]
-  end
-
-  defp add_base_command_entity(entities) do
-    [
-      %{
-        virtual: true,
-        key: @generic_command,
-        attributes: %{},
+        attributes: %{"msg" => {:extended, Extended.Client, :m_msg}},
         methods: %{},
       } | entities
     ]
@@ -80,7 +71,7 @@ defmodule Pythelix.World do
 
       parent =
         if parent do
-          {:ok, parent} = Pythelix.Scripting.Parser.eval(parent)
+          {:ok, parent} = Scripting.eval(parent)
 
           parent
         else
@@ -190,6 +181,14 @@ defmodule Pythelix.World do
     end
 
     for {name, value} <- attributes do
+      IO.inspect(value, label: "value")
+
+      {:ok, value} =
+        case value do
+          code when is_binary(code) -> Scripting.eval(value)
+          other -> {:ok, other}
+        end
+
       Record.set_attribute(entity.key, name, value)
     end
 

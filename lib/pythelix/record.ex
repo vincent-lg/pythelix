@@ -66,6 +66,21 @@ defmodule Pythelix.Record do
   end
 
   @doc """
+  Gets the children id or keys from an entity id or key.
+
+  Returns a list of strings (keys) or inegers (IDs).
+
+  Args:
+
+    * parent_id_or_key (string): the parent ID or key.
+
+  """
+  def get_children_id_or_key(parent_id_or_key) do
+    parent_id_or_key
+    |> Cache.get_children_id_or_key()
+  end
+
+  @doc """
   Gets the children from an entity.
 
   Returns a list of entities (children). If no child exists for this parent entity, returns an empty list.
@@ -79,7 +94,7 @@ defmodule Pythelix.Record do
   def get_children(%Entity{} = parent) do
     parent
     |> Entity.get_id_or_key()
-    |> Cache.get_children_id_or_key()
+    |> get_children_id_or_key()
     |> Enum.map(&get_entity/1)
   end
 

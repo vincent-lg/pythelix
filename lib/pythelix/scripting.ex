@@ -38,44 +38,56 @@ defmodule Pythelix.Scripting do
         script
       end
 
-    script = %{script | line: line}
+    if opts[:line] do
+      bytecode =
+        script.bytecode
+        |> Enum.map(fn
+          {:line, old_line} -> {:line, old_line + line}
+          other -> other
+        end)
 
-    script =
-      if opts[:repl] do
-        bytecode = script.bytecode
-
-        bytecode =
-          if List.last(bytecode) == :pop do
-            {_, bytecode} = List.pop_at(bytecode, -1)
-
-            bytecode
-          else
-            bytecode
-          end
-
-        %{script | bytecode: bytecode}
+        %{script | bytecode: bytecode, line: line}
       else
         script
       end
-
-    script =
-      if opts[:line] do
-        bytecode =
-          script.bytecode
-          |> Enum.map(fn
-            {:line, old_line} -> {:line, old_line + line}
-            other -> other
-          end)
-
-        %{script | bytecode: bytecode}
+    |> then(fn script ->
+      if call do
+        Interpreter.Script.execute(script)
       else
         script
       end
+    end)
+  end
 
-    if call do
-      Interpreter.Script.execute(script)
-    else
-      script
-    end
+  @doc """
+  Evaluates the code and return the result.
+
+  Args:
+
+  * code (string) the cod to be evaluated.
+
+  This can be a multiline expression. For the scripting parser,
+  this is considered something "raw", meaning the result would simply be
+  popped from the stack. However, this time we pull the last "raw" value
+  and return it. So that:
+
+      (iex) Pythelix.Scripting.eval("1 + 4")
+      {:ok, 5}
+      (iex) Pythelix.Scripting.eval("value = 2 * 54")
+      {:ok, nil}
+      (iex) Pythelix.Scripting.eval("i = 5\ni * 3")
+      {:ok, 15}
+
+  """
+  @spec eval(String.t(), Keyword.t()) :: {:ok, any} | {:error, String.t()}
+  def eval(code, opts \\ []) do
+    run(code, opts)
+    |> then(fn
+      %script{error: error} when is_binary(error) ->
+        {:error, error}
+
+      script ->
+        {:ok, script.last_raw}
+    end)
   end
 end

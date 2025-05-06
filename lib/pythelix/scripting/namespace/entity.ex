@@ -3,6 +3,7 @@ defmodule Pythelix.Scripting.Namespace.Entity do
   Defines the namespace specific to an entity stored in the database.
   """
 
+  alias Pythelix.Record
   alias Pythelix.Scripting.Interpreter.Script
 
   @doc """
@@ -56,6 +57,16 @@ defmodule Pythelix.Scripting.Namespace.Entity do
     case Map.get(entity.attributes, name) do
       nil ->
         {:error, :attribute_not_found}
+
+      {:parent, id_or_key} ->
+        parent =
+          id_or_key
+          |> Record.get_entity()
+
+        value = Map.fetch!(parent.attributes, name)
+        id_or_key = Pythelix.Entity.get_id_or_key(entity)
+
+        {:getattr, id_or_key, name, value}
 
       value ->
         id_or_key = Pythelix.Entity.get_id_or_key(entity)

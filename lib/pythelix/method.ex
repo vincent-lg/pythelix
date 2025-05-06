@@ -48,8 +48,9 @@ defmodule Pythelix.Method do
   defp maybe_run({:error, _} = error, _args), do: error
 
   defp maybe_run(%Script{} = script, args) do
-    script
+    %{script | cursor: 0}
     |> write_arguments(Map.to_list(args))
+    |> IO.inspect(label: "script")
     |> Script.execute()
   end
 

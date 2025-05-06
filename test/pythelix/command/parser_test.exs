@@ -16,14 +16,21 @@ defmodule Pythelix.Command.ParserTest do
       %{pattern: pattern}
     end
 
+    test "parses empty command", %{pattern: pattern} do
+      input = ""
+
+      obtained = Parser.parse(pattern, input)
+      assert obtained == {:mandatory, "item"}
+    end
+
     test "parses full command with number, source, destination", %{pattern: pattern} do
       input = "get 9 red apples from old tree into leather backpack"
 
       expected = %{
-        number: 9,
-        item: "red apples",
-        source: "old tree",
-        destination: "leather backpack"
+        "number" => 9,
+        "item" => "red apples",
+        "source" => "old tree",
+        "destination" => "leather backpack"
       }
 
       obtained = Parser.parse(pattern, input)
@@ -34,9 +41,9 @@ defmodule Pythelix.Command.ParserTest do
       input = "get red apples from old tree into leather backpack"
 
       expected = %{
-        item: "red apples",
-        source: "old tree",
-        destination: "leather backpack"
+        "item" => "red apples",
+        "source" => "old tree",
+        "destination" => "leather backpack"
       }
 
       obtained = Parser.parse(pattern, input)
@@ -47,9 +54,9 @@ defmodule Pythelix.Command.ParserTest do
       input = "get 15 red apples into leather backpack"
 
       expected = %{
-        number: 15,
-        item: "red apples",
-        destination: "leather backpack"
+        "number" => 15,
+        "item" => "red apples",
+        "destination" => "leather backpack"
       }
 
       obtained = Parser.parse(pattern, input)
@@ -60,9 +67,9 @@ defmodule Pythelix.Command.ParserTest do
       input = "get 31 red apples from apple tree"
 
       expected = %{
-        number: 31,
-        item: "red apples",
-        source: "apple tree"
+        "number" => 31,
+        "item" => "red apples",
+        "source" => "apple tree"
       }
 
       obtained = Parser.parse(pattern, input)
@@ -73,10 +80,10 @@ defmodule Pythelix.Command.ParserTest do
       input = "get 9 red apples into leather backpack from old tree"
 
       expected = %{
-        number: 9,
-        item: "red apples",
-        source: "old tree",
-        destination: "leather backpack"
+        "number" => 9,
+        "item" => "red apples",
+        "source" => "old tree",
+        "destination" => "leather backpack"
       }
 
       obtained = Parser.parse(pattern, input)
@@ -89,9 +96,9 @@ defmodule Pythelix.Command.ParserTest do
       input = "get red apples into leather backpack from old tree"
 
       expected = %{
-        item: "red apples",
-        source: "old tree",
-        destination: "leather backpack"
+        "item" => "red apples",
+        "source" => "old tree",
+        "destination" => "leather backpack"
       }
 
       obtained = Parser.parse(pattern, input)

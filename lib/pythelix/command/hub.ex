@@ -3,9 +3,9 @@ defmodule Pythelix.Command.Hub do
 
   require Logger
 
+  alias Pythelix.Command
   alias Pythelix.Entity
   alias Pythelix.Method
-  alias Pythelix.Scripting.Namespace.Extended
   alias Pythelix.Record
 
   def start_link(_) do
@@ -15,6 +15,7 @@ defmodule Pythelix.Command.Hub do
   def init(_) do
     state = %{
       client_id: 1,
+      commands: %{},
       executor_id: 1,
       queue: :queue.new(),
       busy?: false,
@@ -25,9 +26,39 @@ defmodule Pythelix.Command.Hub do
   end
 
   def handle_continue(:init_world, state) do
-    Pythelix.World.init()
+    init_start_time = System.monotonic_time(:microsecond)
 
-    {:noreply, state}
+    if Application.get_env(:pythelix, :worldlets) do
+      Pythelix.World.init()
+      init_elapsed = System.monotonic_time(:microsecond) - init_start_time
+      IO.puts("⏱️ World initialized in #{init_elapsed} µs")
+
+      cmd_start_time = System.monotonic_time(:microsecond)
+      commands =
+        Command.get_command_keys()
+        |> tap(fn commands ->
+          commands
+          |> Enum.map(&Command.build_syntax_pattern/1)
+        end)
+        |> Enum.flat_map(fn key ->
+          key
+          |> Command.get_command_names()
+          |> IO.inspect()
+          |> Enum.flat_map(fn name ->
+            1..String.length(name)
+            |> Enum.map(fn len -> {String.slice(name, 0, len), key} end)
+          end)
+        end)
+        |> Enum.into(%{})
+        |> IO.inspect(label: "commands")
+
+      cmd_elapsed = System.monotonic_time(:microsecond) - cmd_start_time
+      IO.puts("⏱️ Commands loaded in #{cmd_elapsed} µs")
+
+      {:noreply, %{state | commands: commands}}
+    else
+      {:noreply, state}
+    end
   end
 
   def assign_client(from_pid) do
@@ -46,7 +77,7 @@ defmodule Pythelix.Command.Hub do
 
     Record.set_attribute(key, "client_id", state.client_id)
     Record.set_attribute(key, "pid", from_pid)
-    Record.set_attribute(key, "msg", {:extended, Extended.Client, :m_msg})
+    #Record.set_attribute(key, "msg", {:extended, Extended.Client, :m_msg})
 
     {:reply, client_id, %{state | client_id: state.client_id + 1}}
   end
@@ -112,17 +143,28 @@ defmodule Pythelix.Command.Hub do
     end
   end
 
-  defp run_command(%{executor_id: executor_id} = state, client_id, command) do
+  defp run_command(%{commands: commands} = state, client_id, command) do
     key = "client/#{client_id}"
     client = Record.get_entity(key)
-    command_key = "command/#{command}"
 
-    args = %{"client" => client}
+    {command_name, command_args} =
+      case String.split(command, " ", parts: 2) do
+        [just_key] -> {just_key, ""}
+        [cmd, str] -> {cmd, str}
+      end
 
+    command_key = Map.get(commands, command_name)
+
+    execute_command(state, client, command_key, command_args)
+  end
+
+  defp execute_command(state, _, nil, _), do: state
+
+  defp execute_command(%{executor_id: executor_id} = state, client, command_key, command_args) do
     {:ok, pid} =
       Pythelix.Executor.start_child({
         Pythelix.Command.Executor,
-        {executor_id, {command_key, args}}
+        {executor_id, {client, command_key, command_args}}
       })
 
     Process.monitor(pid)

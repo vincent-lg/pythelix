@@ -44,6 +44,7 @@ defmodule Pythelix.World.File do
             lines
             |> Enum.reverse()
             |> Enum.join("\n")
+            |> then(&(~s/"""/ <> &1 <> ~s/"""/))
           end)
 
         parse_lines(rest, %{state | current: updated, multiline_key: nil})

@@ -240,7 +240,7 @@ defmodule Pythelix.Scripting.Interpreter.AST do
     code
     |> add({:line, line})
     |> read_ast(expr)
-    |> add(:pop)
+    |> add(:raw)
   end
 
   defp read_ast(code, :line), do: code

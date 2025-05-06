@@ -22,25 +22,28 @@ defmodule Pythelix.Scripting.REPL do
   @spec parse(binary()) :: :complete | {:need_more, binary()} | {:error, binary()}
   def parse(input) do
     input
-    |> String.split("\n")
-    |> Enum.with_index(1)
-    |> Enum.flat_map(fn {line, line_number} ->
-      tokenize_line(line, line_number)
-    end)
+    |> tokenize()
     |> Enum.reduce_while({[], :normal}, fn token, {stack, mode} ->
+      IO.inspect({token, stack, mode}, label: "token")
       case parse_token(token, stack, mode) do
-        {:ok, stack, mode} -> {:cont, {stack, mode}}
+        {:ok, stack, mode} -> {:cont, {stack, mode}} |> IO.inspect()
         {:error, reason} -> {:halt, {:error, reason}}
       end
     end)
     |> tabulate_result()
   end
 
-  defp tokenize_line(line, line_number) do
-    Regex.scan(~r/(?:""")|(?:''')|(?:[\p{L}\p{N}])+|[^\s\p{L}\p{N}]/u, line)
-    |> List.flatten()
-    |> Enum.map(fn token -> {token, line_number} end)
-    |> IO.inspect(label: "tokens")
+  defp tokenize(input) do
+    regex = ~r/[\p{L}\p{N}]+|[^\p{L}\p{N}\s]|[\n]/u
+    tokens = Regex.scan(regex, input) |> List.flatten()
+
+    {annotated, _line} =
+      Enum.map_reduce(tokens, 1, fn token, line ->
+        new_line = if token == "\n", do: line + 1, else: line
+        {{token, line}, new_line}
+      end)
+
+    annotated
   end
 
   defp tabulate_result({:error, _} = error), do: error
@@ -49,6 +52,41 @@ defmodule Pythelix.Scripting.REPL do
 
   defp tabulate_result({[{symbol, line} | _], _}) do
     {:need_more, "no close of symbol #{inspect(symbol)} started on line #{line}"}
+  end
+
+  # All non-multiline strings.
+  defp parse_token(token, stack, :escape_string) do
+    parse_token(token, stack, :string)
+  end
+
+  defp parse_token({"\n", line}, _, :string) do
+    {:error, "syntax error on line #{line}: the string should be closed before the end of line"}
+  end
+
+  defp parse_token({"\\", line}, stack, :string) do
+    {:ok, stack, :escape_string}
+  end
+
+  # Single strings with quotes
+  defp parse_token({"'", line}, stack, :normal) do
+    {:ok, [{:tic, line} | stack], :string}
+  end
+
+  defp parse_token({"'", _}, [{:tic, _} | stack], :string) do
+    {:ok, stack, :normal}
+  end
+
+  defp parse_token({"'", line}, [{other, other_line} | _], :string) do
+    {:error, "found ' on line #{line}, but unclosed #{other} at #{other_line}"}
+  end
+
+  defp parse_token({"'", line}, _, :string) do
+    {:error, "tic ' at line #{line} doesn't close anything"}
+  end
+
+  # All else in strings should be ignored.
+  defp parse_token(_, stack, :string) do
+    {:ok, stack, :string}
   end
 
   # Parenthesis
@@ -83,6 +121,23 @@ defmodule Pythelix.Scripting.REPL do
 
   defp parse_token({"]", line}, _, :normal) do
     {:error, "right bracket ] at line #{line} doesn't close anything"}
+  end
+
+  # If...endif keywords
+  defp parse_token({"if", line}, stack, :normal) do
+    {:ok, [{:if, line} | stack], :normal}
+  end
+
+  defp parse_token({"endif", _}, [{:if, _} | stack], :normal) do
+    {:ok, stack, :normal}
+  end
+
+  defp parse_token({"endif", line}, [{other, other_line} | _], :normal) do
+    {:error, "found 'endif' on line #{line}, but unclosed #{other} at #{other_line}"}
+  end
+
+  defp parse_token({"endif", line}, _, :normal) do
+    {:error, "'endif' at line #{line} doesn't close an 'if' condition"}
   end
 
   # While-for...done

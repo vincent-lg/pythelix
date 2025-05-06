@@ -15,6 +15,7 @@ defmodule Pythelix.Scripting.Interpreter.Script do
     references: %{},
     variables: %{},
     bound: %{},
+    last_raw: nil,
     error: nil,
     debugger: nil
   ]
@@ -33,6 +34,7 @@ defmodule Pythelix.Scripting.Interpreter.Script do
           references: map(),
           variables: map(),
           bound: map(),
+          last_raw: any(),
           error: nil | String.t(),
           debugger: nil | %Debugger{}
         }
@@ -351,6 +353,12 @@ defmodule Pythelix.Scripting.Interpreter.Script do
 
     script
     |> put_stack(value)
+  end
+
+  defp handle(script, :raw) do
+    {script, value} = get_stack(script)
+
+    %{script | last_raw: value}
   end
 
   defp handle(script, :pop) do

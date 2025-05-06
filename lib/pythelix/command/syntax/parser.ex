@@ -23,6 +23,7 @@ defmodule Pythelix.Command.Syntax.Parser do
     |> ignore(ascii_char([?>]))
     |> reduce({List, :to_string, []})
     |> label("arg")
+    |> unwrap_and_tag(:string)
     |> tag(:arg)
   )
 
@@ -52,10 +53,8 @@ defmodule Pythelix.Command.Syntax.Parser do
   defcombinatorp(
     :branch,
     choice([
-      # ignore(ascii_char([?(]))
       ignore(lparen())
       |> parsec(:branch)
-      # |> ignore(ascii_char([?)]))
       |> ignore(rparen())
       |> tag(:opt),
       parsec(:units)

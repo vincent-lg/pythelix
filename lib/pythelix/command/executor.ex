@@ -8,7 +8,9 @@ defmodule Pythelix.Command.Executor do
   """
 
   alias Pythelix.Entity
+  alias Pythelix.Method
   alias Pythelix.Record
+  alias Pythelix.Scripting.Interpreter.Script
 
   @doc """
   Executes a command.
@@ -22,29 +24,118 @@ defmodule Pythelix.Command.Executor do
 
   """
   @spec execute(map()) :: :ok
-  def execute({key, args}) do
+  def execute({client, key, args}) do
     key
     |> get_entity()
-    |> maybe_execute(args)
+    |> maybe_execute(args, client)
   end
 
   defp get_entity(key), do: Record.get_entity(key)
 
-  defp maybe_execute(nil, _), do: {:error, "unknown command"}
+  defp maybe_execute(nil, _, _), do: {:error, "unknown command"}
 
-  defp maybe_execute(%Entity{} = entity, args) do
-    case Map.fetch(entity.methods, "run") do
-      :error ->
-        {:error, "no run method on the command"}
+  defp maybe_execute(%Entity{} = command, command_args, client) do
+    with {:ok, pattern} <- get_command_syntax(command),
+         {:ok, parsed} <- parse_command_syntax(pattern, command_args),
+         {:ok, refined} <- refine_command(command, parsed, client) do
+      run_command(command, refined, client)
+    else
+      :parse_error ->
+        parse_error(command, command_args, client)
 
-      {:ok, method} ->
-        state = %{
-          method: method,
-          args: [],
-          kwargs: args
-        }
+      {:mandatory, _} ->
+        parse_error(command, command_args, client)
 
-        Pythelix.Scripting.Executor.execute(state)
+      :refine_error ->
+        refine_error(command, command_args, client)
+    end
+  end
+
+  defp get_command_syntax(%Entity{} = command) do
+    Map.fetch!(command.attributes, "syntax_pattern")
+    |> then(&({:ok, &1}))
+  end
+
+  defp parse_command_syntax(pattern, args) do
+    case Pythelix.Command.Parser.parse(pattern, args) do
+      {:error, _} -> :parse_error
+      result -> result
+    end
+  end
+
+  defp refine_command(command, args, client) do
+    case Map.get(command.methods, "refine") do
+      nil ->
+        {:ok, args}
+
+      method ->
+        run_method(method, Map.put(args, "client", client))
+        |> maybe_extract_refined_args(args)
+    end
+  end
+
+  defp maybe_extract_refined_args({:ok, script}, args) do
+    args
+    |> Enum.map(fn {name, _} ->
+      case Script.get_variable_value(script, name) do
+        nil -> {nil, nil}
+        other -> {name, other}
+      end
+    end)
+    |> Enum.reject(&(&1 == nil))
+    |> Map.new()
+    |> then(&({:ok, &1}))
+  end
+
+  defp maybe_extract_refined_args(_, _), do: :refine_error
+
+  defp run_command(%Entity{} = command, args, client) do
+    case Map.get(command.methods, "run") do
+      nil -> run_error(command, args, client)
+      method -> run_method(method, Map.put(args, "client", client))
+    end
+  end
+
+  defp run_method(%Method{} = method, args) do
+    state = %{
+      method: method,
+      args: [],
+      kwargs: args
+    }
+
+    Pythelix.Scripting.Executor.execute(state)
+  end
+
+  defp parse_error(%Entity{} = command, args, client) do
+    case Map.get(command.methods, "parse_error") do
+      nil ->
+        pid = client.attributes["pid"]
+        send(pid, {:message, "The command failed in parsing. Please contact an administrator."})
+
+      method ->
+        run_method(method, args)
+    end
+  end
+
+  defp refine_error(%Entity{} = command, args, client) do
+    case Map.get(command.methods, "refined_error") do
+      nil ->
+        pid = client.attributes["pid"]
+        send(pid, {:message, "The command failed while being refined. Please contact an administrator."})
+
+      method ->
+        run_method(method, args)
+    end
+  end
+
+  defp run_error(%Entity{} = command, args, client) do
+    case Map.get(command.methods, "run_error") do
+      nil ->
+        pid = client.attributes["pid"]
+        send(pid, {:message, "The command failed during run. Please contact an administrator."})
+
+      method ->
+        run_method(method, args)
     end
   end
 end

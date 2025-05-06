@@ -76,16 +76,13 @@ defmodule Mix.Tasks.Script do
     script = Scripting.Interpreter.Script.execute(script)
     exec_elapsed = System.monotonic_time(:microsecond) - exec_start_time
     IO.puts("⏱️ Parsed in #{eval_elapsed} µs, execution in #{exec_elapsed} µs")
-    #|> then(fn
-    #  %Script{stack: [value]} = script ->
-    #    IO.inspect(value)
 
-    #    %{script | stack: []}
-
-    #  %Script{stack: []} = script ->
-    #    script
-    #end)
-    script
+    if script.last_raw != nil do
+      IO.inspect(script.last_raw)
+      %{script | last_raw: nil}
+    else
+      script
+    end
   end
 
   defp warmup() do
