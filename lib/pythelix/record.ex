@@ -60,9 +60,31 @@ defmodule Pythelix.Record do
     |> Repo.preload(:attributes)
     |> Cache.cache_stored_entity_attributes()
     |> Entity.new(key, methods)
+    |> tap(&get_location_entity(&1, recursive: true))
     |> pull_parent_attributes()
     |> pull_parent_methods()
     |> Cache.cache_entity()
+  end
+
+  @doc """
+  Return the parent's entity.
+
+  If opts["recursive], tap the DB/Cache.
+
+  Args:
+
+  * entity (Entity): the entity.
+  """
+  def get_location_entity(entity, opts \\ [])
+
+  def get_location_entity(%Entity{location_id: nil}, _opts), do: nil
+
+  def get_location_entity(%Entity{location_id: location_id_or_key}, opts) do
+    entity = get_entity(location_id_or_key)
+
+    if opts[:recursive] do
+      get_location_entity(entity, opts)
+    end
   end
 
   @doc """
@@ -113,6 +135,80 @@ defmodule Pythelix.Record do
     entity
     |> Entity.get_id_or_key()
     |> Cache.get_ancestors_id_or_key()
+    |> Enum.map(&get_entity/1)
+  end
+
+  @doc """
+  Gets the location from an entity.
+
+  Returns the entity in which the specified entity is located, or nil.
+
+  Args:
+
+    * entity (entity): the child entity.
+
+  """
+  @spec get_location(Entity.t()) :: Entity.t() | nil
+  def get_location(%Entity{} = entity) do
+    entity
+    |> Entity.get_id_or_key()
+    |> Cache.get_location_id_or_key()
+    |> then(&(&1 && get_entity(&1)))
+  end
+
+  @doc """
+  Gets the locations from an entity.
+
+  Returns a list of entities (location tree).
+
+  Args:
+
+    * entity (entity): the child entity.
+
+  """
+  @spec get_locations(Entity.t()) :: [Entity.t()]
+  def get_locations(%Entity{} = entity) do
+    entity
+    |> Entity.get_id_or_key()
+    |> Cache.get_locations_id_or_key()
+    |> Enum.map(&get_entity/1)
+  end
+
+  @doc """
+  Gets the contained entities from an entity.
+
+  Returns a list of contained (entities inside the specified entity,
+  first-level only).
+
+  Args:
+
+    * entity (entity): the child entity.
+
+  """
+  @spec get_contained(Entity.t()) :: [Entity.t()]
+  def get_contained(%Entity{} = entity) do
+    entity
+    |> Entity.get_id_or_key()
+    |> Cache.get_contained_id_or_key()
+    |> Enum.map(&get_entity/1)
+  end
+
+  @doc """
+  Gets the contents from an entity.
+
+  Returns a list of entities (all contained within the specified entity
+  at any level).
+
+  Args:
+
+    * entity (entity): the child entity.
+
+  """
+  @spec get_contents(Entity.t()) :: [Entity.t()]
+  def get_contents(%Entity{} = entity) do
+    entity
+    |> Entity.get_id_or_key()
+    |> Cache.get_contents_id_or_key()
     |> Enum.map(&get_entity/1)
   end
 
@@ -257,6 +353,54 @@ defmodule Pythelix.Record do
   end
 
   @doc """
+  Change the location of an entity.
+
+  If the change isn't possible, returns `{:cycle, ...}`.
+
+  Args:
+
+  * entity (Entity): the entity to move.
+  * location (Entity): the new location.
+  """
+  @spec change_location(Entity.t(), Entity.t()) :: {:error, String.tOP}
+  def change_location(%Entity{} = entity, %Entity{} = new_location) do
+    entity
+    |> can_move_to_location?(new_location)
+    |> maybe_change_location(new_location)
+  end
+
+  defp can_move_to_location?(%Entity{} = entity, %Entity{} = new_location) do
+    id_or_key = Entity.get_id_or_key(entity)
+    new_location_id = Entity.get_id_or_key(new_location)
+
+    if id_or_key == new_location_id do
+      {:error, "An entity cannot be located in itself"}
+    else
+      # Prevent upward cycle
+      locations = Cache.get_locations_id_or_key(new_location_id)
+
+      if Enum.member?(locations, id_or_key) do
+        {:error, "This would create a cyclical location dependency"}
+      else
+        {:ok, entity}
+      end
+    end
+  end
+
+  defp maybe_change_location({:error, _} = error, _), do: error
+
+  defp maybe_change_location({:ok, entity}, new_location) do
+    if entity.id != :virtual do
+      Repo.get(Record.Entity, entity.id)
+      |> Record.Entity.changeset(%{location_id: new_location.id})
+      |> Repo.update()
+    end
+
+    entity
+    |> Cache.change_location(new_location)
+    |> Cache.cache_entity()
+  end
+  @doc """
   Set an entity attribute to any value.
 
   Arguments:
@@ -355,6 +499,7 @@ defmodule Pythelix.Record do
   defp maybe_build_entity({:ok, %Entity{} = entity}) do
     entity =
       entity
+      |> Cache.retrieve_entity_location()
       |> pull_parent_attributes()
       |> pull_parent_methods()
       |> Cache.cache_entity()
