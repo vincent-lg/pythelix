@@ -17,7 +17,7 @@ defmodule Pythelix.Network.TCP.Client do
 
   def handle_info({:tcp, _socket, data}, {socket_state, client_id}) do
     start = System.monotonic_time(:microsecond)
-    command = String.trim_trailing(data, "\n")
+    command = String.trim_trailing(data, "\r\n")
     Pythelix.Command.Hub.send_command(client_id, start, command)
 
     {:noreply, {socket_state, client_id}}

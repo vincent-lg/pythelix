@@ -33,7 +33,9 @@ defmodule Pythelix.Scripting.Format.String do
   * format (Format.String): the formatted string.
   """
   @spec format(Format.String.t()) :: String.t()
-  def format(format_string) do
+  def format(string) when is_binary(string), do: string
+
+  def format(%Format.String{} = format_string) do
     script =
       format_string.variables
       |> Enum.reduce(%Script{bytecode: 0}, fn {name, value}, script ->
@@ -69,7 +71,7 @@ defmodule Pythelix.Scripting.Format.String do
       {:format, code} ->
         case Scripting.eval(code, script: script) do
           {:ok, value} ->
-            inspect(value)
+            to_string(value)
 
           {:error, error} ->
             inspect(error)

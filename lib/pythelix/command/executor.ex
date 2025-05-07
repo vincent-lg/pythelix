@@ -46,11 +46,17 @@ defmodule Pythelix.Command.Executor do
       :parse_error ->
         parse_error(command, command_args, client)
 
+        {:ok, nil}
+
       {:mandatory, _} ->
         parse_error(command, command_args, client)
 
+        {:ok, nil}
+
       :refine_error ->
         refine_error(command, command_args, client)
+
+        {:ok, nil}
     end
   end
 

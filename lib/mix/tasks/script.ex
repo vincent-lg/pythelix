@@ -79,7 +79,7 @@ defmodule Mix.Tasks.Script do
     IO.puts("⏱️ Parsed in #{eval_elapsed} µs, execution in #{exec_elapsed} µs")
 
     if script.last_raw != nil do
-      IO.inspect(script.last_raw)
+      IO.inspect(inspect(script.last_raw))
       %{script | last_raw: nil}
     else
       script

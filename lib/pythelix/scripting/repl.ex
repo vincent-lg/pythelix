@@ -24,9 +24,8 @@ defmodule Pythelix.Scripting.REPL do
     input
     |> tokenize()
     |> Enum.reduce_while({[], :normal}, fn token, {stack, mode} ->
-      IO.inspect({token, stack, mode}, label: "token")
       case parse_token(token, stack, mode) do
-        {:ok, stack, mode} -> {:cont, {stack, mode}} |> IO.inspect()
+        {:ok, stack, mode} -> {:cont, {stack, mode}}
         {:error, reason} -> {:halt, {:error, reason}}
       end
     end)

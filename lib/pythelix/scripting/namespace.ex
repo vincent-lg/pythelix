@@ -5,8 +5,9 @@ defmodule Pythelix.Scripting.Namespace do
 
   alias Pythelix.Entity
   alias Pythelix.Scripting.Callable
-  alias Pythelix.Scripting.Namespace
+  alias Pythelix.Scripting.Format
   alias Pythelix.Scripting.Interpreter.Script
+  alias Pythelix.Scripting.Namespace
 
   defmacro __using__(_opts) do
     quote do
@@ -251,6 +252,7 @@ defmodule Pythelix.Scripting.Namespace do
   end
 
   defp check_arg_type(_, value, :any), do: value
+  defp check_arg_type(_, %Format.String{} = value, :str), do: value
   defp check_arg_type(_, value, :str) when not is_binary(value), do: :error
   defp check_arg_type(_, value, :int) when not is_integer(value), do: :error
   defp check_arg_type(_, value, :float) when not is_float(value), do: :error

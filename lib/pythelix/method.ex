@@ -50,7 +50,6 @@ defmodule Pythelix.Method do
   defp maybe_run(%Script{} = script, args) do
     %{script | cursor: 0}
     |> write_arguments(Map.to_list(args))
-    |> IO.inspect(label: "script")
     |> Script.execute()
   end
 
