@@ -60,6 +60,7 @@ defmodule Pythelix.Record do
     |> Repo.preload(:attributes)
     |> Cache.cache_stored_entity_attributes()
     |> Entity.new(key, methods)
+    |> Cache.retrieve_entity_location()
     |> tap(&get_location_entity(&1, recursive: true))
     |> pull_parent_attributes()
     |> pull_parent_methods()
@@ -289,12 +290,14 @@ defmodule Pythelix.Record do
   * entity (entity): the entity whose parent is to change.
   * parent (entity): the entity's new parent.
   """
-  @spec change_parent(Entity.t(), Entity.t()) :: {:ok, Entity.t()} | {:error, binary()}
-  def change_parent(%Entity{} = entity, %Entity{} = new_parent) do
+  @spec change_parent(Entity.t(), Entity.t() | nil) :: Entity.t() | {:error, binary()}
+  def change_parent(%Entity{} = entity, new_parent) do
     entity
     |> can_have_parent?(new_parent)
     |> maybe_change_parent(new_parent)
   end
+
+  defp can_have_parent?(%Entity{} = entity, nil), do: {:ok, entity}
 
   defp can_have_parent?(%Entity{} = entity, %Entity{} = new_parent) do
     id_or_key = Entity.get_id_or_key(entity)
@@ -362,12 +365,14 @@ defmodule Pythelix.Record do
   * entity (Entity): the entity to move.
   * location (Entity): the new location.
   """
-  @spec change_location(Entity.t(), Entity.t()) :: {:error, String.tOP}
-  def change_location(%Entity{} = entity, %Entity{} = new_location) do
+  @spec change_location(Entity.t(), Entity.t() | nil) :: Entity.t() | {:error, String.tOP}
+  def change_location(%Entity{} = entity, new_location) do
     entity
     |> can_move_to_location?(new_location)
     |> maybe_change_location(new_location)
   end
+
+  defp can_move_to_location?(%Entity{} = entity, nil), do: {:ok, entity}
 
   defp can_move_to_location?(%Entity{} = entity, %Entity{} = new_location) do
     id_or_key = Entity.get_id_or_key(entity)
