@@ -6,10 +6,11 @@ defmodule Pythelix.Scripting.Callable do
   @enforce_keys [:module, :object, :name]
   defstruct [:module, :object, :name]
 
-  alias Pythelix.Method
+  alias Pythelix.Scripting.Callable
   alias Pythelix.Record
   alias Pythelix.Scripting.Callable
   alias Pythelix.Scripting.Interpreter.Script
+  alias Pythelix.Scripting.Traceback
 
   @typedoc "a callable object in script"
   @type t() :: %Callable{
@@ -29,10 +30,14 @@ defmodule Pythelix.Scripting.Callable do
     apply(namespace, name, [script, entity, args, kwargs])
   end
 
-  def call(%Script{} = script, %Method{} = method, _args, kwargs) do
-    case Method.call(method, kwargs) do
-      :ok -> {script, :none}
-      {:error, error} -> {%{script | error: error}, :none}
+  def call(%Script{} = script, %Callable.Method{} = method, _args, kwargs) do
+    case Callable.Method.call(method, kwargs) do
+      %Script{error: %Traceback{chain: chain} = traceback} = _script ->
+        %{traceback | chain: [{script, nil, nil} | chain]}
+        |> then(& {%{script | error: &1}, :none})
+
+      _script ->
+        {script, :none}
     end
   end
 

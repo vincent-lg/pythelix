@@ -5,6 +5,7 @@ defmodule Mix.Tasks.Script do
 
   alias Pythelix.Scripting
   alias Pythelix.Scripting.Interpreter.Script
+  alias Pythelix.Scripting.Traceback
 
   def run(_args) do
     System.put_env("MIX_SCRIPT", "true")
@@ -59,9 +60,8 @@ defmodule Mix.Tasks.Script do
   end
 
   defp handle_input(script, input) do
-    line = (script && script.line + 1) && 1
     eval_start_time = System.monotonic_time(:microsecond)
-    new_script = Scripting.run(input, call: false, line: line, repl: true)
+    new_script = Scripting.run(input, call: false)
     eval_elapsed = System.monotonic_time(:microsecond) - eval_start_time
 
     script =
@@ -70,19 +70,26 @@ defmodule Mix.Tasks.Script do
           new_script
 
         old_script ->
-          %{old_script | bytecode: new_script.bytecode, line: old_script.line + 1, cursor: 0}
+          %{old_script | bytecode: new_script.bytecode, cursor: 0}
       end
 
+    script = Script.refresh_entity_references(script)
     exec_start_time = System.monotonic_time(:microsecond)
-    script = Scripting.Interpreter.Script.execute(script)
-    exec_elapsed = System.monotonic_time(:microsecond) - exec_start_time
-    IO.puts("⏱️ Parsed in #{eval_elapsed} µs, execution in #{exec_elapsed} µs")
+    case Scripting.Interpreter.Script.execute(script, input, "<stdin>") do
+      %{error: %Traceback{} = traceback} ->
+        IO.puts(Traceback.format(traceback))
+        script
 
-    if script.last_raw != nil do
-      IO.inspect(inspect(script.last_raw))
-      %{script | last_raw: nil}
-    else
-      script
+      script ->
+        exec_elapsed = System.monotonic_time(:microsecond) - exec_start_time
+        IO.puts("⏱️ Parsed in #{eval_elapsed} µs, execution in #{exec_elapsed} µs")
+
+        if script.last_raw != nil do
+          IO.puts(inspect(script.last_raw))
+          %{script | last_raw: nil}
+        else
+          script
+        end
     end
   end
 

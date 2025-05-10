@@ -30,10 +30,10 @@ defmodule Pythelix.Method do
 
   """
   @spec call(t(), map()) :: :ok | {:error, binary()}
-  def call(method, args) do
+  def call(method, args, name \\ nil) do
     method
     |> maybe_fetch_script()
-    |> maybe_run(args)
+    |> maybe_run(args, method.code, name || method.name)
   end
 
   def maybe_fetch_script(%Pythelix.Method{script: nil} = method) do
@@ -45,12 +45,12 @@ defmodule Pythelix.Method do
 
   def maybe_fetch_script(%Pythelix.Method{script: script}), do: script
 
-  defp maybe_run({:error, _} = error, _args), do: error
+  defp maybe_run({:error, _} = error, _args, _code, _name), do: error
 
-  defp maybe_run(%Script{} = script, args) do
+  defp maybe_run(%Script{} = script, args, code, name) do
     %{script | cursor: 0}
     |> write_arguments(Map.to_list(args))
-    |> Script.execute()
+    |> Script.execute(code, name)
   end
 
   defp write_arguments(%Script{} = script, []), do: script

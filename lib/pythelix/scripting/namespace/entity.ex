@@ -6,6 +6,7 @@ defmodule Pythelix.Scripting.Namespace.Entity do
   alias Pythelix.Entity
   alias Pythelix.Record
   alias Pythelix.Scripting.Interpreter.Script
+  alias Pythelix.Scripting.Callable
 
   @doc """
   Gets an attribute or method from an entity.
@@ -13,7 +14,7 @@ defmodule Pythelix.Scripting.Namespace.Entity do
   def getattr(script, self, "id") do
     entity = Script.get_value(script, self)
 
-    entity.id
+    (entity.id != :virtual && entity.id) || :none
   end
 
   def getattr(script, self, "parent") do
@@ -55,8 +56,8 @@ defmodule Pythelix.Scripting.Namespace.Entity do
   @doc """
   Sets an attribute to an entity.
   """
-  def setattr(script, self, "id", to_ref) do
-    {script, :none}
+  def setattr(script, _self, "id", _to_ref) do
+    {Script.raise(script, AttributeError, "can't set attribute"), :none}
   end
 
   def setattr(script, self, "parent", to_ref) do
@@ -64,18 +65,20 @@ defmodule Pythelix.Scripting.Namespace.Entity do
     entity = Script.get_value(script, self)
     id_or_key = Entity.get_id_or_key(entity)
 
-    script =
-      case to_value do
-        :none ->
-          Record.change_parent(entity, nil)
-          |> then(&Script.update_reference(script, self, &1))
+    case to_value do
+      :none ->
+        Record.change_parent(entity, nil)
+        |> then(&Script.update_reference(script, self, &1))
+        |> then(& {&1, {:setattr, id_or_key, "parent", to_ref}})
 
-        %Entity{} = parent ->
-          Record.change_parent(entity, parent)
-          |> then(&Script.update_reference(script, self, &1))
-      end
+      %Entity{} = parent ->
+        Record.change_parent(entity, parent)
+        |> then(&Script.update_reference(script, self, &1))
+        |> then(& {&1, {:setattr, id_or_key, "parent", to_ref}})
 
-    {script, {:setattr, id_or_key, "parent", to_ref}}
+      other ->
+        {Script.raise(script, AttributeError, "#{inspect(other)} isn't a valid parent"), :none}
+    end
   end
 
   def setattr(script, self, "location", to_ref) do
@@ -83,18 +86,20 @@ defmodule Pythelix.Scripting.Namespace.Entity do
     entity = Script.get_value(script, self)
     id_or_key = Entity.get_id_or_key(entity)
 
-    script =
-      case to_value do
-        :none ->
-          Record.change_location(entity, nil)
-          |> then(&Script.update_reference(script, self, &1))
+    case to_value do
+      :none ->
+        Record.change_location(entity, nil)
+        |> then(&Script.update_reference(script, self, &1))
+        |> then(& {&1, {:setattr, id_or_key, "location", to_ref}})
 
-        %Entity{} = location ->
-          Record.change_location(entity, location)
-          |> then(&Script.update_reference(script, self, &1))
-      end
+      %Entity{} = location ->
+        Record.change_location(entity, location)
+        |> then(&Script.update_reference(script, self, &1))
+        |> then(& {&1, {:setattr, id_or_key, "location", to_ref}})
 
-    {script, {:setattr, id_or_key, "parent", to_ref}}
+      other ->
+        {Script.raise(script, AttributeError, "#{inspect(other)} isn't a valid location"), :none}
+    end
   end
 
   def setattr(script, self, name, to_ref) do
@@ -130,9 +135,22 @@ defmodule Pythelix.Scripting.Namespace.Entity do
   end
 
   defp maybe_get_method({:error, :attribute_not_found}, entity, name) do
+    id_or_key = Pythelix.Entity.get_id_or_key(entity)
+
     case Map.get(entity.methods, name) do
-      nil -> :none
-      method -> method
+      nil ->
+        :none
+
+      {:parent, id_or_key} ->
+        parent =
+          id_or_key
+          |> Record.get_entity()
+
+        method = Map.fetch!(parent.methods, name)
+        %Callable.Method{entity: id_or_key, method: method}
+
+      method ->
+        %Callable.Method{entity: id_or_key, method: method}
     end
   end
 

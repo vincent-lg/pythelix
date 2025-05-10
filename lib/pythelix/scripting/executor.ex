@@ -5,6 +5,7 @@ defmodule Pythelix.Scripting.Executor do
 
   alias Pythelix.Method
   alias Pythelix.Scripting.Interpreter.Script
+  alias Pythelix.Scripting.Traceback
 
   @doc """
   Executes a script.
@@ -24,7 +25,7 @@ defmodule Pythelix.Scripting.Executor do
 
     Method.call(method, kwargs)
     |> case do
-      %Script{error: message} when message != nil -> {:error, message}
+      %Script{error: %Traceback{} = traceback} -> {:error, traceback}
       script -> {:ok, script}
     end
   end

@@ -62,7 +62,7 @@ defmodule Pythelix.Scripting.REPL do
     {:error, "syntax error on line #{line}: the string should be closed before the end of line"}
   end
 
-  defp parse_token({"\\", line}, stack, :string) do
+  defp parse_token({"\\", _line}, stack, :string) do
     {:ok, stack, :escape_string}
   end
 

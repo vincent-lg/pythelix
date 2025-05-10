@@ -7,9 +7,10 @@ defmodule Pythelix.Scripting.Namespace.Builtin do
 
   deffun function_Entity(script, namespace), [
     {:key, keyword: "key", type: :string, default: nil},
-    {:parent, keyword: "parent", type: :entity, default: nil}
+    {:parent, keyword: "parent", type: :entity, default: nil},
+    {:location, keyword: "location", type: :entity, default: nil}
   ] do
-    opts = [key: namespace.key, parent: namespace.parent]
+    opts = [key: namespace.key, parent: namespace.parent, location: namespace.location]
     {:ok, entity} = Pythelix.Record.create_entity(opts)
 
     {script, entity}

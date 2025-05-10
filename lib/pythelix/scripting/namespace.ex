@@ -8,6 +8,7 @@ defmodule Pythelix.Scripting.Namespace do
   alias Pythelix.Scripting.Format
   alias Pythelix.Scripting.Interpreter.Script
   alias Pythelix.Scripting.Namespace
+  alias Pythelix.Scripting.Traceback
 
   defmacro __using__(_opts) do
     quote do
@@ -92,7 +93,8 @@ defmodule Pythelix.Scripting.Namespace do
 
       @doc false
       def setattr(script, _, _, _) do
-        {%{script | error: "can't set attribute"}, :none}
+        Traceback.raise(script, AttributeError, "can't set attribute")
+        |> then(& {%{script | error: &1}, :none})
       end
     end
   end
@@ -125,7 +127,7 @@ defmodule Pythelix.Scripting.Namespace do
         {unquote_splicing(args)} = {script, namespace}
 
         case script do
-          %Script{error: error} when is_binary(error) ->
+          %Script{error: %Traceback{}} ->
             {script, nil}
 
           _ ->
@@ -146,7 +148,7 @@ defmodule Pythelix.Scripting.Namespace do
         {unquote_splicing(args)} = {script, namespace}
 
         case script do
-          %Script{error: error} when is_binary(error) ->
+          %Script{error: %Traceback{}} ->
             {script, nil}
 
           _ ->
@@ -218,7 +220,8 @@ defmodule Pythelix.Scripting.Namespace do
         message =
           "positional argument #{index} has also been specified as keyword argument #{keyword}"
 
-        {%{script | error: message}, :error}
+        Traceback.raise(script, TypeError, message)
+        |> then(& {%{script | error: &1}, :error})
 
       from_pos == nil and from_keyword == nil and Keyword.has_key?(opts, :default) ->
         value = Keyword.get(opts, :default)
@@ -229,7 +232,8 @@ defmodule Pythelix.Scripting.Namespace do
         type = (index && "positional") || "keyword"
         message = "expected #{type} argument #{set}"
 
-        {%{script | error: message}, :error}
+        Traceback.raise(script, TypeError, message)
+        |> then(& {%{script | error: &1}, :error})
 
       true ->
         type = opts[:type]
@@ -244,7 +248,8 @@ defmodule Pythelix.Scripting.Namespace do
       :error ->
         message = "argument #{name} expects value of type #{type}"
 
-        {%{script | error: message}, :error}
+        Traceback.raise(script, TypeError, message)
+        |> then(& {%{script | error: &1}, :error})
 
       valid ->
         {script, valid}

@@ -6,6 +6,15 @@ defmodule Pythelix.Scripting.Interpreter.Script do
   a list of bytecodes to execute.
   """
 
+  alias Pythelix.Entity
+  alias Pythelix.Record
+  alias Pythelix.Scripting.Callable
+  alias Pythelix.Scripting.Callable.Method
+  alias Pythelix.Scripting.Format
+  alias Pythelix.Scripting.Interpreter.{Debugger, Iterator, Script}
+  alias Pythelix.Scripting.Namespace
+  alias Pythelix.Scripting.Traceback
+
   @enforce_keys [:bytecode]
   defstruct [
     :bytecode,
@@ -20,12 +29,6 @@ defmodule Pythelix.Scripting.Interpreter.Script do
     debugger: nil
   ]
 
-  alias Pythelix.Method
-  alias Pythelix.Scripting.Callable
-  alias Pythelix.Scripting.Format
-  alias Pythelix.Scripting.Interpreter.{Debugger, Iterator, Script}
-  alias Pythelix.Scripting.Namespace
-
   @typedoc "a script with bytecode"
   @type t() :: %Script{
           bytecode: list(),
@@ -36,7 +39,7 @@ defmodule Pythelix.Scripting.Interpreter.Script do
           variables: map(),
           bound: map(),
           last_raw: any(),
-          error: nil | String.t(),
+          error: nil | Traceback.t(),
           debugger: nil | %Debugger{}
         }
 
@@ -89,6 +92,30 @@ defmodule Pythelix.Scripting.Interpreter.Script do
   def get_value(_script, other), do: other
 
   @doc """
+  Updates entity references.
+
+  This is used to "refresh" the script if time has passed and the entity references are staled.
+
+  Args:
+
+  * script (Script): the script to refresh.
+
+  """
+  @spec refresh_entity_references(t()) :: t()
+  def refresh_entity_references(%Script{} = script) do
+    script.references
+    |> Enum.map(fn
+      {reference, %Entity{} = entity} ->
+        {reference, Record.get_entity(entity.key || entity.id)}
+
+      {reference, other} ->
+        {reference, other}
+    end)
+    |> Map.new()
+    |> then(& %{script | references: &1})
+  end
+
+  @doc """
   Add a bound attribute.
   """
   @spec bind_attribute(t(), reference(), integer(), String.t()) :: t()
@@ -107,27 +134,43 @@ defmodule Pythelix.Scripting.Interpreter.Script do
   end
 
   @doc """
+  Raises an exception.
+
+  Args:
+
+  * script (Script) tghe script.
+  exception (atom): the exception.
+  message (string): the message.
+  """
+  @spec raise(t(), atom(), String.t()) :: t()
+  def raise(script, exception, message) do
+    Traceback.raise(script, exception, message)
+    |> then(& %{script | error: &1})
+  end
+
+  @doc """
   Execute the given script.
   """
   @spec execute(Script.t()) :: Script.t()
-  def execute(script) do
+  def execute(script, code \\ nil, owner \\ nil) do
     script
-    |> run()
+    |> run(code, owner)
   end
 
-  defp run(%{bytecode: bytecode} = script) do
+  defp run(%{bytecode: bytecode} = script, code, owner) do
     bytecode
     |> Stream.with_index()
     |> Stream.map(fn {op, index} -> {index, op} end)
     |> Map.new()
-    |> run_next_bytecode(script)
+    |> run_next_bytecode(script, code, owner)
   end
 
-  defp run_next_bytecode(_, %{error: error} = script) when is_binary(error) do
-    script
+  defp run_next_bytecode(_, %{error: %Traceback{} = traceback} = script, code, owner) do
+    Traceback.associate(traceback, code, owner)
+    |> then(& %{script | error: &1})
   end
 
-  defp run_next_bytecode(bytecode, %{cursor: cursor} = script) do
+  defp run_next_bytecode(bytecode, %{cursor: cursor} = script, code, owner) do
     case Map.get(bytecode, cursor) do
       nil ->
         script
@@ -138,7 +181,7 @@ defmodule Pythelix.Scripting.Interpreter.Script do
           |> move_ahead()
           |> handle(op)
 
-        run_next_bytecode(bytecode, script)
+        run_next_bytecode(bytecode, script, code, owner)
     end
   end
 
@@ -274,8 +317,12 @@ defmodule Pythelix.Scripting.Interpreter.Script do
   defp handle(%{variables: variables} = script, {:read, variable}) do
     value = Map.get(variables, variable, :no_var)
 
-    script
-    |> put_stack(value)
+    if value == :no_var do
+      Script.raise(script, NameError, "name '#{variable}' is not defined")
+    else
+      script
+      |> put_stack(value)
+    end
   end
 
   defp handle(script, {:getattr, attr}) do

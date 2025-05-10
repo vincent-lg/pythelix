@@ -7,7 +7,7 @@ defmodule Pythelix.Scripting do
   the script.
   """
 
-  alias Pythelix.Scripting.{Interpreter, Parser}
+  alias Pythelix.Scripting.{Interpreter, Parser, Traceback}
 
   @doc """
   Executes the given instructions and returns a script structure.
@@ -90,8 +90,8 @@ defmodule Pythelix.Scripting do
   def eval(code, opts \\ []) do
     run(code, opts)
     |> then(fn
-      %script{error: error} when is_binary(error) ->
-        {:error, error}
+      %Interpreter.Script{error: %Traceback{} = traceback} ->
+        {:error, traceback}
 
       script ->
         {:ok, script.last_raw}

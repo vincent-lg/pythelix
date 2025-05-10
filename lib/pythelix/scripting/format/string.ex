@@ -86,8 +86,6 @@ defmodule Pythelix.Scripting.Format.String do
   defimpl Inspect do
     import Inspect.Algebra
 
-    alias Pythelix.Entity
-
     def inspect(%Format.String{} = format_string, opts) do
       to_doc(Format.String.format(format_string), opts)
     end
