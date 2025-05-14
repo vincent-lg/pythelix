@@ -82,7 +82,11 @@ defmodule Mix.Tasks.Script do
 
       script ->
         exec_elapsed = System.monotonic_time(:microsecond) - exec_start_time
-        IO.puts("⏱️ Parsed in #{eval_elapsed} µs, execution in #{exec_elapsed} µs")
+
+        apply_start_time = System.monotonic_time(:microsecond)
+        Pythelix.Record.Diff.apply()
+        apply_elapsed = System.monotonic_time(:microsecond) - apply_start_time
+        IO.puts("⏱️ Parsed in #{eval_elapsed} µs, execution in #{exec_elapsed} µs, applied in #{apply_elapsed} µs")
 
         if script.last_raw != nil do
           IO.puts(inspect(script.last_raw))

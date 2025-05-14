@@ -8,13 +8,20 @@ defmodule Pythelix.Application do
   @impl true
   def start(_type, _args) do
     children = [
-      {Cachex, name: :px_cache},
+      %{
+        id: :px_cache,
+        start: {Cachex, :start_link, [:px_cache, []]}
+      },
+      %{
+        id: :px_diff,
+        start: {Cachex, :start_link, [:px_diff, []]}
+      },
+      Pythelix.Repo,
       Pythelix.ExecutorSupervisor,
       {DynamicSupervisor, strategy: :one_for_one, name: Pythelix.Network.TCP.ClientSupervisor},
       Pythelix.Network.TCP.Server,
       Pythelix.Command.Hub,
       PythelixWeb.Telemetry,
-      Pythelix.Repo,
       {Ecto.Migrator,
        repos: Application.fetch_env!(:pythelix, :ecto_repos), skip: skip_migrations?()},
       {DNSCluster, query: Application.get_env(:pythelix, :dns_cluster_query) || :ignore},

@@ -11,6 +11,82 @@ defmodule Pythelix.Record.Cache do
   end
 
   @doc """
+  Clear the cache.
+  This will force Pthelix to reconstruct it (fresh) from the database.
+  If you'd like to commit the changes to the database, use
+  `commit_and_clear` instead.
+  """
+  @spec clear() :: :ok
+  def clear() do
+    Cachex.clear(:px_cache)
+    Cachex.clear(:px_diff)
+    Pythelix.Record.Diff.init()
+    :ok
+  end
+
+  @doc """
+  Commit the cached changes to the database and then clear the cache.
+  This is most useful for testing in particular.
+  """
+  @spec commit_and_clear() :: :ok
+  def commit_and_clear() do
+    Pythelix.Record.Diff.apply()
+    clear()
+  end
+
+  def cache_parent_children(entities) do
+    cache_parent_entities(entities)
+    cache_child_entities(entities)
+  end
+
+  defp cache_parent_entities(entities) do
+    entities
+    |> Enum.each(fn %{id: id, parent_id: parent_id} ->
+      if parent_id do
+        Cachex.put(:px_cache, {:parent, id}, parent_id)
+      end
+    end)
+  end
+
+  defp cache_child_entities(entities) do
+    entities
+    |> Enum.each(fn %{id: id, parent_id: parent_id} ->
+      if parent_id do
+        Cachex.get_and_update(:px_cache, {:children, parent_id}, fn
+          nil -> {:commit, [id]}
+          children -> {:commit, [id | children]}
+        end)
+      end
+    end)
+  end
+
+  def cache_location_contents(entities) do
+    cache_location_entities(entities)
+    cache_contents_entities(entities)
+  end
+
+  defp cache_location_entities(entities) do
+    entities
+    |> Enum.each(fn %{id: id, location_id: location_id} ->
+      if location_id do
+        Cachex.put(:px_cache, {:location, id}, location_id)
+      end
+    end)
+  end
+
+  defp cache_contents_entities(entities) do
+    entities
+    |> Enum.each(fn %{id: id, location_id: location_id} ->
+      if location_id do
+        Cachex.get_and_update(:px_cache, {:contents, location_id}, fn
+          nil -> {:commit, [id]}
+          contents -> {:commit, [id | contents]}
+        end)
+      end
+    end)
+  end
+
+  @doc """
   Returns the entity if cached, or nil.
 
   Args:
@@ -114,25 +190,9 @@ defmodule Pythelix.Record.Cache do
 
   """
   @spec update_ancestors(Entity.t()) :: Entity.t()
-  def update_ancestors(entity) do
+  def update_ancestors(%{parent_id: parent_id_or_key} = entity) do
     id_or_key = Entity.get_id_or_key(entity)
-    parent_id_or_key = entity.parent_id
-
-    if parent_id_or_key do
-      new_ancestors =
-        case Cachex.get(:px_cache, {:ancestors, parent_id_or_key}) do
-          {:ok, nil} ->
-            [parent_id_or_key]
-
-          {:ok, ancestors} ->
-            [parent_id_or_key | ancestors]
-            |> Enum.uniq()
-        end
-
-      Cachex.put(:px_cache, {:ancestors, id_or_key}, new_ancestors)
-    else
-      Cachex.del(:px_cache, {:ancestors, id_or_key})
-    end
+    Cachex.put(:px_cache, {:parent, id_or_key}, parent_id_or_key)
 
     entity
   end
@@ -190,10 +250,8 @@ defmodule Pythelix.Record.Cache do
   """
   @spec get_ancestors_id_or_key(integer() | binary()) :: [integer() | binary()]
   def get_ancestors_id_or_key(id_or_key) do
-    case Cachex.get(:px_cache, {:ancestors, id_or_key}) do
-      {:ok, nil} -> []
-      {:ok, ancestors} -> ancestors
-    end
+    id_or_key
+    |> get_recursive_ancestors()
   end
 
   @doc """
@@ -205,10 +263,8 @@ defmodule Pythelix.Record.Cache do
   """
   @spec get_locations_id_or_key(integer() | binary()) :: [integer() | binary()]
   def get_locations_id_or_key(id_or_key) do
-    case Cachex.get(:px_cache, {:locations, id_or_key}) do
-      {:ok, nil} -> []
-      {:ok, locations} -> locations
-    end
+    id_or_key
+    |> get_recursive_locations()
   end
 
   @doc """
@@ -235,7 +291,7 @@ defmodule Pythelix.Record.Cache do
   """
   @spec get_contained_id_or_key(integer() | binary()) :: [integer() | binary()]
   def get_contained_id_or_key(id_or_key) do
-    case Cachex.get(:px_cache, {:contained, id_or_key}) do
+    case Cachex.get(:px_cache, {:contents, id_or_key}) do
       {:ok, nil} -> []
       {:ok, contained} -> contained
     end
@@ -250,9 +306,39 @@ defmodule Pythelix.Record.Cache do
   """
   @spec get_contents_id_or_key(integer() | binary()) :: [integer() | binary()]
   def get_contents_id_or_key(id_or_key) do
+    id_or_key
+    |> get_recursive_contents()
+  end
+
+  defp get_recursive_ancestors(id_or_key) do
+    case Cachex.get(:px_cache, {:parent, id_or_key}) do
+      {:ok, nil} ->
+        []
+
+      {:ok, parent_id} ->
+        [parent_id | get_recursive_ancestors(parent_id)]
+    end
+  end
+
+  defp get_recursive_locations(id_or_key) do
+    case Cachex.get(:px_cache, {:location, id_or_key}) do
+      {:ok, nil} ->
+        []
+
+      {:ok, location_id} ->
+        [location_id | get_recursive_locations(location_id)]
+    end
+  end
+
+  defp get_recursive_contents(id_or_key) do
     case Cachex.get(:px_cache, {:contents, id_or_key}) do
-      {:ok, nil} -> []
-      {:ok, contents} -> contents
+      {:ok, nil} ->
+        []
+
+      {:ok, contents} ->
+        contents
+        |> Enum.flat_map(&get_recursive_contents/1)
+        |> then(& Enum.concat(contents, &1))
     end
   end
 
@@ -357,79 +443,28 @@ defmodule Pythelix.Record.Cache do
   end
 
   defp remove_contained_from(location_id_or_key, entity_id_or_key) do
-    locations_id_or_key = get_locations_id_or_key(entity_id_or_key)
-    contents_id_or_key = get_contents_id_or_key(entity_id_or_key)
-    extended_contents_id_or_key = [entity_id_or_key | contents_id_or_key]
-
-    # Remove entity and its children from any of its extended locations.
-    locations_id_or_key
-    |> Enum.map(fn id_or_key ->
-      contents =
-        id_or_key
-        |> get_contents_id_or_key()
-        |> Enum.reject(&Enum.member?(extended_contents_id_or_key, &1))
-
-      Cachex.put(:px_cache, {:contents, id_or_key}, contents)
-    end)
-
     # Remove entity from its location contained.
-    Cachex.get_and_update(:px_cache, {:contained, location_id_or_key}, fn
+    Cachex.get_and_update(:px_cache, {:contents, location_id_or_key}, fn
       nil -> {:ignore, []}
       contents -> {:commit, Enum.reject(contents, &(&1 == entity_id_or_key))}
     end)
 
     # Remove location from the entity.
     Cachex.del(:px_cache, {:location, entity_id_or_key})
-
-    # Remove any locations from the entity's extended contents.
-    extended_contents_id_or_key
-    |> Enum.map(fn id_or_key ->
-      locations =
-        id_or_key
-        |> get_locations_id_or_key()
-        |> Enum.reject(&Enum.member?(locations_id_or_key, &1))
-
-      Cachex.put(:px_cache, {:locations, id_or_key}, locations)
-    end)
   end
 
   defp add_contained_to(location_id_or_key, entity_id_or_key) do
-    locations_id_or_key = get_locations_id_or_key(location_id_or_key)
-    contents_id_or_key = get_contents_id_or_key(entity_id_or_key)
-    extended_locations_id_or_key = [location_id_or_key | locations_id_or_key]
-    extended_contents_id_or_key = [entity_id_or_key | contents_id_or_key]
-
-    # Add entity and its children to any of entity's extended locations.
-    extended_locations_id_or_key
-    |> Enum.map(fn id_or_key ->
-      contents =
-        id_or_key
-        |> get_contents_id_or_key()
-        |> Enum.concat(extended_contents_id_or_key)
-        |> Enum.uniq()
-
-      Cachex.put(:px_cache, {:contents, id_or_key}, contents)
-    end)
-
-    # Add any locations from the entity's extended contents.
-    extended_contents_id_or_key
-    |> Enum.reverse()
-    |> Enum.map(fn id_or_key ->
-      locations =
-        id_or_key
-        |> get_locations_id_or_key()
-        |> Enum.concat(extended_locations_id_or_key)
-
-      Cachex.put(:px_cache, {:locations, id_or_key}, locations)
-    end)
-
     # Add entity from its location contained.
-    Cachex.get_and_update(:px_cache, {:contained, location_id_or_key}, fn
+    Cachex.get_and_update(:px_cache, {:contents, location_id_or_key}, fn
       nil -> {:commit, [entity_id_or_key]}
       contained -> {:commit, contained ++ [entity_id_or_key]}
     end)
 
     # Add location from the entity.
-    Cachex.put(:px_cache, {:location, entity_id_or_key}, location_id_or_key)
+    if location_id_or_key do
+      Cachex.put(:px_cache, {:location, entity_id_or_key}, location_id_or_key)
+    else
+      Cachex.del(:px_cache, {:location, entity_id_or_key})
+    end
   end
 end

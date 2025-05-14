@@ -23,7 +23,7 @@ defmodule Pythelix.Entity do
   @spec new(struct()) :: t()
   def new(%Pythelix.Record.Entity{} = entity, key \\ nil, methods \\ %{}) do
     %Pythelix.Entity{
-      id: entity.id,
+      id: entity.gen_id,
       key: key,
       parent_id: entity.parent_id,
       location_id: entity.location_id,

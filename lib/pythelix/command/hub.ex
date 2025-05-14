@@ -26,6 +26,8 @@ defmodule Pythelix.Command.Hub do
   end
 
   def handle_continue(:init_world, state) do
+    Pythelix.Record.Diff.init()
+    Pythelix.Record.cache_relationships()
     init_start_time = System.monotonic_time(:microsecond)
 
     if Application.get_env(:pythelix, :worldlets) do

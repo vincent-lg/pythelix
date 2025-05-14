@@ -8,10 +8,25 @@ defmodule Pythelix.Record do
   alias Pythelix.Entity
   alias Pythelix.Record
   alias Pythelix.Record.Cache
+  alias Pythelix.Record.Diff
 
   def warmup() do
     warmup_database()
     warmup_cache()
+  end
+
+  @doc """
+  Cache parent and location for each stored entity.
+  """
+  @spec cache_relationships() :: :ok
+  def cache_relationships() do
+    query =
+      from e in Record.Entity,
+        select: %{id: e.gen_id, parent_id: e.parent_id, location_id: e.location_id}
+
+    Repo.all(query)
+    |> tap(&Cache.cache_parent_children/1)
+    |> tap(&Cache.cache_location_contents/1)
   end
 
   @doc """
@@ -226,10 +241,24 @@ defmodule Pythelix.Record do
 
   """
   def create_entity(opts \\ []) do
-    case opts[:virtual] do
-      nil -> create_stored_entity(opts)
-      _ -> create_virtual_entity(opts)
+    if key = opts[:key] do
+      if get_entity(key) do
+        {:error, "the #{key} key already exists"}
+      else
+        :ok
+      end
+    else
+      :ok
     end
+    |> then(fn
+      :ok ->
+        case opts[:virtual] do
+          nil -> create_stored_entity(opts)
+          _ -> create_virtual_entity(opts)
+        end
+
+      other -> other
+    end)
     |> maybe_build_entity()
   end
 
@@ -237,17 +266,21 @@ defmodule Pythelix.Record do
     parent_id = (opts[:parent] && opts[:parent].key) || nil
     location_id = (opts[:location] && opts[:location].key) || nil
 
-    entity =
-      %Entity{
-        id: :virtual,
-        key: opts[:key],
-        parent_id: parent_id,
-        location_id: location_id,
-        attributes: %{},
-        methods: %{}
-      }
+    if key = opts[:key] do
+      entity =
+        %Entity{
+          id: :virtual,
+          key: key,
+          parent_id: parent_id,
+          location_id: location_id,
+          attributes: %{},
+          methods: %{}
+        }
 
-    {:ok, entity}
+      {:ok, entity}
+    else
+      {:error, "a key is mandatory for a virtual entity"}
+    end
   end
 
   defp create_stored_entity(opts) do
@@ -255,35 +288,25 @@ defmodule Pythelix.Record do
     parent_id = (opts[:parent] && opts[:parent].id) || nil
     location_id = (opts[:location] && opts[:location].id) || nil
 
-    Repo.transaction(fn ->
-      # Check if the key is present and unique
-      if key && Repo.get_by(Record.Entity, key: key) do
-        Repo.rollback("Key already exists")
-      end
+    gen_id = Diff.get_entity_id()
+    Diff.add({:add, gen_id, key, parent_id, location_id})
 
-      # Create the entity
-      attrs = %{location_id: location_id, parent_id: parent_id, key: key}
+    entity = %Entity{
+      id: gen_id,
+      key: key,
+      parent_id: parent_id,
+      location_id: location_id,
+      attributes: %{},
+      methods: %{}
+    }
 
-      %Record.Entity{}
-      |> Record.Entity.changeset(attrs)
-      |> Record.Entity.put_methods(%{})
-      |> Repo.insert()
-    end)
-    |> case do
-      {:ok, {:ok, entity}} ->
-        entity = Entity.new(entity, key)
-
-        {:ok, entity}
-
-      other ->
-        other
-    end
+    {:ok, entity}
   end
 
   @doc """
   Change the parent of the specified entity.
 
-  Check that this would not create cclical relations
+  Check that this would not create cyclical relations
 
   Args:
 
@@ -341,9 +364,8 @@ defmodule Pythelix.Record do
 
   defp maybe_change_parent({:ok, %Entity{} = entity}, %Entity{} = parent) do
     if entity.id != :virtual do
-      Repo.get(Record.Entity, entity.id)
-      |> Record.Entity.changeset(%{parent_id: parent.id})
-      |> Repo.update()
+      parent_id = (parent && parent.id) || nil
+      Diff.add({:update, entity.id, :parent_id, parent_id})
     end
 
     entity
@@ -396,15 +418,15 @@ defmodule Pythelix.Record do
 
   defp maybe_change_location({:ok, entity}, new_location) do
     if entity.id != :virtual do
-      Repo.get(Record.Entity, entity.id)
-      |> Record.Entity.changeset(%{location_id: new_location.id})
-      |> Repo.update()
+      location_id = (new_location && new_location.id) || nil
+      Diff.add({:update, entity.id, :location_id, location_id})
     end
 
     entity
     |> Cache.change_location(new_location)
     |> Cache.cache_entity()
   end
+
   @doc """
   Set an entity attribute to any value.
 
@@ -488,17 +510,10 @@ defmodule Pythelix.Record do
   end
 
   defp delete_stored_entity(entity) do
-    case Repo.get(Record.Entity, entity.id) do
-      nil ->
-        {:error, "this entity does not exist in storage"}
+    Cache.uncache_entity(entity)
+    Diff.add({:delete, entity.id})
 
-      record ->
-        Repo.delete(record)
-
-        Cache.uncache_entity(entity)
-
-        :ok
-    end
+    :ok
   end
 
   defp maybe_build_entity({:ok, %Entity{} = entity}) do
@@ -578,14 +593,21 @@ defmodule Pythelix.Record do
   end
 
   defp create_entity_attribute_value(%Entity{} = entity, name, value, opts) do
-    attrs = %{entity_id: entity.id, name: name, value: :erlang.term_to_binary(value)}
+    gen_id = Diff.get_attribute_id()
 
     if opts[:cache] do
       {:ok, nil}
     else
-      %Record.Attribute{}
-      |> Record.Attribute.changeset(attrs)
-      |> Repo.insert()
+      serialized = :erlang.term_to_binary(value)
+
+      Diff.add({:addattr, gen_id, name, serialized})
+      attribute = %{
+        id: gen_id,
+        name: name,
+        value: value
+      }
+
+      {:ok, attribute}
     end
     |> case do
       {:ok, attribute} ->
@@ -610,9 +632,7 @@ defmodule Pythelix.Record do
           serialized = :erlang.term_to_binary(value)
 
           if :erlang.term_to_binary(former) != serialized do
-            Repo.get(Record.Attribute, attribute_id)
-            |> Record.Attribute.changeset(%{value: serialized})
-            |> Repo.update()
+            Diff.add({:setattr, attribute_id, name, serialized})
           end
         end
 
@@ -681,10 +701,7 @@ defmodule Pythelix.Record do
       end)
       |> Map.new()
 
-    Repo.get(Record.Entity, entity.id)
-    |> Record.Entity.changeset(%{})
-    |> Record.Entity.put_methods(to_store)
-    |> Repo.update()
+    Diff.add({:update, entity.id, :methods, :erlang.term_to_binary(to_store)})
 
     entity
   end

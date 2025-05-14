@@ -31,6 +31,15 @@ defmodule Pythelix.Scripting.Namespace.Entity do
     {:getattr, id_or_key, "parent", parent}
   end
 
+  def getattr(script, self, "children") do
+    entity = Script.get_value(script, self)
+    id_or_key = Pythelix.Entity.get_id_or_key(entity)
+
+    children = Pythelix.Record.get_children(entity)
+
+    {:getattr, id_or_key, "children", children}
+  end
+
   def getattr(script, self, "location") do
     entity = Script.get_value(script, self)
     id_or_key = Pythelix.Entity.get_id_or_key(entity)
@@ -45,6 +54,15 @@ defmodule Pythelix.Scripting.Namespace.Entity do
     {:getattr, id_or_key, "location", location}
   end
 
+  def getattr(script, self, "contents") do
+    entity = Script.get_value(script, self)
+    id_or_key = Pythelix.Entity.get_id_or_key(entity)
+
+    contents = Pythelix.Record.get_contained(entity)
+
+    {:getattr, id_or_key, "contents", contents}
+  end
+
   def getattr(script, self, name) do
     entity = Script.get_value(script, self)
 
@@ -57,6 +75,14 @@ defmodule Pythelix.Scripting.Namespace.Entity do
   Sets an attribute to an entity.
   """
   def setattr(script, _self, "id", _to_ref) do
+    {Script.raise(script, AttributeError, "can't set attribute"), :none}
+  end
+
+  def setattr(script, _self, "children", _to_ref) do
+    {Script.raise(script, AttributeError, "can't set attribute"), :none}
+  end
+
+  def setattr(script, _self, "contents", _to_ref) do
     {Script.raise(script, AttributeError, "can't set attribute"), :none}
   end
 
