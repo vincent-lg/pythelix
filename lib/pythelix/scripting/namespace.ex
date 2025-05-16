@@ -122,7 +122,7 @@ defmodule Pythelix.Scripting.Namespace do
       @function to_string(unquote(name))
       def unquote(String.to_atom("f_#{name}"))(script, args, kwargs) do
         {script, namespace} =
-          validate(script, to_string(unquote(name)), unquote(constraints), args, kwargs)
+          validate(script, unquote(constraints), args, kwargs)
 
         {unquote_splicing(args)} = {script, namespace}
 
@@ -142,7 +142,7 @@ defmodule Pythelix.Scripting.Namespace do
       @method to_string(unquote(name))
       def unquote(String.to_atom("m_#{name}"))(script, self, args, kwargs) do
         {script, namespace} =
-          validate(script, to_string(unquote(name)), unquote(constraints), args, kwargs)
+          validate(script, unquote(constraints), args, kwargs)
 
         namespace = Map.put(namespace, :self, self)
         {unquote_splicing(args)} = {script, namespace}
@@ -184,7 +184,7 @@ defmodule Pythelix.Scripting.Namespace do
   @doc """
   Validate constraints and fills out an argument map if valid.
   """
-  def validate(script, _, constraints, args, kwargs) do
+  def validate(script, constraints, args, kwargs) do
     {script, _, _, namespace} =
       Enum.reduce(constraints, {script, args, kwargs, %{}}, &build_arg/2)
 

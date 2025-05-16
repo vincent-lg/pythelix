@@ -75,27 +75,27 @@ defmodule Pythelix.Record.Diff do
   and they are not meant to be exactly similar.
   """
   def add({:add, gen_id, key, parent_id, location_id}) do
-    add_diff(:adds, {gen_id, key, parent_id, location_id})
+    add_diff(:add, {gen_id, key, parent_id, location_id})
   end
 
   def add({:update, gen_id, field_name, field_value}) do
-    add_diff(:updates, {gen_id, field_name, field_value})
+    add_diff(:update, {gen_id, field_name, field_value})
   end
 
   def add({:delete, gen_id}) do
-    add_diff(:deletes, {gen_id})
+    add_diff(:delete, {gen_id})
   end
 
   def add({:addattr, gen_id, attribute_name, attribute_value}) do
-    add_diff(:addattrs, {gen_id, attribute_name, attribute_value})
+    add_diff(:addattr, {gen_id, attribute_name, attribute_value})
   end
 
   def add({:setattr, gen_id, attribute_name, attribute_value}) do
-    add_diff(:setattrs, {gen_id, attribute_name, attribute_value})
+    add_diff(:setattr, {gen_id, attribute_name, attribute_value})
   end
 
   def add({:delattr, gen_id}) do
-    add_diff(:delattrs, {gen_id})
+    add_diff(:delattr, {gen_id})
   end
 
   @doc """
@@ -107,10 +107,34 @@ defmodule Pythelix.Record.Diff do
   """
   @spec apply() :: :ok
   def apply() do
-    Multi.new()
+    {:ok, keys} = Cachex.keys(:px_diff)
+
+    entries =
+      keys
+      |> Enum.filter(fn
+        {:add, _} -> true
+        {:update, _} -> true
+        {:delete, _} -> true
+        {:addattr, _} -> true
+        {:setattr, _} -> true
+        {:delattr, _} -> true
+        _other -> false
+      end)
+      |> Enum.map(fn key ->
+        case Cachex.get(:px_diff, key) do
+          {:ok, nil} -> {nil, nil}
+          {:ok, value} -> {key, value}
+        end
+      end)
+
     # Entities (add, update, delete)
+    Multi.new()
     |> Multi.run(:add_entities, fn _repo, _changes ->
-      Repo.insert_all(Record.Entity, to_add_entities())
+      to_add_entities(entries)
+      |> Enum.chunk_every(2_000)
+      |> Enum.each(fn chunk ->
+        Repo.insert_all(Record.Entity, chunk)
+      end)
 
       # If new IDs have been generated.
       case get_update_entity_query() do
@@ -121,23 +145,36 @@ defmodule Pythelix.Record.Diff do
       {:ok, :done}
     end)
     |> Multi.run(:update_entities, fn _repo, _changes ->
-      to_update_entities()
-      |> build_bulk_update_queries("entities")
-      |> Enum.each(fn {sql, params} ->
-        Repo.query!(sql, params)
+      to_update_entities(entries)
+      |> Enum.chunk_every(4_000)
+      |> Enum.each(fn chunk ->
+        chunk
+        |> Enum.reduce(%{}, fn map, acc -> Map.merge(map, acc) end)
+        |> build_bulk_update_queries("entities")
+        |> Enum.each(fn {sql, params} ->
+          Repo.query!(sql, params)
+        end)
       end)
 
       {:ok, :done}
     end)
     |> Multi.run(:delete_entities, fn _repo, _changes ->
-      from(e in Record.Entity, where: e.gen_id in ^to_delete_entities())
-      |> Repo.delete_all()
+      to_delete_entities(entries)
+      |> Enum.chunk_every(10_000)
+      |> Enum.each(fn chunk ->
+        from(e in Record.Entity, where: e.gen_id in ^chunk)
+        |> Repo.delete_all()
+      end)
 
       {:ok, :done}
     end)
     # Attributes (add, update, delete)
     |> Multi.run(:add_attributes, fn _repo, _changes ->
-      Repo.insert_all(Record.Attribute, to_add_attributes())
+      to_add_attributes(entries)
+      |> Enum.chunk_every(5_000)
+      |> Enum.each(fn chunk ->
+        Repo.insert_all(Record.Attribute, chunk)
+      end)
 
       # If new IDs have been generated.
       case get_update_attribute_query() do
@@ -148,22 +185,30 @@ defmodule Pythelix.Record.Diff do
       {:ok, :done}
     end)
     |> Multi.run(:update_attributes, fn _repo, _changes ->
-      to_update_attributes()
-      |> build_bulk_update_queries("attributes")
-      |> Enum.each(fn {sql, params} ->
-        Repo.query!(sql, params)
+      to_update_attributes(entries)
+      |> Enum.chunk_every(5_000)
+      |> Enum.each(fn chunk ->
+        chunk
+        |> build_bulk_update_queries("attributes")
+        |> Enum.each(fn {sql, params} ->
+          Repo.query!(sql, params)
+        end)
       end)
 
       {:ok, :done}
     end)
     |> Multi.run(:delete_attributes, fn _repo, _changes ->
-      from(a in Record.Attribute, where: a.gen_id in ^to_delete_attributes())
-      |> Repo.delete_all()
+      to_delete_attributes(entries)
+      |> Enum.chunk_every(10_000)
+      |> Enum.each(fn chunk ->
+        from(a in Record.Attribute, where: a.gen_id in ^chunk)
+        |> Repo.delete_all()
+      end)
 
       {:ok, :done}
     end)
     |> Repo.transaction()
-    |> handle_apply()
+    |> handle_apply(entries)
   end
 
   defp return_and_increment(entry) do
@@ -172,126 +217,102 @@ defmodule Pythelix.Record.Diff do
     |> tap(& Cachex.put(:px_diff, entry, &1 + 1))
   end
 
-  defp add_diff(:updates, {gen_id, field, value}) do
-    Cachex.get_and_update(:px_diff, :updates, fn
+  defp add_diff(:update, {gen_id, field, value}) do
+    Cachex.get_and_update(:px_diff, {:update, gen_id}, fn
       nil ->
-        {:commit, %{gen_id => %{field => value}}}
+        {:commit, %{field => value}}
 
-      updates ->
-        updates
-        |> Map.update(gen_id, %{field => value}, fn map ->
-          Map.put(map, field, value)
-        end)
+      map ->
+        map
+        |> Map.put(field, value)
         |> then(& {:commit, &1})
     end)
   end
 
-  defp add_diff(:setattrs, {gen_id, name, value}) do
-    Cachex.get_and_update(:px_diff, :setattrs, fn
+  defp add_diff(:setattr, {gen_id, name, value}) do
+    Cachex.get_and_update(:px_diff, {:setattr, gen_id}, fn
       nil ->
-        {:commit, %{gen_id => %{name: name, value: value}}}
+        {:commit, %{name: name, value: value}}
 
       updates ->
         updates
-        |> Map.put(gen_id, %{name: name, value: value})
+        |> Map.merge(%{name: name, value: value})
         |> then(& {:commit, &1})
     end)
   end
 
   defp add_diff(operation, args) do
-    Cachex.get_and_update(:px_diff, operation, fn
-      nil -> {:commit, [args]}
-      changes -> {:commit, [args | changes]}
-    end)
+    gen_id = elem(args, 0)
+    rest = Tuple.delete_at(args, 0)
+
+    Cachex.put(:px_diff, {operation, gen_id}, rest)
   end
 
   # Apply entities.
-  defp to_add_entities() do
+  defp to_add_entities(entries) do
     now = DateTime.utc_now() |> DateTime.truncate(:second)
 
-    case Cachex.get(:px_diff, :adds) do
-      {:ok, nil} ->
-        []
-
-      {:ok, operations} ->
-        operations
-        |> Enum.reverse()
-        |> Enum.map(fn {gen_id, key, parent_id, location_id} ->
-          %{
-            gen_id: gen_id,
-            key: key,
-            parent_id: parent_id,
-            location_id: location_id,
-            inserted_at: now,
-            updated_at: now
-          }
-        end)
-    end
+    entries
+    |> Enum.filter(fn {key, _value} -> match?({:add, _}, key) end)
+    |> Enum.map(fn {{:add, gen_id}, {key, parent_id, location_id}} ->
+      %{
+        gen_id: gen_id,
+        key: key,
+        parent_id: parent_id,
+        location_id: location_id,
+        inserted_at: now,
+        updated_at: now
+      }
+    end)
   end
 
-  defp to_update_entities() do
-    case Cachex.get(:px_diff, :updates) do
-      {:ok, nil} -> %{}
-      {:ok, updates} -> updates
-    end
+  defp to_update_entities(entries) do
+    entries
+    |> Enum.filter(fn {key, _value} -> match?({:update, _}, key) end)
+    |> Enum.map(fn {{:update, gen_id}, map} ->
+      %{gen_id => map}
+    end)
   end
 
-  defp to_delete_entities() do
-    case Cachex.get(:px_diff, :deletes) do
-      {:ok, nil} ->
-        []
-
-      {:ok, operations} ->
-        operations
-        |> Enum.reverse()
-        |> Enum.map(fn {gen_id} -> gen_id end)
-    end
+  defp to_delete_entities(entries) do
+    entries
+    |> Enum.filter(fn {key, _value} -> match?({:delete, _}, key) end)
+    |> Enum.map(fn {{:delete, gen_id}, _} -> gen_id end)
   end
 
   # Apply attributes.
-  defp to_add_attributes() do
+  defp to_add_attributes(entries) do
     now = DateTime.utc_now() |> DateTime.truncate(:second)
 
-    case Cachex.get(:px_diff, :addattrs) do
-      {:ok, nil} ->
-        []
-
-      {:ok, operations} ->
-        operations
-        |> Enum.reverse()
-        |> Enum.map(fn {gen_id, name, value} ->
-          %{
-            gen_id: gen_id,
-            name: name,
-            value: value,
-            inserted_at: now,
-            updated_at: now
-          }
-        end)
-    end
+    entries
+    |> Enum.filter(fn {key, _value} -> match?({:addattr, _}, key) end)
+    |> Enum.map(fn {{:addattr, gen_id}, {name, value}} ->
+      %{
+        gen_id: gen_id,
+        name: name,
+        value: value,
+        inserted_at: now,
+        updated_at: now
+      }
+    end)
   end
 
-  defp to_update_attributes() do
-    case Cachex.get(:px_diff, :setattrs) do
-      {:ok, nil} ->
-        %{}
-
-      {:ok, updates} ->
-        updates
-        |> Map.new()
-    end
+  defp to_update_attributes(entries) do
+    entries
+    |> Enum.filter(fn {key, _value} -> match?({:setattr, _}, key) end)
+    |> Enum.map(fn {{:setattr, gen_id}, {name, value}} ->
+      %{
+        gen_id: gen_id,
+        name: name,
+        value: value
+      }
+    end)
   end
 
-  defp to_delete_attributes() do
-    case Cachex.get(:px_diff, :delattrs) do
-      {:ok, nil} ->
-        []
-
-      {:ok, operations} ->
-        operations
-        |> Enum.reverse()
-        |> Enum.map(fn {gen_id} -> gen_id end)
-    end
+  defp to_delete_attributes(entries) do
+    entries
+    |> Enum.filter(fn {key, _value} -> match?({:delattr, _}, key) end)
+    |> Enum.map(fn {{:delattr, gen_id}, _} -> gen_id end)
   end
 
   defp build_bulk_update_queries(changes, table, key_field \\ :gen_id) when is_map(changes) do
@@ -397,16 +418,13 @@ defmodule Pythelix.Record.Diff do
     end
   end
 
-  defp handle_apply({:ok, _}) do
-    Cachex.del(:px_diff, :adds)
-    Cachex.del(:px_diff, :updates)
-    Cachex.del(:px_diff, :deletes)
-    Cachex.del(:px_diff, :addattrs)
-    Cachex.del(:px_diff, :setattrs)
-    Cachex.del(:px_diff, :delattrs)
+  defp handle_apply({:ok, _}, entries) do
+    for {key, _} <- entries do
+      Cachex.del(:px_diff, key)
+    end
   end
 
-  defp handle_apply(result) do
+  defp handle_apply(result, _) do
     Logger.warning("An error occurred while applying the diff to the database. Clear the cache.")
     Pythelix.Record.Cache.clear()
 
