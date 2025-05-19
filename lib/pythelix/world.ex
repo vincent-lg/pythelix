@@ -192,7 +192,7 @@ defmodule Pythelix.World do
     end
 
     for {name, code} <- entity.methods do
-      Record.set_method(entity.key, name, code)
+      Record.set_method(entity.key, name, [], code)
     end
 
     Record.get_entity(entity.key)

@@ -6,39 +6,27 @@ defmodule Pythelix.Entity do
   """
 
   @enforce_keys [:id, :location_id]
-  defstruct [:id, :parent_id, :location_id, key: nil, attributes: %{}, methods: %{}]
+  defstruct [:id, :parent_id, :location_id, key: nil]
 
   @type t() :: %{
           id: integer() | :virtual,
           key: binary() | nil,
           parent_id: integer() | binary() | nil,
-          location_id: integer() | binary() | nil,
-          attributes: map(),
-          methods: map()
+          location_id: integer() | binary() | nil
         }
 
   @doc """
   Create an entity from a database record.
   """
   @spec new(struct()) :: t()
-  def new(%Pythelix.Record.Entity{} = entity, key \\ nil, methods \\ %{}) do
+  def new(%Pythelix.Record.Entity{} = entity, key \\ nil) do
     %Pythelix.Entity{
       id: entity.gen_id,
       key: key,
       parent_id: entity.parent_id,
-      location_id: entity.location_id,
-      attributes: new_attributes(entity.attributes),
-      methods: methods
+      location_id: entity.location_id
     }
   end
-
-  defp new_attributes(attributes) when is_list(attributes) do
-    Map.new(attributes, fn attribute ->
-      {attribute.name, :erlang.binary_to_term(attribute.value)}
-    end)
-  end
-
-  defp new_attributes(_), do: %{}
 
   def get_id_or_key(entity) do
     (entity.id != :virtual && entity.id) || entity.key
@@ -49,13 +37,14 @@ defmodule Pythelix.Entity do
 
     alias Pythelix.Entity
 
-    def inspect(%Entity{id: id, key: key}, opts) do
-      header = (key && "Entity(key=") || "Entity(id="
+    def inspect(%Entity{id: id, key: key}, _opts) do
+      header = (key && "!") || "Entity(id="
+      footer = (key && "!") || ")"
 
       concat([
         header,
-        to_doc(key || id, opts),
-        ")"
+        to_string(key || id),
+        footer
       ])
     end
   end

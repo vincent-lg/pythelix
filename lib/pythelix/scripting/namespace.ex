@@ -263,7 +263,7 @@ defmodule Pythelix.Scripting.Namespace do
   defp check_arg_type(_, value, :float) when not is_float(value), do: :error
 
   defp check_arg_type(script, value, :entity) do
-    entity = Script.get_value(script, value) |> IO.inspect(label: "value")
+    entity = Script.get_value(script, value)
 
     case entity do
       %Entity{} -> value

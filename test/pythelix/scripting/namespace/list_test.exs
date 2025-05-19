@@ -1,4 +1,4 @@
-defmodule Pythelix.Scripting.ListTest do
+defmodule Pythelix.Scripting.Namespace.ListTest do
   @moduledoc """
   Module to test the list API.
   """

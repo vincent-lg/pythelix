@@ -1,4 +1,4 @@
-defmodule Pythelix.Scripting.StringTest do
+defmodule Pythelix.Scripting.Namespace.StringTest do
   @moduledoc """
   Module to test the string API.
   """

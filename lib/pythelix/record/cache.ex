@@ -4,6 +4,7 @@ defmodule Pythelix.Record.Cache do
   """
 
   alias Pythelix.Entity
+  alias Pythelix.Method
   alias Pythelix.Record
 
   def warmup() do
@@ -227,6 +228,43 @@ defmodule Pythelix.Record.Cache do
   end
 
   @doc """
+  Uncache an entity attribute.
+
+  Args:
+
+  * entity (Entity): the entity.
+  * attribute (string: the attribute to uncache.
+  """
+  def uncache_entity_attribute(entity, name) do
+    id_or_key = Entity.get_id_or_key(entity)
+
+    Cachex.del(:px_cache, {:attribute, id_or_key, name})
+    Cachex.del(:px_cache, {:attribute_id, id_or_key, name})
+    Cachex.get_and_update(:px_cache, {:attributes, id_or_key}, fn
+      nil -> {:ignore, []}
+      names -> {:commit, Enum.reject(names, & &1 == name)}
+    end)
+  end
+
+  @doc """
+  Uncache an entity method.
+
+  Args:
+
+  * entity (Entity): the entity.
+  * method (string: the method to uncache.
+  """
+  def uncache_entity_method(entity, name) do
+    id_or_key = Entity.get_id_or_key(entity)
+
+    Cachex.del(:px_cache, {:method, id_or_key, name})
+    Cachex.get_and_update(:px_cache, {:methods, id_or_key}, fn
+      nil -> {:ignore, []}
+      names -> {:commit, Enum.reject(names, & &1 == name)}
+    end)
+  end
+
+  @doc """
   Get the children ID or key of a given entity ID or key.
 
   Args:
@@ -354,7 +392,8 @@ defmodule Pythelix.Record.Cache do
   def cache_stored_entity_attributes(%Record.Entity{attributes: attributes} = entity)
        when is_list(attributes) do
     for attribute <- attributes do
-      cache_stored_entity_attribute(entity, attribute)
+      value = :erlang.binary_to_term(attribute.value)
+      cache_stored_entity_attribute(entity.gen_id, attribute, value)
     end
 
     entity
@@ -362,17 +401,114 @@ defmodule Pythelix.Record.Cache do
 
   def cache_stored_entity_attributes(%Record.Entity{} = entity), do: entity
 
-  def cache_stored_entity_attribute(entity, attribute) do
-    Cachex.put(:px_cache, {:attribute, entity.id, attribute.name}, attribute.id)
+  def cache_stored_entity_attribute(entity_id, attribute, value) do
+    Cachex.put(:px_cache, {:attribute_id, entity_id, attribute.name}, attribute.gen_id)
+    cache_entity_attribute(entity_id, attribute.name, value)
+  end
+
+  def cache_entity_attribute(id_or_key, name, value) do
+    Cachex.put(:px_cache, {:attribute, id_or_key, name}, value)
+    Cachex.get_and_update(:px_cache, {:attributes, id_or_key}, fn
+      nil -> {:commit, [name]}
+      names -> {:commit, [name | names]}
+    end)
+  end
+
+  def get_cached_entity_attributes(entity, opts \\ []) do
+    id_or_key = Entity.get_id_or_key(entity)
+
+    case Cachex.get(:px_cache, {:attributes, id_or_key}) do
+      {:ok, nil} ->
+        %{}
+
+      {:ok, names} ->
+        names
+        |> Enum.map(& {&1, get_cached_entity_attribute(entity, &1, opts)})
+        |> Map.new()
+    end
+  end
+
+  def get_cached_entity_attribute(entity, name, opts \\ []) do
+    id_or_key = Entity.get_id_or_key(entity)
+    raw_parents = opts[:raw_parents]
+
+    case Cachex.get(:px_cache, {:attribute, id_or_key, name}) do
+      {:ok, nil} ->
+        nil
+
+      {:ok, {:parent, parent_id_or_key}} when raw_parents == nil ->
+        parent = Record.get_entity(parent_id_or_key)
+        get_cached_entity_attribute(parent, name)
+
+      {:ok, value} ->
+        value
+    end
   end
 
   def get_cached_stored_entity_attribute(entity, name) do
-    case Cachex.get(:px_cache, {:attribute, entity.id, name}) do
+    case Cachex.get(:px_cache, {:attribute_id, entity.id, name}) do
       {:ok, nil} ->
         nil
 
       {:ok, attribute_id} ->
         attribute_id
+    end
+  end
+
+  @doc """
+  Cache entity methods coming from the database.
+
+  Args:
+
+  * entity (Record.Entity): a stored entity.
+
+  """
+  @spec cache_stored_entity_methods(map(), map()) :: map()
+  def cache_stored_entity_methods(%Record.Entity{} = entity, methods) do
+    methods
+    |> Enum.each(fn {name, {args, code, bytecode}} ->
+      cache_entity_method(Entity.get_id_or_key(entity), name, Method.new(args, code, bytecode))
+    end)
+
+    entity
+  end
+
+  def cache_entity_method(id_or_key, name, method) do
+    Cachex.put(:px_cache, {:method, id_or_key, name}, method)
+    Cachex.get_and_update(:px_cache, {:methods, id_or_key}, fn
+      nil -> {:commit, [name]}
+      names -> {:commit, [name | names]}
+    end)
+  end
+
+  def get_cached_entity_methods(entity, opts \\ []) do
+    id_or_key = Entity.get_id_or_key(entity)
+
+    case Cachex.get(:px_cache, {:methods, id_or_key}) do
+      {:ok, nil} ->
+        %{}
+
+      {:ok, names} ->
+        names
+        |> Enum.map(& {&1, get_cached_entity_method(entity, &1, opts)})
+        |> Map.new()
+    end
+  end
+
+  def get_cached_entity_method(entity, name, opts \\ []) do
+    id_or_key = Entity.get_id_or_key(entity)
+    raw_parents = opts[:raw_parents]
+
+    case Cachex.get(:px_cache, {:method, id_or_key, name}) do
+      {:ok, nil} ->
+        nil
+
+      {:ok, {:parent, parent_id_or_key}} when raw_parents == nil->
+        parent = Record.get_entity(parent_id_or_key)
+        get_cached_entity_method(parent, name)
+
+      {:ok, value} ->
+        value
     end
   end
 

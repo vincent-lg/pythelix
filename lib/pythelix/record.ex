@@ -6,6 +6,7 @@ defmodule Pythelix.Record do
   import Ecto.Query, warn: false
   alias Pythelix.Repo
   alias Pythelix.Entity
+  alias Pythelix.Method
   alias Pythelix.Record
   alias Pythelix.Record.Cache
   alias Pythelix.Record.Diff
@@ -74,7 +75,8 @@ defmodule Pythelix.Record do
     entity
     |> Repo.preload(:attributes)
     |> Cache.cache_stored_entity_attributes()
-    |> Entity.new(key, methods)
+    |> Cache.cache_stored_entity_methods(methods)
+    |> Entity.new(key)
     |> Cache.retrieve_entity_location()
     |> tap(&get_location_entity(&1, recursive: true))
     |> pull_parent_attributes()
@@ -272,9 +274,7 @@ defmodule Pythelix.Record do
           id: :virtual,
           key: key,
           parent_id: parent_id,
-          location_id: location_id,
-          attributes: %{},
-          methods: %{}
+          location_id: location_id
         }
 
       {:ok, entity}
@@ -295,9 +295,7 @@ defmodule Pythelix.Record do
       id: gen_id,
       key: key,
       parent_id: parent_id,
-      location_id: location_id,
-      attributes: %{},
-      methods: %{}
+      location_id: location_id
     }
 
     {:ok, entity}
@@ -428,6 +426,41 @@ defmodule Pythelix.Record do
   end
 
   @doc """
+  Get the attributes of an entity in a map.
+
+  Args:
+
+  - `entity`: the entity from which to return attributes.
+  - `opts`: optionally a keyword list with options.
+
+  Supported options:
+
+  - `raw_parents`: if `true`, leave the parent attribute as their raw representation.
+  """
+  @spec get_attributes(Entity.t(), Keyword.t()) :: map()
+  def get_attributes(%Entity{} = entity, opts \\ []) do
+    Cache.get_cached_entity_attributes(entity, opts)
+  end
+
+  @doc """
+  Get the attribute of an entity, or nil.
+
+  Args:
+
+  - `entity`: the entity from which to return attribute.
+  * `name`: the name of the attribute to get.
+  - `opts`: optionally a keyword list with options.
+
+  Supported options:
+
+  - `raw_parents`: if `true`, leave the parent attribute as its raw representation.
+  """
+  @spec get_attribute(Entity.t(), String.t(), Keyword.t()) :: any()
+  def get_attribute(%Entity{} = entity, name, opts \\ []) do
+    Cache.get_cached_entity_attribute(entity, name, opts)
+  end
+
+  @doc """
   Set an entity attribute to any value.
 
   Arguments:
@@ -451,9 +484,43 @@ defmodule Pythelix.Record do
 
       entity ->
         set_entity_attribute(entity, name, value, opts)
-        |> Cache.cache_entity()
         |> set_child_attribute(name, value)
     end
+  end
+
+  @doc """
+  Get the methods of an entity in a map.
+
+  Args:
+
+  - `entity`: the entity from which to return methods.
+  - `opts`: optionally a keyword list with options.
+
+  Supported options:
+
+  - `raw_parents`: if `true`, leave the parent method as their raw representation.
+  """
+  @spec get_methods(Entity.t(), Keyword.t()) :: map()
+  def get_methods(%Entity{} = entity, opts \\ []) do
+    Cache.get_cached_entity_methods(entity, opts)
+  end
+
+  @doc """
+  Get the method of an entity, or nil.
+
+  Args:
+
+  - `entity`: the entity from which to return method.
+  - `name`: the name of the method to get.
+  - `opts`: optionally a keyword list with options.
+
+  Supported options:
+
+  - `raw_parents`: if `true`, leave the parent method as its raw representation.
+  """
+  @spec get_method(Entity.t(), String.t(), Keyword.t()) :: any()
+  def get_method(%Entity{} = entity, name, opts \\ []) do
+    Cache.get_cached_entity_method(entity, name, opts)
   end
 
   @doc """
@@ -471,14 +538,13 @@ defmodule Pythelix.Record do
   * `:new`: only set the method if it doesn't exist.
   * `:cache`: just cache the method (never store it into the database).
   """
-  @spec set_method(integer() | binary(), binary(), binary(), [atom()]) :: Entity.t() | :invalid_entity
-  def set_method(id_or_key, name, code, opts \\ []) do
+  @spec set_method(integer() | binary(), list(), binary(), binary(), [atom()]) :: Entity.t() | :invalid_entity
+  def set_method(id_or_key, name, args, code, opts \\ []) do
     case get_entity(id_or_key) do
       nil -> :invalid_entity
       entity ->
-        set_entity_method(entity, name, code, opts)
-        |> Cache.cache_entity()
-        |> set_child_method(name, code)
+        set_entity_method(entity, name, args, code, opts)
+        |> set_child_method(name, args)
     end
   end
 
@@ -532,10 +598,11 @@ defmodule Pythelix.Record do
   defp pull_parent_attributes(%Entity{parent_id: nil} = entity), do: entity
 
   defp pull_parent_attributes(%Entity{parent_id: parent_id_or_key} = entity) do
+    id_or_key = Entity.get_id_or_key(entity)
     parent = get_entity(parent_id_or_key)
 
     parent_attributes =
-      parent.attributes
+      Cache.get_cached_entity_attributes(parent, raw_parents: true)
       |> Enum.map(fn {key, value} ->
         case value do
           {:parent, _} -> {key, value}
@@ -544,18 +611,22 @@ defmodule Pythelix.Record do
       end)
       |> Map.new()
 
-    attributes = Map.merge(parent_attributes, entity.attributes)
+    Map.merge(parent_attributes, get_attributes(entity, raw_parents: true))
+    |> Enum.each(fn {name, value} ->
+      Cache.cache_entity_attribute(id_or_key, name, value)
+    end)
 
-    %{entity | attributes: attributes}
+    entity
   end
 
   defp pull_parent_methods(%Entity{parent_id: nil} = entity), do: entity
 
   defp pull_parent_methods(%Entity{parent_id: parent_id_or_key} = entity) do
+    id_or_key = Entity.get_id_or_key(entity)
     parent = get_entity(parent_id_or_key)
 
     parent_methods =
-      parent.methods
+      Cache.get_cached_entity_methods(parent, raw_parents: true)
       |> Enum.map(fn {key, value} ->
         case value do
           {:parent, _} -> {key, value}
@@ -564,22 +635,25 @@ defmodule Pythelix.Record do
       end)
       |> Map.new()
 
-    methods = Map.merge(parent_methods, entity.methods)
+    Map.merge(parent_methods, get_methods(entity, raw_parents: true))
+    |> Enum.each(fn {name, value} ->
+      Cache.cache_entity_method(id_or_key, name, value)
+    end)
 
-    %{entity | methods: methods}
+    entity
   end
 
-  defp set_entity_attribute(%Entity{id: :virtual} = entity, name, value, opts) do
-    attributes =
-      case opts[:new] do
-        true -> Map.put_new(entity.attributes, name, value)
-        _ -> Map.put(entity.attributes, name, value)
-      end
+  defp set_entity_attribute(%Entity{id: :virtual} = entity, name, value, _opts) do
+    id_or_key = Entity.get_id_or_key(entity)
 
-    %{entity | attributes: attributes}
+    Cache.cache_entity_attribute(id_or_key, name, value)
+
+    entity
   end
 
-  defp set_entity_attribute(%Entity{attributes: attributes} = entity, name, value, opts) do
+  defp set_entity_attribute(%Entity{} = entity, name, value, opts) do
+    attributes = Cache.get_cached_entity_attributes(entity)
+
     case Map.fetch(attributes, name) do
       :error ->
         create_entity_attribute_value(entity, name, value, opts)
@@ -593,29 +667,30 @@ defmodule Pythelix.Record do
   end
 
   defp create_entity_attribute_value(%Entity{} = entity, name, value, opts) do
-    gen_id = Diff.get_attribute_id()
-
     if opts[:cache] do
-      {:ok, nil}
+      {:ok, nil, value}
     else
       serialized = :erlang.term_to_binary(value)
 
+      gen_id = Diff.get_attribute_id()
       Diff.add({:addattr, gen_id, name, serialized})
       attribute = %{
-        id: gen_id,
+        gen_id: gen_id,
         name: name,
-        value: value
+        value: serialized
       }
 
-      {:ok, attribute}
+      {:ok, attribute, value}
     end
     |> case do
-      {:ok, attribute} ->
+      {:ok, attribute, value} ->
         if attribute do
-          Cache.cache_stored_entity_attribute(entity, attribute)
+          Cache.cache_stored_entity_attribute(entity.id, attribute, value)
+        else
+          Cache.cache_entity_attribute(entity.id, name, value)
         end
 
-        %{entity | attributes: Map.put(entity.attributes, name, value)}
+        entity
 
       error ->
         error
@@ -635,8 +710,9 @@ defmodule Pythelix.Record do
             Diff.add({:setattr, attribute_id, name, serialized})
           end
         end
+        Cache.cache_entity_attribute(Entity.get_id_or_key(entity), name, value)
 
-        %{entity | attributes: Map.put(entity.attributes, name, value)}
+        entity
     end
   end
 
@@ -655,50 +731,52 @@ defmodule Pythelix.Record do
     entity
   end
 
-  defp set_entity_method(%Entity{id: :virtual} = entity, name, code, opts) do
+  defp set_entity_method(%Entity{id: :virtual} = entity, name, args, code, _opts) do
     method =
-      case code do
-        code when is_binary(code) -> %Pythelix.Method{name: name, code: code}
-        other -> other
+      if code == nil do
+        args
+      else
+        Method.new(args, code)
       end
 
-    methods =
-      case opts[:new] do
-        true -> Map.put_new(entity.methods, name, method)
-        _ -> Map.put(entity.methods, name, method)
-      end
+    Cache.cache_entity_method(entity.key, name, method)
 
-    %{entity | methods: methods}
+    entity
   end
 
-  defp set_entity_method(%Entity{methods: methods} = entity, name, code, opts) do
+  defp set_entity_method(%Entity{} = entity, name, args, code, opts) do
+    methods = Cache.get_cached_entity_methods(entity, raw_parents: true)
+
     case Map.fetch(methods, name) do
       :error ->
-        set_entity_method_code(entity, name, code, opts)
+        set_entity_method_code(entity, name, args, code, opts)
 
       {:ok, _} ->
         case opts[:new] do
           true -> entity
-          _ -> set_entity_method_code(entity, name, code, opts)
+          _ -> set_entity_method_code(entity, name, args, code, opts)
         end
     end
   end
 
-  defp set_entity_method_code(%Entity{} = entity, name, code, _opts) do
+  defp set_entity_method_code(%Entity{} = entity, name, args, code, _opts) do
+    id_or_key = Entity.get_id_or_key(entity)
     method =
-      case code do
-        code when is_binary(code) -> %Pythelix.Method{name: name, code: code}
-        other -> other
+      if code == nil do
+        args
+      else
+        Method.new(args, code)
       end
 
-    entity = %{entity | methods: Map.put(entity.methods, name, method)}
+    Cache.cache_entity_method(id_or_key, name, method)
 
     to_store =
-      entity.methods
-      |> Enum.filter(fn
-        {_, {:parent, _}} -> false
-        {name, method} -> {name, method.code}
+      Cache.get_cached_entity_methods(entity, raw_parents: true)
+      |> Enum.map(fn
+        {_, {:parent, _}} -> nil
+        {name, method} -> {name, {method.args, method.code, method.bytecode}}
       end)
+      |> Enum.reject(& &1 == nil)
       |> Map.new()
 
     Diff.add({:update, entity.id, :methods, :erlang.term_to_binary(to_store)})
@@ -706,15 +784,15 @@ defmodule Pythelix.Record do
     entity
   end
 
-  defp set_child_method(entity, name, code) do
+  defp set_child_method(entity, name, args) do
     id_or_key = Entity.get_id_or_key(entity)
 
     for child <- get_children(entity) do
       child_id_or_key = Entity.get_id_or_key(child)
 
-      case code do
-        {:parent, other} -> set_method(child_id_or_key, name, {:parent, other}, cache: true)
-        _ -> set_method(child_id_or_key, name, {:parent, id_or_key}, new: true, cache: true)
+      case args do
+        {:parent, other} -> set_method(child_id_or_key, name, {:parent, other}, nil, new: true, cache: true)
+        _ -> set_method(child_id_or_key, name, {:parent, id_or_key}, nil, new: true, cache: true)
       end
     end
 
@@ -742,21 +820,19 @@ defmodule Pythelix.Record do
   end
 
   defp clear_parent_attributes(%Entity{} = entity) do
-    attributes =
-      entity.attributes
-      |> Enum.reject(fn {_, value} -> match?({:parent, _}, value) end)
-      |> Map.new()
+    Cache.get_cached_entity_attributes(entity, raw_parents: true)
+    |> Enum.reject(fn {_, value} -> !match?({:parent, _}, value) end)
+    |> Enum.map(fn {name, _} -> Cache.uncache_entity_attribute(entity, name) end)
 
-    %{entity | attributes: attributes}
+    entity
   end
 
   defp clear_parent_methods(%Entity{} = entity) do
-    methods =
-      entity.methods
-      |> Enum.reject(fn {_, value} -> match?({:parent, _}, value) end)
-      |> Map.new()
+    Cache.get_cached_entity_methods(entity, raw_parents: true)
+    |> Enum.reject(fn {_, value} -> !match?({:parent, _}, value) end)
+    |> Enum.map(fn {name, _} -> Cache.uncache_entity_method(entity, name) end)
 
-    %{entity | methods: methods}
+    entity
   end
 
   defp warmup_database() do

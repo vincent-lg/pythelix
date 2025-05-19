@@ -16,14 +16,8 @@ defmodule Pythelix.Scripting.Executor do
 
   """
   @spec execute(map()) :: {:ok, any()} | {:error, any()}
-  def execute(%{method: method, args: _args, kwargs: kwargs}) do
-    script =
-      method
-      |> Method.maybe_fetch_script()
-
-    method = %{method | script: script}
-
-    Method.call(method, kwargs)
+  def execute(%{method: method, args: args, kwargs: kwargs}) do
+    Method.call(method, args, kwargs, "unknown")
     |> case do
       %Script{error: %Traceback{} = traceback} -> {:error, traceback}
       script -> {:ok, script}

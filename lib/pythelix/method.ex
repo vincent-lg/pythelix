@@ -3,19 +3,28 @@ defmodule Pythelix.Method do
   A Pythelix method on an entity.
   """
 
+  alias Pythelix.Scripting
   alias Pythelix.Scripting.Interpreter.Script
 
-  @enforce_keys [:name, :code]
-  defstruct [:name, :code, script: nil]
+  @enforce_keys [:args, :code, :bytecode]
+  defstruct [:args, :code, :bytecode]
 
   @type t() :: %{
-          name: binary(),
+          args: list(),
           code: binary(),
-          script: Script.t()
+          bytecode: list(),
         }
 
-  def new(name, code) do
-    %Pythelix.Method{name: name, code: code}
+  def new(args, code, bytecode \\ nil) do
+    bytecode =
+      if bytecode == nil do
+        script = Scripting.run(code, call: false)
+        script.bytecode
+      else
+        bytecode
+      end
+
+    %Pythelix.Method{args: args, code: code, bytecode: bytecode}
   end
 
   @doc """
@@ -26,30 +35,25 @@ defmodule Pythelix.Method do
   Args:
 
   * method: the method structure.
-  * args: the method arguments (as a map).
+  * args: the method positional arguments (as a list).
+  * kwargs: the method keyword arguments (as a map).
+  * name (string): the method name.
 
   """
-  @spec call(t(), map()) :: :ok | {:error, binary()}
-  def call(method, args, name \\ nil) do
+  @spec call(t(), list(), map(), String.t()) :: :ok | {:error, binary()}
+  def call(method, args, kwargs, name) do
     method
-    |> maybe_fetch_script()
-    |> maybe_run(args, method.code, name || method.name)
+    |> fetch_script()
+    |> run(args, kwargs, method.code, name)
   end
 
-  def maybe_fetch_script(%Pythelix.Method{script: nil} = method) do
-    case Pythelix.Scripting.run(method.code, call: false) do
-      {:ok, script} -> script
-      error -> error
-    end
+  def fetch_script(%Pythelix.Method{bytecode: bytecode}) do
+    %Script{bytecode: bytecode}
   end
 
-  def maybe_fetch_script(%Pythelix.Method{script: script}), do: script
-
-  defp maybe_run({:error, _} = error, _args, _code, _name), do: error
-
-  defp maybe_run(%Script{} = script, args, code, name) do
+  defp run(%Script{} = script, _args, kwargs, code, name) do
     %{script | cursor: 0}
-    |> write_arguments(Map.to_list(args))
+    |> write_arguments(Map.to_list(kwargs))
     |> Script.execute(code, name)
   end
 

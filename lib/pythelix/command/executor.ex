@@ -61,7 +61,9 @@ defmodule Pythelix.Command.Executor do
   end
 
   defp get_command_syntax(%Entity{} = command) do
-    Map.fetch!(command.attributes, "syntax_pattern")
+    attributes = Record.get_attributes(command)
+
+    Map.fetch!(attributes, "syntax_pattern")
     |> then(&({:ok, &1}))
   end
 
@@ -73,7 +75,9 @@ defmodule Pythelix.Command.Executor do
   end
 
   defp refine_command(command, args, client) do
-    case Map.get(command.methods, "refine") do
+    methods = Record.get_methods(command)
+
+    case Map.get(methods, "refine") do
       nil ->
         {:ok, args}
 
@@ -99,7 +103,9 @@ defmodule Pythelix.Command.Executor do
   defp maybe_extract_refined_args(_, _), do: :refine_error
 
   defp run_command(%Entity{} = command, args, client) do
-    case Map.get(command.methods, "run") do
+    methods = Record.get_methods(command)
+
+    case Map.get(methods, "run") do
       nil -> run_error(command, args, client)
       method -> run_method(method, Map.put(args, "client", client))
     end
@@ -116,7 +122,9 @@ defmodule Pythelix.Command.Executor do
   end
 
   defp parse_error(%Entity{} = command, args, client) do
-    case Map.get(command.methods, "parse_error") do
+    methods = Record.get_methods(command)
+
+    case Map.get(methods, "parse_error") do
       nil ->
         pid = client.attributes["pid"]
         send(pid, {:message, "The command failed in parsing. Please contact an administrator."})
@@ -127,7 +135,9 @@ defmodule Pythelix.Command.Executor do
   end
 
   defp refine_error(%Entity{} = command, args, client) do
-    case Map.get(command.methods, "refined_error") do
+    methods = Record.get_methods(command)
+
+    case Map.get(methods, "refined_error") do
       nil ->
         pid = client.attributes["pid"]
         send(pid, {:message, "The command failed while being refined. Please contact an administrator."})
@@ -138,7 +148,9 @@ defmodule Pythelix.Command.Executor do
   end
 
   defp run_error(%Entity{} = command, args, client) do
-    case Map.get(command.methods, "run_error") do
+    methods = Record.get_methods(command)
+
+    case Map.get(methods, "run_error") do
       nil ->
         pid = client.attributes["pid"]
         send(pid, {:message, "The command failed during run. Please contact an administrator."})

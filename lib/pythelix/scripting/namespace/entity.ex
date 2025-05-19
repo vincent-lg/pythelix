@@ -139,19 +139,11 @@ defmodule Pythelix.Scripting.Namespace.Entity do
   end
 
   defp get_attribute(entity, name) do
-    case Map.get(entity.attributes, name) do
+    attributes = Record.get_attributes(entity)
+
+    case Map.get(attributes, name) do
       nil ->
         {:error, :attribute_not_found}
-
-      {:parent, id_or_key} ->
-        parent =
-          id_or_key
-          |> Record.get_entity()
-
-        value = Map.fetch!(parent.attributes, name)
-        id_or_key = Pythelix.Entity.get_id_or_key(entity)
-
-        {:getattr, id_or_key, name, value}
 
       value ->
         id_or_key = Pythelix.Entity.get_id_or_key(entity)
@@ -162,18 +154,11 @@ defmodule Pythelix.Scripting.Namespace.Entity do
 
   defp maybe_get_method({:error, :attribute_not_found}, entity, name) do
     id_or_key = Pythelix.Entity.get_id_or_key(entity)
+    methods = Record.get_methods(entity)
 
-    case Map.get(entity.methods, name) do
+    case Map.get(methods, name) do
       nil ->
         :none
-
-      {:parent, id_or_key} ->
-        parent =
-          id_or_key
-          |> Record.get_entity()
-
-        method = Map.fetch!(parent.methods, name)
-        %Callable.Method{entity: id_or_key, method: method}
 
       method ->
         %Callable.Method{entity: id_or_key, method: method}

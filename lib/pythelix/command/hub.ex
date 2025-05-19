@@ -179,7 +179,7 @@ defmodule Pythelix.Command.Hub do
 
   defp run_script(%{executor_id: executor_id} = state, id_or_key, name, args) do
     with entity = %Entity{} <- Record.get_entity(id_or_key),
-         method = %Method{} <- Map.get(entity.methods, name, :no_method) do
+         method = %Method{} <- Map.get(Record.get_methods(entity), name, :no_method) do
       method_args = %{method: method, args: [], kwargs: args}
 
       {:ok, pid} =

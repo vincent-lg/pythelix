@@ -12,7 +12,7 @@ defmodule Pythelix.Scripting.Callable.Method do
           method: Pythelix.Method.t()
         }
 
-  def call(method, kwargs) do
+  def call(method, args, kwargs) do
     entity = Record.get_entity(method.entity)
 
     key =
@@ -22,6 +22,6 @@ defmodule Pythelix.Scripting.Callable.Method do
       end
 
     name = "#{key}, method #{method.method.name}"
-    Pythelix.Method.call(method.method, kwargs, name)
+    Pythelix.Method.call(method.method, args, kwargs, name)
   end
 end
