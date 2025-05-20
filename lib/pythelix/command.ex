@@ -35,8 +35,8 @@ defmodule Pythelix.Command do
         []
 
       command ->
-        [Map.get(command.attributes, "name", command.key)]
-        |> Enum.concat(Map.get(command.attributes, "aliases", []))
+        [Record.get_attribute(command, "name", "")]
+        |> Enum.concat(Record.get_attribute(command, "aliases", []))
         |> Enum.reject(fn name -> name == nil end)
         |> Enum.uniq()
     end)
@@ -50,7 +50,7 @@ defmodule Pythelix.Command do
         :error
 
       command ->
-        syntax = Map.get(command.attributes, "syntax", "")
+        syntax = Record.get_attribute(command, "syntax", "")
         build_pattern_for(command, syntax)
     end)
   end

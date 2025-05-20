@@ -11,6 +11,7 @@ defmodule Pythelix.Command.Executor do
   alias Pythelix.Method
   alias Pythelix.Record
   alias Pythelix.Scripting.Interpreter.Script
+  alias Pythelix.Scripting.Object.Dict
 
   @doc """
   Executes a command.
@@ -39,8 +40,11 @@ defmodule Pythelix.Command.Executor do
          {:ok, parsed} <- parse_command_syntax(pattern, command_args),
          {:ok, refined} <- refine_command(command, parsed, client),
          {:ok, script} <- run_command(command, refined, client) do
-      elapsed = System.monotonic_time(:microsecond) - start_time
-      IO.puts("⏱️ Run in #{elapsed} µs")
+      if start_time != nil  do
+        elapsed = System.monotonic_time(:microsecond) - start_time
+        IO.puts("⏱️ Run in #{elapsed} µs")
+      end
+
       {:ok, script}
     else
       :parse_error ->
@@ -115,7 +119,7 @@ defmodule Pythelix.Command.Executor do
     state = %{
       method: method,
       args: [],
-      kwargs: args
+      kwargs: Dict.new(args)
     }
 
     Pythelix.Scripting.Executor.execute(state)
@@ -126,7 +130,7 @@ defmodule Pythelix.Command.Executor do
 
     case Map.get(methods, "parse_error") do
       nil ->
-        pid = client.attributes["pid"]
+        pid = Record.get_attribute(client, "pid")
         send(pid, {:message, "The command failed in parsing. Please contact an administrator."})
 
       method ->
@@ -139,7 +143,7 @@ defmodule Pythelix.Command.Executor do
 
     case Map.get(methods, "refined_error") do
       nil ->
-        pid = client.attributes["pid"]
+        pid = Record.get_attribute(client, "pid")
         send(pid, {:message, "The command failed while being refined. Please contact an administrator."})
 
       method ->
@@ -152,7 +156,7 @@ defmodule Pythelix.Command.Executor do
 
     case Map.get(methods, "run_error") do
       nil ->
-        pid = client.attributes["pid"]
+        pid = Record.get_attribute(client, "pid")
         send(pid, {:message, "The command failed during run. Please contact an administrator."})
 
       method ->

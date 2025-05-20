@@ -8,6 +8,7 @@ defmodule Pythelix.Scripting.Namespace do
   alias Pythelix.Scripting.Format
   alias Pythelix.Scripting.Interpreter.Script
   alias Pythelix.Scripting.Namespace
+  alias Pythelix.Scripting.Object.Dict
   alias Pythelix.Scripting.Traceback
 
   defmacro __using__(_opts) do
@@ -188,6 +189,8 @@ defmodule Pythelix.Scripting.Namespace do
     {script, _, _, namespace} =
       Enum.reduce(constraints, {script, args, kwargs, %{}}, &build_arg/2)
 
+    script = check_signature(script, constraints, args, kwargs)
+
     {script, namespace}
   end
 
@@ -213,7 +216,7 @@ defmodule Pythelix.Scripting.Namespace do
     keyword = opts[:keyword]
 
     from_pos = (index && Enum.at(args, index)) || nil
-    from_keyword = (keyword && Map.get(kwargs, keyword)) || nil
+    from_keyword = (keyword && Dict.get(kwargs, keyword)) || nil
 
     cond do
       from_pos && from_keyword ->
@@ -272,4 +275,60 @@ defmodule Pythelix.Scripting.Namespace do
   end
 
   defp check_arg_type(_, value, _), do: value
+
+  defp check_signature(script, constraints, args, kwargs) do
+    check_signature_positional_args(script, constraints, args)
+    |> check_signature_keyword_args(constraints, kwargs)
+  end
+
+  defp check_signature_positional_args(script, constraints, args) do
+    constraints
+    |> Stream.map(fn {_, opts} -> opts end)
+    |> Stream.filter(fn opts -> opts[:index] end)
+    |> Enum.to_list()
+    |> then(fn constraints ->
+      needed = length(constraints)
+      received = length(args)
+
+      if needed < received do
+        message = "expected at most #{needed} arguments, got #{received}"
+
+        Traceback.raise(script, TypeError, message)
+        |> then(& %{script | error: &1})
+      else
+        script
+      end
+    end)
+  end
+
+  defp check_signature_keyword_args(%Script{error: nil} = script, constraints, kwargs) do
+    constraints
+    |> Stream.map(fn {_, opts} -> opts end)
+    |> Stream.map(fn opts -> opts[:keyword] end)
+    |> Stream.reject(& &1 == nil)
+    |> Enum.to_list()
+    |> then(fn constraints ->
+      missing =
+        constraints
+        |> Enum.reduce(kwargs, fn constraint, args ->
+          case Dict.get(args, constraint, :none) do
+            :none -> args
+            _ -> Dict.delete(args, constraint)
+          end
+        end)
+        |> Dict.keys()
+
+      if length(missing) > 0 do
+        name = Enum.at(missing, 0)
+        message = "this callable doesn't accept the #{name} keyword argument"
+
+        Traceback.raise(script, TypeError, message)
+        |> then(& %{script | error: &1})
+      else
+        script
+      end
+    end)
+  end
+
+  defp check_signature_keyword_args(script, _, _), do: script
 end

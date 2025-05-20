@@ -161,7 +161,7 @@ defmodule Pythelix.Scripting.Namespace.Entity do
         :none
 
       method ->
-        %Callable.Method{entity: id_or_key, method: method}
+        %Callable.Method{entity: id_or_key, name: name, method: method}
     end
   end
 

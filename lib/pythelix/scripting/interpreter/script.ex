@@ -13,6 +13,7 @@ defmodule Pythelix.Scripting.Interpreter.Script do
   alias Pythelix.Scripting.Format
   alias Pythelix.Scripting.Interpreter.{Debugger, Iterator, Script}
   alias Pythelix.Scripting.Namespace
+  alias Pythelix.Scripting.Object.Dict
   alias Pythelix.Scripting.Traceback
 
   @enforce_keys [:bytecode]
@@ -218,7 +219,7 @@ defmodule Pythelix.Scripting.Interpreter.Script do
     {script, to_put} = get_stack(script)
     {script, dict} = get_stack(script)
 
-    dict = Map.put(dict, key, to_put)
+    dict = Dict.put(dict, key, to_put)
 
     script
     |> put_stack(dict, :no_reference)
@@ -226,7 +227,7 @@ defmodule Pythelix.Scripting.Interpreter.Script do
 
   defp handle(script, {:dict, :no_reference}) do
     script
-    |> put_stack(%{}, :no_reference)
+    |> put_stack(Dict.new(), :no_reference)
   end
 
   defp handle(script, {:list, len}) do

@@ -423,18 +423,18 @@ defmodule Pythelix.Record.Cache do
 
       {:ok, names} ->
         names
-        |> Enum.map(& {&1, get_cached_entity_attribute(entity, &1, opts)})
+        |> Enum.map(& {&1, get_cached_entity_attribute(entity, &1, nil, opts)})
         |> Map.new()
     end
   end
 
-  def get_cached_entity_attribute(entity, name, opts \\ []) do
+  def get_cached_entity_attribute(entity, name, default \\ nil, opts \\ []) do
     id_or_key = Entity.get_id_or_key(entity)
     raw_parents = opts[:raw_parents]
 
     case Cachex.get(:px_cache, {:attribute, id_or_key, name}) do
       {:ok, nil} ->
-        nil
+        default
 
       {:ok, {:parent, parent_id_or_key}} when raw_parents == nil ->
         parent = Record.get_entity(parent_id_or_key)
@@ -467,7 +467,7 @@ defmodule Pythelix.Record.Cache do
   def cache_stored_entity_methods(%Record.Entity{} = entity, methods) do
     methods
     |> Enum.each(fn {name, {args, code, bytecode}} ->
-      cache_entity_method(Entity.get_id_or_key(entity), name, Method.new(args, code, bytecode))
+      cache_entity_method(entity.gen_id, name, Method.new(args, code, bytecode))
     end)
 
     entity

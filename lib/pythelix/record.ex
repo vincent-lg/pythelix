@@ -455,9 +455,9 @@ defmodule Pythelix.Record do
 
   - `raw_parents`: if `true`, leave the parent attribute as its raw representation.
   """
-  @spec get_attribute(Entity.t(), String.t(), Keyword.t()) :: any()
-  def get_attribute(%Entity{} = entity, name, opts \\ []) do
-    Cache.get_cached_entity_attribute(entity, name, opts)
+  @spec get_attribute(Entity.t(), String.t(), any(), Keyword.t()) :: any()
+  def get_attribute(%Entity{} = entity, name, default \\ nil, opts \\ []) do
+    Cache.get_cached_entity_attribute(entity, name, default, opts)
   end
 
   @doc """

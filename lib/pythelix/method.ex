@@ -5,6 +5,7 @@ defmodule Pythelix.Method do
 
   alias Pythelix.Scripting
   alias Pythelix.Scripting.Interpreter.Script
+  alias Pythelix.Scripting.Object.Dict
 
   @enforce_keys [:args, :code, :bytecode]
   defstruct [:args, :code, :bytecode]
@@ -53,7 +54,7 @@ defmodule Pythelix.Method do
 
   defp run(%Script{} = script, _args, kwargs, code, name) do
     %{script | cursor: 0}
-    |> write_arguments(Map.to_list(kwargs))
+    |> write_arguments(Dict.items(kwargs))
     |> Script.execute(code, name)
   end
 

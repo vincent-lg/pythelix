@@ -37,6 +37,19 @@ defmodule Pythelix.Scripting.Namespace.EntityTest do
       assert Record.get_attributes(entity) == %{}
       assert Record.get_methods(entity) == %{}
     end
+
+    test "create an entity with key and retrieve in the script" do
+      {:ok, entity} = Record.create_entity(key: "this")
+
+      script =
+        run("""
+        ent = !this!
+        id = ent.id
+        """)
+
+      id = Script.get_variable_value(script, "id")
+      assert entity.id == id
+    end
   end
 
   describe "attribute getting" do

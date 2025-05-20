@@ -81,7 +81,6 @@ defmodule Pythelix.Command.Hub do
 
     Record.set_attribute(key, "client_id", state.client_id)
     Record.set_attribute(key, "pid", from_pid)
-    #Record.set_attribute(key, "msg", {:extended, Extended.Client, :m_msg})
 
     {:reply, client_id, %{state | client_id: state.client_id + 1}}
   end

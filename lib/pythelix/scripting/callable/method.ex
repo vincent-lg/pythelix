@@ -5,10 +5,11 @@ defmodule Pythelix.Scripting.Callable.Method do
 
   alias Pythelix.Record
 
-  defstruct [:entity, :method]
+  defstruct [:entity, :name, :method]
 
   @type t() :: %{
           entity: binary() | integer(),
+          name: String.t(),
           method: Pythelix.Method.t()
         }
 
@@ -21,7 +22,7 @@ defmodule Pythelix.Scripting.Callable.Method do
         _ -> "##{entity.id}"
       end
 
-    name = "#{key}, method #{method.method.name}"
+    name = "#{key}, method #{method.name}"
     Pythelix.Method.call(method.method, args, kwargs, name)
   end
 end
