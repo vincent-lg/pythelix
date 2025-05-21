@@ -4,6 +4,7 @@ defmodule Pythelix.Scripting.Namespace do
   """
 
   alias Pythelix.Entity
+  alias Pythelix.Record
   alias Pythelix.Scripting.Callable
   alias Pythelix.Scripting.Format
   alias Pythelix.Scripting.Interpreter.Script
@@ -85,7 +86,19 @@ defmodule Pythelix.Scripting.Namespace do
           nil ->
             method = Map.get(methods(), name)
 
-            %Callable{module: __MODULE__, object: self, name: method}
+            if method == nil do
+              module_name =
+                to_string(__MODULE__)
+                |> String.split(".")
+                |> Enum.at(-1)
+                |> String.downcase()
+
+              message = "'#{module_name}' doesn't have attribute '#{name}'"
+
+              Script.raise(script, AttributeError, message)
+            else
+              %Callable{module: __MODULE__, object: self, name: method}
+            end
 
           attribute ->
             apply(__MODULE__, attribute, [script, self])
@@ -249,7 +262,7 @@ defmodule Pythelix.Scripting.Namespace do
   defp enforce_arg_type(script, name, value, type) do
     case check_arg_type(script, value, type) do
       :error ->
-        message = "argument #{name} expects value of type #{type}"
+        message = "argument #{name} expects value of type #{inspect(type)}"
 
         Traceback.raise(script, TypeError, message)
         |> then(& {%{script | error: &1}, :error})
@@ -271,6 +284,24 @@ defmodule Pythelix.Scripting.Namespace do
     case entity do
       %Entity{} -> value
       _ -> :error
+    end
+  end
+
+  defp check_arg_type(script, value, {:entity, parent_key}) when is_binary(parent_key) do
+    entity = Script.get_value(script, value)
+
+    case entity do
+      %Entity{} ->
+        ancestors = Record.get_ancestors(entity)
+
+        if Enum.any?(ancestors, & &1.key == parent_key) do
+          value
+        else
+          :error
+        end
+
+      _ ->
+        :error
     end
   end
 

@@ -191,8 +191,8 @@ defmodule Pythelix.World do
       Record.set_attribute(entity.key, name, value)
     end
 
-    for {name, code} <- entity.methods do
-      Record.set_method(entity.key, name, [], code)
+    for {name, {args, code}} <- entity.methods do
+      Record.set_method(entity.key, name, args, code)
     end
 
     Record.get_entity(entity.key)

@@ -12,6 +12,7 @@ defmodule Pythelix.Command.Executor do
   alias Pythelix.Record
   alias Pythelix.Scripting.Interpreter.Script
   alias Pythelix.Scripting.Object.Dict
+  alias Pythelix.Scripting.Traceback
 
   @doc """
   Executes a command.
@@ -59,6 +60,12 @@ defmodule Pythelix.Command.Executor do
 
       :refine_error ->
         refine_error(command, command_args, client)
+
+        {:ok, nil}
+
+      {:error, %Traceback{} = traceback} ->
+        IO.puts(Traceback.format(traceback))
+        run_error(command, command_args, client)
 
         {:ok, nil}
     end

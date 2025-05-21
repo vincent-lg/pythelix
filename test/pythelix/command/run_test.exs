@@ -7,7 +7,7 @@ defmodule Pythelix.Command.RunTest do
     test "a command without argument" do
       {:ok, command} = Record.create_entity(key: "command/test")
       Record.set_attribute(command.key, "name", "test")
-      Record.set_method(command.key, "run", [], """
+      Record.set_method(command.key, "run", :free, """
       client.msg("hello")
       """)
       run_command(command, "")

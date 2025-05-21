@@ -1,9 +1,5 @@
 defmodule Pythelix.World.File do
-  defmodule Pythelix.Building.File.State do
-    defstruct entities: [], current: nil, multiline_key: nil, method_name: nil, error: nil
-  end
-
-  alias Pythelix.Building.File.State
+  alias Pythelix.World.File.State
 
   @pattern_entity_or_method ~r/^(\[.*?\])|(\{.*?\})$/
   @pattern_entity ~r/^\[(.*?)\]$/
@@ -63,7 +59,7 @@ defmodule Pythelix.World.File do
         parse_lines(rest, state)
 
       line =~ @pattern_method ->
-        state = parse_method_name(state, line)
+        state = parse_method_name(state, {line, index})
         parse_lines(rest, state)
 
       String.contains?(line, ":") ->
@@ -89,7 +85,7 @@ defmodule Pythelix.World.File do
 
       String.starts_with?(line, " ") ->
         current = state.current
-        current = update_in(current.methods[method], &[line | &1])
+        current = update_in(current.methods[method], fn {cst, lines} -> {cst, [line | lines]} end)
 
         %{state | current: current}
 
@@ -98,12 +94,25 @@ defmodule Pythelix.World.File do
     end
   end
 
-  defp parse_method_name(state, line) do
+  defp parse_method_name(state, {line, index}) do
     current = state.current
     method_name = Regex.replace(@pattern_method, line, "\\1")
-    current = put_in(current.methods[method_name], [])
 
-    %{state | method_name: method_name, current: current}
+    cond do
+      String.contains?(method_name, "(") ->
+        case Pythelix.Command.Signature.constraints(method_name) do
+          {name, constraints} when is_binary(name) ->
+            put_in(current.methods[name], {constraints, []})
+            |> then(& %{state | method_name: name, current: &1})
+
+          error ->
+            put_error(state, {line, index}, "Signature error: #{inspect(error)}")
+        end
+
+      true ->
+        put_in(current.methods[method_name], {:free, []})
+        |> then(& %{state | method_name: method_name, current: &1})
+    end
   end
 
   defp parse_attribute(state, line) do
@@ -149,13 +158,13 @@ defmodule Pythelix.World.File do
   defp set_entity(entity) do
     update_in(entity.methods, fn methods ->
       methods
-      |> Enum.map(fn {name, lines} ->
+      |> Enum.map(fn {name, {args, lines}} ->
         lines =
           lines
           |> Enum.reverse()
           |> Enum.join("\n")
 
-        {name, lines}
+        {name, {args, lines}}
       end)
       |> Map.new()
     end)

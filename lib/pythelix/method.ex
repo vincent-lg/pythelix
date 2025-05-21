@@ -3,15 +3,18 @@ defmodule Pythelix.Method do
   A Pythelix method on an entity.
   """
 
+  alias Pythelix.Method
   alias Pythelix.Scripting
   alias Pythelix.Scripting.Interpreter.Script
+  alias Pythelix.Scripting.Namespace
   alias Pythelix.Scripting.Object.Dict
+  alias Pythelix.Scripting.Traceback
 
   @enforce_keys [:args, :code, :bytecode]
   defstruct [:args, :code, :bytecode]
 
   @type t() :: %{
-          args: list(),
+          args: :free | list(),
           code: binary(),
           bytecode: list(),
         }
@@ -43,20 +46,38 @@ defmodule Pythelix.Method do
   """
   @spec call(t(), list(), map(), String.t()) :: :ok | {:error, binary()}
   def call(method, args, kwargs, name) do
-    method
-    |> fetch_script()
-    |> run(args, kwargs, method.code, name)
+    with script <- fetch_script(method),
+         {%Script{error: nil} = script, namespace} <- check_args(script, method, args, kwargs, name),
+         %Script{error: nil} = script <- maybe_run(script, method, namespace, name) do
+      script
+    else
+      {%Script{error: %Traceback{}} = script, _} -> script
+      other -> other
+    end
   end
 
   def fetch_script(%Pythelix.Method{bytecode: bytecode}) do
     %Script{bytecode: bytecode}
   end
 
-  defp run(%Script{} = script, _args, kwargs, code, name) do
-    %{script | cursor: 0}
-    |> write_arguments(Dict.items(kwargs))
-    |> Script.execute(code, name)
+  defp check_args(%Script{} = script, %Method{} = method, args, kwargs, _name) do
+    method.args
+    |> then(fn
+      :free ->
+        {script, Dict.items(kwargs) |> Map.new()}
+
+      constraints ->
+        Namespace.validate(script, constraints, args, kwargs)
+    end)
   end
+
+  defp maybe_run(%Script{error: nil} = script, method, namespace, name) do
+    %{script | cursor: 0}
+    |> write_arguments(Enum.to_list(namespace))
+    |> Script.execute(method.code, name)
+  end
+
+  defp maybe_run(%Script{} = script, _method, _namespace, _name), do: script
 
   defp write_arguments(%Script{} = script, []), do: script
 

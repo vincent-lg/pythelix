@@ -330,10 +330,15 @@ defmodule Pythelix.Scripting.Interpreter.Script do
     {script, {value, self}} = get_stack(script, :reference)
 
     namespace = Namespace.locate(value)
-    attribute = namespace.getattr(script, self, attr)
 
-    script
-    |> put_stack(attribute)
+    case namespace.getattr(script, self, attr) do
+      %Script{} = script ->
+        script
+
+      other ->
+        script
+        |> put_stack(other)
+    end
   end
 
   defp handle(script, {:setattr, name}) do
