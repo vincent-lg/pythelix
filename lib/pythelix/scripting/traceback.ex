@@ -59,6 +59,9 @@ defmodule Pythelix.Scripting.Traceback do
   def format(traceback) do
     chain =
       traceback.chain
+      |> Enum.reject(fn {_, code, owner} ->
+        (code == nil) || (owner == nil)
+      end)
       |> Enum.flat_map(fn chain ->
         [format_call(chain), format_code(chain)]
       end)

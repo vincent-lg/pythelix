@@ -261,6 +261,12 @@ defmodule Pythelix.Scripting.Namespace do
 
   defp enforce_arg_type(script, name, value, type) do
     case check_arg_type(script, value, type) do
+      {:error, message} ->
+        message = "argument #{name} expects #{message}"
+
+        Traceback.raise(script, TypeError, message)
+        |> then(& {%{script | error: &1}, :error})
+
       :error ->
         message = "argument #{name} expects value of type #{inspect(type)}"
 
@@ -283,7 +289,7 @@ defmodule Pythelix.Scripting.Namespace do
 
     case entity do
       %Entity{} -> value
-      _ -> :error
+      _ -> {:error, "an entity"}
     end
   end
 
@@ -297,11 +303,11 @@ defmodule Pythelix.Scripting.Namespace do
         if Enum.any?(ancestors, & &1.key == parent_key) do
           value
         else
-          :error
+          {:error, "an entity inhering from !#{parent_key}!"}
         end
 
       _ ->
-        :error
+        {:error, "an entity"}
     end
   end
 
