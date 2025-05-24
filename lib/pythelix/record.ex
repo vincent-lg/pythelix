@@ -673,7 +673,7 @@ defmodule Pythelix.Record do
       serialized = :erlang.term_to_binary(value)
 
       gen_id = Diff.get_attribute_id()
-      Diff.add({:addattr, gen_id, name, serialized})
+      Diff.add({:addattr, entity.id, gen_id, name, serialized})
       attribute = %{
         gen_id: gen_id,
         name: name,

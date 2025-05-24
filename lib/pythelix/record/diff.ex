@@ -61,7 +61,7 @@ defmodule Pythelix.Record.Diff do
     {:delete, gen_id}
 
     # Attribute modifications (gen_id is :attributes)
-    {:addattr, gen_ic, attribute_name, attribute_value}
+    {:addattr, gen_id, entity_id, attribute_name, attribute_value}
     {:setattr, gen_id, attribute_name, attribute_value}
     {:delattr, gen_id}
 
@@ -86,8 +86,8 @@ defmodule Pythelix.Record.Diff do
     add_diff(:delete, {gen_id})
   end
 
-  def add({:addattr, gen_id, attribute_name, attribute_value}) do
-    add_diff(:addattr, {gen_id, attribute_name, attribute_value})
+  def add({:addattr, entity_id, gen_id, attribute_name, attribute_value}) do
+    add_diff(:addattr, {gen_id, entity_id, attribute_name, attribute_value})
   end
 
   def add({:setattr, gen_id, attribute_name, attribute_value}) do
@@ -286,9 +286,10 @@ defmodule Pythelix.Record.Diff do
 
     entries
     |> Enum.filter(fn {key, _value} -> match?({:addattr, _}, key) end)
-    |> Enum.map(fn {{:addattr, gen_id}, {name, value}} ->
+    |> Enum.map(fn {{:addattr, gen_id}, {entity_id, name, value}} ->
       %{
         gen_id: gen_id,
+        entity_gen_id: entity_id,
         name: name,
         value: value,
         inserted_at: now,
