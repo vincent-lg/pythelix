@@ -34,7 +34,7 @@ defmodule Pythelix.Scripting.Interpreter.AST do
     |> add({:builtin, "entity"})
     |> add({:dict, :no_reference})
     |> add({:put, key})
-    |> add({:put_dict, "key", :no_reference})
+    |> add({:put_dict, {"key", :no_reference}})
     |> add({:call, 0})
   end
 
@@ -48,7 +48,7 @@ defmodule Pythelix.Scripting.Interpreter.AST do
       Enum.reduce(kwargs, code, fn {key, value}, code ->
         code
         |> read_ast(value)
-        |> add({:put_dict, key, :no_reference})
+        |> add({:put_dict, {key, :no_reference}})
       end)
 
     code
@@ -97,7 +97,7 @@ defmodule Pythelix.Scripting.Interpreter.AST do
     code
     |> read_ast(left)
     |> read_ast(right)
-    |> add(op)
+    |> add({op, nil})
   end
 
   defp read_ast(code, {cmp, [left, right]}) when cmp in [:<, :<=, :>, :>=, :==, :!=] do
@@ -116,7 +116,7 @@ defmodule Pythelix.Scripting.Interpreter.AST do
           |> read_ast(part)
       end
     end)
-    |> add(cmp)
+    |> add({cmp, nil})
     |> replace({:unset, ref}, fn code -> {:iffalse, length_code(code)} end)
   end
 
@@ -143,7 +143,7 @@ defmodule Pythelix.Scripting.Interpreter.AST do
   defp read_ast(code, {:not, [ast]}) do
     code
     |> read_ast(ast)
-    |> add(:not)
+    |> add({:not, nil})
   end
 
   defp read_ast(code, {:stmt_list, statements}) when is_list(statements) do
@@ -183,7 +183,7 @@ defmodule Pythelix.Scripting.Interpreter.AST do
     code =
       code
       |> read_ast(value)
-      |> add(op)
+      |> add({op, nil})
 
     Enum.reduce(Enum.with_index(names), code, fn
       {name, 0}, code when length(names) == 1 -> add(code, {:store, name})
@@ -237,7 +237,7 @@ defmodule Pythelix.Scripting.Interpreter.AST do
       code
       |> add({:line, line})
       |> read_ast(iterate)
-      |> add(:mkiter)
+      |> add({:mkiter, nil})
 
     before = length_code(code)
     end_block = make_ref()
@@ -254,7 +254,7 @@ defmodule Pythelix.Scripting.Interpreter.AST do
     code
     |> add({:line, line})
     |> read_ast(expr)
-    |> add(:raw)
+    |> add({:raw, nil})
   end
 
   defp read_ast(code, :line), do: code

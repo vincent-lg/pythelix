@@ -11,10 +11,9 @@ defmodule Pythelix.Scripting.Interpreter.Script do
   alias Pythelix.Scripting.Callable
   alias Pythelix.Scripting.Callable.Method
   alias Pythelix.Scripting.Format
-  alias Pythelix.Scripting.Interpreter.{Debugger, Iterator, Script}
-  alias Pythelix.Scripting.Namespace
-  alias Pythelix.Scripting.Object.Dict
+  alias Pythelix.Scripting.Interpreter.{Debugger, Script}
   alias Pythelix.Scripting.Traceback
+  alias Pythelix.Scripting.Interpreter.VM
 
   @enforce_keys [:bytecode]
   defstruct [
@@ -43,9 +42,6 @@ defmodule Pythelix.Scripting.Interpreter.Script do
           error: nil | Traceback.t(),
           debugger: nil | %Debugger{}
         }
-
-  @ops %{+: &+/2, -: &-/2, *: &*/2, /: &//2}
-  @cmps %{<: &</2, <=: &<=/2, >: &>/2, >=: &>=/2, ==: &==/2, !=: &!=/2}
 
   @doc """
   Write a variable in the script, overriding a variable of the same name.
@@ -180,7 +176,7 @@ defmodule Pythelix.Scripting.Interpreter.Script do
         script =
           script
           |> move_ahead()
-          |> handle(op)
+          |> VM.handle(op)
 
         run_next_bytecode(bytecode, script, code, owner)
     end
@@ -190,256 +186,19 @@ defmodule Pythelix.Scripting.Interpreter.Script do
     %{script | cursor: cursor + 1}
   end
 
-  defp handle(script, {:put, value}) do
-    script
-    |> put_stack(value)
-  end
-
-  defp handle(script, op) when op in [:+, :-, :*, :/] do
-    operation = Map.get(@ops, op)
-
-    {script, value2} = get_stack(script)
-    {script, value1} = get_stack(script)
-
-    script
-    |> put_stack(operation.(value1, value2))
-  end
-
-  defp handle(script, cmp) when cmp in [:<, :<=, :>, :>=, :==, :!=] do
-    operation = Map.get(@cmps, cmp)
-
-    {script, value2} = get_stack(script)
-    {script, value1} = get_stack(script)
-
-    script
-    |> put_stack(operation.(value1, value2))
-  end
-
-  defp handle(script, {:put_dict, key, :no_reference}) do
-    {script, to_put} = get_stack(script)
-    {script, dict} = get_stack(script)
-
-    dict = Dict.put(dict, key, to_put)
-
-    script
-    |> put_stack(dict, :no_reference)
-  end
-
-  defp handle(script, {:dict, :no_reference}) do
-    script
-    |> put_stack(Dict.new(), :no_reference)
-  end
-
-  defp handle(script, {:list, len}) do
-    {script, values} =
-      if len > 0 do
-        Enum.reduce(1..len, {script, []}, fn _, {script, values} ->
-          {script, {value, reference}} = get_stack(script, :reference)
-
-          case reference do
-            nil -> {script, [value | values]}
-            _ -> {script, [reference | values]}
-          end
-        end)
-      else
-        {script, []}
-      end
-
-    script
-    |> put_stack(values)
-  end
-
-  defp handle(script, {:iffalse, line}) do
-    {script, value} = get_stack(script)
-
-    if value do
-      script
-      |> debug("is true")
-    else
-      script
-      |> put_stack(value)
-      |> debug("is false so jump")
-      |> jump(line)
-    end
-  end
-
-  defp handle(script, {:iftrue, line}) do
-    {script, value} = get_stack(script)
-
-    if value do
-      script
-      |> put_stack(value)
-      |> debug("is true so jump")
-      |> jump(line)
-    else
-      script
-      |> debug("is false")
-    end
-  end
-
-  defp handle(script, {:popiffalse, line}) do
-    {script, value} = get_stack(script)
-
-    if value do
-      script
-      |> debug("is true")
-    else
-      script
-      |> debug("is false so jump")
-      |> jump(line)
-    end
-  end
-
-  defp handle(script, {:popiftrue, line}) do
-    {script, value} = get_stack(script)
-
-    if value do
-      script
-      |> debug("is true so jump")
-      |> jump(line)
-    else
-      script
-      |> debug("is false")
-    end
-  end
-
-  defp handle(script, {:goto, line}) do
-    script
-    |> jump(line)
-  end
-
-  defp handle(script, :not) do
-    {script, value} = get_stack(script)
-
-    script
-    |> put_stack(!value)
-  end
-
-  defp handle(%{variables: variables} = script, {:read, variable}) do
-    value = Map.get(variables, variable, :no_var)
-
-    if value == :no_var do
-      Script.raise(script, NameError, "name '#{variable}' is not defined")
-    else
-      script
-      |> put_stack(value)
-    end
-  end
-
-  defp handle(script, {:getattr, attr}) do
-    {script, {value, self}} = get_stack(script, :reference)
-
-    namespace = Namespace.locate(value)
-
-    case namespace.getattr(script, self, attr) do
-      %Script{} = script ->
-        script
-
-      other ->
-        script
-        |> put_stack(other)
-    end
-  end
-
-  defp handle(script, {:setattr, name}) do
-    {script, {value, self}} = get_stack(script, :reference)
-    {script, {_, to_set}} = get_stack(script, :reference)
-
-    namespace = Namespace.locate(value)
-    {script, result} = namespace.setattr(script, self, name, to_set)
-
-    script
-    |> put_stack(result)
-  end
-
-  defp handle(script, {:builtin, name}) do
-    name = Map.get(Namespace.Builtin.functions(), name)
-
-    script
-    |> put_stack(%Callable{module: Namespace.Builtin, object: nil, name: name})
-  end
-
-  defp handle(script, {:store, variable}) do
-    {script, {value, reference}} = get_stack(script, :reference)
-    value = reference || value
-
-    store(script, variable, value)
-  end
-
-  defp handle(script, :mkiter) do
-    {script, value} = get_stack(script)
-    iterator = Iterator.new(script, value)
-
-    script
-    |> put_stack(iterator)
-  end
-
-  defp handle(script, {:iter, line}) do
-    {script, {iterator, reference}} = get_stack(script, :reference)
-
-    case Iterator.next(script, reference, iterator) do
-      :stop ->
-        jump(script, line)
-
-      {:cont, script, value} ->
-        script
-        |> put_stack(reference)
-        |> put_stack(value)
-    end
-  end
-
-  defp handle(script, {:call, len}) do
-    {script, args} =
-      if len > 0 do
-        Enum.reduce(1..len, {script, []}, fn _, {script, values} ->
-          {script, {ref, _}} = get_stack(script, :reference)
-
-          {script, [ref | values]}
-        end)
-      else
-        {script, []}
-      end
-
-    {script, kwargs} = get_stack(script)
-    {script, callable} = get_stack(script)
-
-    {script, value} = Callable.call(script, callable, args, kwargs)
-
-    script
-    |> put_stack(value)
-  end
-
-  defp handle(script, :raw) do
-    {script, value} = get_stack(script)
-
-    %{script | last_raw: value}
-  end
-
-  defp handle(script, :pop) do
-    {script, _} = get_stack(script)
-
-    script
-  end
-
-  defp handle(script, {:line, line}), do: %{script | line: line}
-
-  defp handle(_script, unknown) do
-    raise "unknown bytecode: #{inspect(unknown)}"
-  end
-
-  defp put_stack(%{stack: stack} = script, value, :no_reference) do
+  def put_stack(%{stack: stack} = script, value, :no_reference) do
     %{script | stack: [value | stack]}
     |> debug("in stack: #{inspect(value)}")
   end
 
-  defp put_stack(%{stack: stack} = script, {:formatted, string}) do
+  def put_stack(%{stack: stack} = script, {:formatted, string}) do
     formatted = Format.String.new(script, string)
 
     %{script | stack: [formatted | stack]}
     |> debug("in stack: #{inspect(formatted)}")
   end
 
-  defp put_stack(script, {:setattr, entity_id, name, value}) do
+  def put_stack(script, {:setattr, entity_id, name, value}) do
     value = Map.get(script.bound, {entity_id, name}, value)
     {script, value} = (references?(value) && reference(script, value)) || {script, value}
 
@@ -451,7 +210,7 @@ defmodule Pythelix.Scripting.Interpreter.Script do
     end
   end
 
-  defp put_stack(%{stack: stack} = script, {:getattr, entity_id, name, value}) do
+  def put_stack(%{stack: stack} = script, {:getattr, entity_id, name, value}) do
     value = Map.get(script.bound, {entity_id, name}, value)
 
     value =
@@ -474,16 +233,16 @@ defmodule Pythelix.Scripting.Interpreter.Script do
     end
   end
 
-  defp put_stack(%{stack: stack} = script, value) do
+  def put_stack(%{stack: stack} = script, value) do
     {script, value} = (references?(value) && reference(script, value)) || {script, value}
 
     %{script | stack: [value | stack]}
     |> debug("in stack: #{inspect(value)}")
   end
 
-  defp get_stack(script, retrieve \\ :value)
+  def get_stack(script, retrieve \\ :value)
 
-  defp get_stack(%{stack: [first | next], references: references} = script, retrieve) do
+  def get_stack(%{stack: [first | next], references: references} = script, retrieve) do
     first =
       case retrieve do
         :value ->
@@ -500,18 +259,18 @@ defmodule Pythelix.Scripting.Interpreter.Script do
     {%{script | stack: next}, first}
   end
 
-  defp get_stack(script, _retrieve) do
+  def get_stack(script, _retrieve) do
     raise "stack is empty, #{inspect(script)}"
   end
 
-  defp store(%{variables: variables} = script, variable, value) do
+  def store(%{variables: variables} = script, variable, value) do
     variables = Map.put(variables, variable, value)
 
     %{script | variables: variables}
     |> debug("store #{variable} = #{inspect(value)}")
   end
 
-  defp jump(script, line) do
+  def jump(script, line) do
     script =
       script
       |> debug("jump to #{line}")
@@ -519,7 +278,7 @@ defmodule Pythelix.Scripting.Interpreter.Script do
     %{script | cursor: line}
   end
 
-  defp reference(%{references: references} = script, value) do
+  def reference(%{references: references} = script, value) do
     reference = make_ref()
     references = Map.put(references, reference, value)
 
@@ -530,28 +289,28 @@ defmodule Pythelix.Scripting.Interpreter.Script do
     {%{script | references: references}, reference}
   end
 
-  defp references?(value) when is_atom(value), do: false
-  defp references?(%Method{}), do: false
-  defp references?(%Callable{}), do: false
-  defp references?(value) when is_reference(value), do: false
-  defp references?(value) when is_number(value), do: false
-  defp references?(value) when is_boolean(value), do: false
-  defp references?(value) when is_binary(value), do: false
-  defp references?(value) when is_tuple(value), do: false
-  defp references?(_value), do: true
+  def references?(value) when is_atom(value), do: false
+  def references?(%Method{}), do: false
+  def references?(%Callable{}), do: false
+  def references?(value) when is_reference(value), do: false
+  def references?(value) when is_number(value), do: false
+  def references?(value) when is_boolean(value), do: false
+  def references?(value) when is_binary(value), do: false
+  def references?(value) when is_tuple(value), do: false
+  def references?(_value), do: true
 
-  defp reference_to_value(value, script) when is_reference(value) do
+  def reference_to_value(value, script) when is_reference(value) do
     Map.get(script.references, value)
     |> reference_to_value(script)
   end
 
-  defp reference_to_value(value, script) when is_list(value) do
+  def reference_to_value(value, script) when is_list(value) do
     Enum.map(value, fn element -> reference_to_value(element, script) end)
   end
 
-  defp reference_to_value(value, _script), do: value
+  def reference_to_value(value, _script), do: value
 
-  defp update_bound(script, reference, value) do
+  def update_bound(script, reference, value) do
     script.bound
     |> Map.get(reference, [])
     |> Enum.reduce(script, fn {entity_id, attribute}, script ->
@@ -561,11 +320,11 @@ defmodule Pythelix.Scripting.Interpreter.Script do
     end)
   end
 
-  defp debug(%{debugger: %Debugger{} = debugger} = script, text) do
+  def debug(%{debugger: %Debugger{} = debugger} = script, text) do
     debugger = Debugger.add(debugger, script.cursor - 1, text)
 
     %{script | debugger: debugger}
   end
 
-  defp debug(script, _text), do: script
+  def debug(script, _text), do: script
 end
