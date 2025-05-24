@@ -14,6 +14,8 @@ defmodule Pythelix.Command.Executor do
   alias Pythelix.Scripting.Object.Dict
   alias Pythelix.Scripting.Traceback
 
+  def name(_), do: nil
+
   @doc """
   Executes a command.
 
@@ -25,8 +27,8 @@ defmodule Pythelix.Command.Executor do
   * {key: the command key, args: the command arguments in a map}
 
   """
-  @spec execute(map()) :: :ok
-  def execute({client, start_time, key, args}) do
+  @spec execute(integer(), map()) :: :ok
+  def execute(_, {client, start_time, key, args}) do
     key
     |> get_entity()
     |> maybe_execute(args, client, start_time)
@@ -129,7 +131,7 @@ defmodule Pythelix.Command.Executor do
       kwargs: Dict.new(args)
     }
 
-    Pythelix.Scripting.Executor.execute(state)
+    Pythelix.Scripting.Executor.execute(nil, state)
   end
 
   defp parse_error(%Entity{} = command, args, client) do

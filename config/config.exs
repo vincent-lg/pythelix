@@ -60,6 +60,14 @@ config :logger, :console,
 
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
+
+config :libcluster,
+  topologies: [
+    pythuster: [
+      strategy: Cluster.Strategy.LocalEpmd
+    ]
+  ]
+
 config :pythelix,
   worldlets: true,
   show_stats: true

@@ -24,6 +24,6 @@ defmodule Pythelix.CommandCase do
     {:ok, client} = Record.create_entity(key: "client/#{id}")
     Record.set_attribute(client.key, "pid", self())
     Record.set_attribute(client.key, "msg", {:extended, Namespace.Extended.Client, :m_msg})
-    Pythelix.Command.Executor.execute({client, nil, command.key, args})
+    Pythelix.Command.Executor.execute(nil, {client, nil, command.key, args})
   end
 end

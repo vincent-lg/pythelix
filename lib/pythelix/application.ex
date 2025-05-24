@@ -7,7 +7,10 @@ defmodule Pythelix.Application do
 
   @impl true
   def start(_type, _args) do
+    topologies = Application.get_env(:libcluster, :topologies)
+
     children = [
+      {Cluster.Supervisor, [topologies, [name: Pythelix.ClusterSupervisor]]},
       %{
         id: :px_cache,
         start: {Cachex, :start_link, [:px_cache, []]}
@@ -17,6 +20,7 @@ defmodule Pythelix.Application do
         start: {Cachex, :start_link, [:px_diff, []]}
       },
       Pythelix.Repo,
+      {Registry, keys: :unique, name: Registry.LongRunning},
       Pythelix.ExecutorSupervisor,
       {DynamicSupervisor, strategy: :one_for_one, name: Pythelix.Network.TCP.ClientSupervisor},
       Pythelix.Network.TCP.Server,
