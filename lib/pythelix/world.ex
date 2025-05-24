@@ -21,8 +21,39 @@ defmodule Pythelix.World do
     end
   end
 
-  defp process_worldlets() do
-    Path.wildcard("#{@worldlet_dir}/**/#{@worldlet_pattern}")
+  @doc """
+  Apply a worldlet, a directory or a single file path.
+
+  Args:
+
+  - `worldlet`: the path leading to the directory or worldlet file.
+  """
+  @spec apply(String.t()) :: {:ok, integer()} | :error | :nofile
+  def apply(worldlet) do
+    if File.exists?(worldlet) do
+      case process_worldlets(worldlet) do
+        :error -> :error
+        entities -> {:ok, length(entities)}
+      end
+    else
+      :nofile
+    end
+  end
+
+  defp process_worldlets(path \\ nil) do
+    files =
+      cond do
+        path == nil ->
+          Path.wildcard("#{@worldlet_dir}/**/#{@worldlet_pattern}")
+
+        File.dir?(path) ->
+          Path.wildcard("#{path}/**/#{@worldlet_pattern}")
+
+        true ->
+          [path]
+      end
+
+    files
     |> Enum.map(&Pythelix.World.File.parse_file/1)
     |> Enum.reduce_while([], fn
       {:ok, entities}, acc ->
@@ -161,6 +192,7 @@ defmodule Pythelix.World do
 
   defp maybe_create_entities({:ok, entities}) do
     Enum.map(entities, fn entity -> create_entity(entity) end)
+    |> tap(fn _ -> Record.Diff.apply() end)
   end
 
   defp create_entity(entity) do
