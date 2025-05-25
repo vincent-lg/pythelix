@@ -2,6 +2,10 @@ defmodule Pythelix.Task.Apply do
   alias Pythelix.Task
   alias Pythelix.World
 
+  def run(str) when is_binary(str) do
+    run(OptionParser.split(str))
+  end
+
   def run([file]) do
     id = :crypto.strong_rand_bytes(4) |> Base.encode16()
     id = "console_#{id}"
