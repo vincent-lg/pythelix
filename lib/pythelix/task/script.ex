@@ -71,7 +71,10 @@ defmodule Pythelix.Task.Script do
 
         {:text, output, eval_elapsed, exec_elapsed, apply_elapsed} ->
           IO.puts("⏱️ Parsed in #{eval_elapsed} µs, execution in #{exec_elapsed} µs, applied in #{apply_elapsed} µs")
-          IO.puts(output)
+
+          if output != nil do
+            IO.puts(output)
+          end
       end
     end
 

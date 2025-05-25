@@ -77,7 +77,7 @@ defmodule Pythelix.Scripting.REPL.Executor do
           if script.last_raw != nil do
             inspect(script.last_raw)
           else
-            ""
+            nil
           end
 
         send(pid, {:text, output, eval_elapsed, exec_elapsed, apply_elapsed})
