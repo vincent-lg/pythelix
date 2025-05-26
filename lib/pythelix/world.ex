@@ -62,6 +62,8 @@ defmodule Pythelix.World do
       {:error, reason}, _acc ->
         {:halt, {:error, reason}}
     end)
+    |> IO.inspect()
+    |> IO.inspect()
     |> case do
       {:error, reason} -> {:error, reason}
       entities -> {:ok, entities}
@@ -214,13 +216,11 @@ defmodule Pythelix.World do
 
     for {name, value} <- attributes do
 
-      {:ok, value} =
-        case value do
-          code when is_binary(code) -> Scripting.eval(value)
-          other -> {:ok, other}
-        end
+      if is_binary(value) do
+        {:ok, value} = Scripting.eval(value) |> IO.inspect(label: "value")
 
-      Record.set_attribute(entity.key, name, value)
+        Record.set_attribute(entity.key, name, value)
+      end
     end
 
     for {name, {args, code}} <- entity.methods do

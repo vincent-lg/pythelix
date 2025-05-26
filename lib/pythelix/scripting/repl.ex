@@ -153,14 +153,6 @@ defmodule Pythelix.Scripting.REPL do
     {:ok, stack, :maybe_3_quote}
   end
 
-  defp parse_token({"\"", line}, [{other, other_line} | _], :string) do
-    {:error, "found \" on line #{line}, but unclosed #{other} at #{other_line}"}
-  end
-
-  defp parse_token({"\"", line}, _, :string) do
-    {:error, "quote \" at line #{line} doesn't close anything"}
-  end
-
   # Strings with single quotes
   defp parse_token({"'", line}, stack, :normal) do
     {:ok, [{:tic, line} | stack], :string}
@@ -168,14 +160,6 @@ defmodule Pythelix.Scripting.REPL do
 
   defp parse_token({"'", _}, [{:tic, _} | _] = stack, :string) do
     {:ok, stack, :maybe_3_tic}
-  end
-
-  defp parse_token({"'", line}, [{other, other_line} | _], :string) do
-    {:error, "found ' on line #{line}, but unclosed #{other} at #{other_line}"}
-  end
-
-  defp parse_token({"'", line}, _, :string) do
-    {:error, "tic ' at line #{line} doesn't close anything"}
   end
 
   # All else in strings should be ignored.

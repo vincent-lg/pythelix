@@ -24,13 +24,27 @@ defmodule Pythelix.Scripting do
     line = Keyword.get(opts, :line, 1)
     former_script = Keyword.get(opts, :script)
 
-    {:ok, ast} = Parser.exec(code)
+    ast =
+      case Parser.exec(code) do
+        {:ok, ast} -> ast
+        {:error, _} -> :error
+    end
 
     if show_ast, do: IO.inspect(ast, label: "ast")
 
     script =
-      [ast]
-      |> Interpreter.AST.convert()
+      if ast == :error do
+        %Interpreter.Script{bytecode: []}
+        |> then(fn script ->
+          message = "invalid syntax"
+          traceback = %Traceback{exception: SyntaxError, message: message, chain: [{script, nil, nil}]}
+          traceback = Traceback.associate(traceback, code, "<strdin>")
+          %{script | error: traceback}
+        end)
+      else
+        [ast]
+        |> Interpreter.AST.convert()
+      end
 
     script =
       case former_script do
@@ -57,12 +71,16 @@ defmodule Pythelix.Scripting do
       else
         script
       end
-    |> then(fn script ->
-      if call do
-        Interpreter.Script.execute(script)
-      else
+    |> then(fn
+      %Interpreter.Script{error: nil} = script ->
+        if call do
+          Interpreter.Script.execute(script)
+        else
+          script
+        end
+
+      script ->
         script
-      end
     end)
   end
 

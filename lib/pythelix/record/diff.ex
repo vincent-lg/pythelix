@@ -189,6 +189,7 @@ defmodule Pythelix.Record.Diff do
       |> Enum.chunk_every(5_000)
       |> Enum.each(fn chunk ->
         chunk
+        |> Enum.reduce(%{}, fn map, acc -> Map.merge(map, acc) end)
         |> build_bulk_update_queries("attributes")
         |> Enum.each(fn {sql, params} ->
           Repo.query!(sql, params)
@@ -301,12 +302,8 @@ defmodule Pythelix.Record.Diff do
   defp to_update_attributes(entries) do
     entries
     |> Enum.filter(fn {key, _value} -> match?({:setattr, _}, key) end)
-    |> Enum.map(fn {{:setattr, gen_id}, {name, value}} ->
-      %{
-        gen_id: gen_id,
-        name: name,
-        value: value
-      }
+    |> Enum.map(fn {{:setattr, gen_id}, map} ->
+      %{gen_id => map}
     end)
   end
 

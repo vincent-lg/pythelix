@@ -1,7 +1,7 @@
 defmodule Pythelix.World.File do
+  alias Pythelix.Scripting.REPL
   alias Pythelix.World.File.State
 
-  @pattern_entity_or_method ~r/^(\[.*?\])|(\{.*?\})$/
   @pattern_entity ~r/^\[(.*?)\]$/
   @pattern_method ~r/^\{(.*?)\}$/
 
@@ -31,42 +31,47 @@ defmodule Pythelix.World.File do
 
   defp parse_lines([], state), do: state
 
-  defp parse_lines([{line, _} | rest], state = %{multiline_key: key, current: current})
+  defp parse_lines([{line, index} | rest], state = %{multiline_key: key, current: current, need_more: true})
        when key != nil do
-    cond do
-      line == "\"\"\"" ->
-        updated =
-          update_in(current.attributes[key], fn lines ->
-            lines
-            |> Enum.reverse()
-            |> Enum.join("\n")
-            |> then(&(~s/"""/ <> &1 <> ~s/"""/))
-          end)
+    text =
+      [line | current.attributes[key]]
+      |> Enum.reverse()
+      |> Enum.join("\n")
 
-        parse_lines(rest, %{state | current: updated, multiline_key: nil})
+    case REPL.parse(text) do
+      :complete ->
+        updated = put_in(current.attributes[key], text)
+        parse_lines(rest, %{state | current: updated, multiline_key: nil, need_more: false})
 
-      true ->
+      {:need_more, _} ->
         current = update_in(current.attributes[key], &[line | &1])
 
         parse_lines(rest, %{state | current: current})
+
+      {:error, _} ->
+        put_error(state, {line, index}, "Syntax error while reading a multiline attribute")
     end
   end
 
-  defp parse_lines([{line, index} | rest], state = %{current: current, method_name: method}) do
+  defp parse_lines([{line, index} | rest], state = %{current: current, method_name: method, need_more: need_more}) do
     cond do
-      current != nil and method != nil and !(line =~ @pattern_entity_or_method) ->
+      need_more && (current != nil and method != nil) ->
         state = parse_method_content(state, {line, index})
         parse_lines(rest, state)
 
-      line =~ @pattern_method ->
+      !need_more && line =~ @pattern_method ->
         state = parse_method_name(state, {line, index})
         parse_lines(rest, state)
 
-      String.contains?(line, ":") ->
-        state = parse_attribute(state, line)
+      current != nil and method != nil ->
+        state = parse_method_content(state, {line, index})
         parse_lines(rest, state)
 
-      line =~ @pattern_entity ->
+      !need_more && String.contains?(line, ":") ->
+        state = parse_attribute(state, {line, index})
+        parse_lines(rest, state)
+
+      !need_more && line =~ @pattern_entity ->
         state = parse_entity_key(state, line, index)
         parse_lines(rest, state)
 
@@ -78,19 +83,25 @@ defmodule Pythelix.World.File do
     end
   end
 
-  def parse_method_content(state = %{method_name: method}, {line, index}) do
-    cond do
-      String.trim(line) == "" ->
-        state
+  def parse_method_content(%{current: current} = state = %{method_name: method}, {line, index}) do
+    text =
+      [line | elem(state.current.methods[method], 1)]
+      |> Enum.reverse()
+      |> Enum.join("\n")
 
-      String.starts_with?(line, " ") ->
-        current = state.current
+    case REPL.parse(text) do
+      :complete ->
         current = update_in(current.methods[method], fn {cst, lines} -> {cst, [line | lines]} end)
 
-        %{state | current: current}
+        %{state | current: current, need_more: false}
 
-      true ->
-        put_error(state, {line, index}, "Syntax error")
+      {:need_more, _} ->
+        current = update_in(current.methods[method], fn {cst, lines} -> {cst, [line | lines]} end)
+
+        %{state | current: current, need_more: true}
+
+      {:error, _} ->
+        put_error(state, {line, index}, "Syntax error while reading a method")
     end
   end
 
@@ -103,7 +114,7 @@ defmodule Pythelix.World.File do
         case Pythelix.Command.Signature.constraints(method_name) do
           {name, constraints} when is_binary(name) ->
             put_in(current.methods[name], {constraints, []})
-            |> then(& %{state | method_name: name, current: &1})
+            |> then(& %{state | method_name: name, current: &1, need_more: true})
 
           error ->
             put_error(state, {line, index}, "Signature error: #{inspect(error)}")
@@ -111,31 +122,32 @@ defmodule Pythelix.World.File do
 
       true ->
         put_in(current.methods[method_name], {:free, []})
-        |> then(& %{state | method_name: method_name, current: &1})
+        |> then(& %{state | method_name: method_name, current: &1, need_more: true})
     end
   end
 
-  defp parse_attribute(state, line) do
+  defp parse_attribute(%{current: current} = state, {line, index}) do
     [key, val] = String.split(line, ":", parts: 2)
     key = String.trim(key)
     val = String.trim(val)
-    current = state.current
 
-    cond do
-      val == "\"\"\"" ->
-        current = put_in(current.attributes[key], [])
-
-        %{state | multiline_key: key, current: current}
-
-      true ->
+    case REPL.parse(val) do
+      :complete ->
         current = put_in(current.attributes[key], val)
 
         %{state | current: current}
+
+      {:need_more, _} ->
+        current = put_in(current.attributes[key], [val])
+
+        %{state | multiline_key: key, current: current, need_more: true}
+
+      {:error, _} ->
+        put_error(state, {line, index}, "Syntax error, invalid attribute value: {inspect(val)}")
     end
   end
 
-  defp parse_entity_key(state, line, index) do
-    current = state.current
+  defp parse_entity_key(%{current: current} = state, line, index) do
     entities = state.entities
 
     entities = (current != nil && [set_entity(current) | entities]) || entities
