@@ -2,7 +2,7 @@ name: Build & Release Pythelix
 
 on:
   push:
-    branches: [releases]
+    branches: [release]
     tags:                              # … when the ref is ALSO a version tag
       - '[0-9]+.[0-9]+.[0-9]+'         # 0.1.2, 2.3.4 …
       - '[0-9]+.[0-9]+'                # 1.0, 2.1 …
@@ -23,9 +23,6 @@ jobs:
           - os_short: linux-x64
             runner: ubuntu-latest
             pack_ext: tar.gz
-          - os_short: macos-x64
-            runner: macos-latest
-            pack_ext: zip
           - os_short: windows-x64
             runner: windows-latest
             pack_ext: zip
@@ -62,15 +59,21 @@ jobs:
         shell: bash
         run: |
           REL_DIR="_build/prod/rel/pythelix"
-          VER=$(basename "$REL_DIR")
+          VER=$(grep -m1 version mix.exs | sed -E 's/[^0-9.]+([0-9.]+).*/\1/')
           ARCHIVE="pythelix-${VER}-${{ matrix.os_short }}.${{ matrix.pack_ext }}"
-          cp "$REL_DIR/pythelix.${{ matrix.pack_ext }}" "$ARCHIVE"
+
+          if [[ "${{ matrix.pack_ext }}" == "zip" ]]; then
+            powershell -Command "Compress-Archive -Path '${REL_DIR}\\*' -DestinationPath '${ARCHIVE}'"
+          else
+            tar -czf "$ARCHIVE" -C "$REL_DIR" .
+          fi
+
           echo "archive=$ARCHIVE" >>"$GITHUB_OUTPUT"
 
       - name: Upload CI artefact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ steps.pkg.outputs.archive }}
+          name: pythelix-${{ matrix.os_short }}
           path: ${{ steps.pkg.outputs.archive }}
 
   publish:
@@ -79,8 +82,19 @@ jobs:
     permissions:
       contents: write     # lets the workflow create / mutate releases
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - uses: actions/download-artifact@v4
         with:
+          name: pythelix-linux-x64
+          merge-multiple: true
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: pythelix-windows-x64
           merge-multiple: true
 
       - name: Publish versioned release
@@ -90,22 +104,39 @@ jobs:
           name: "Pythelix ${{ github.ref_name }}"
           files: pythelix-*                             # all OS builds
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}     # :contentReference[oaicite:2]{index=2}
-
-      - name: Install GitHub CLI
-        uses: cli/cli-action@v2        # lightweight wrapper around `gh`
+          GH_TOKEN: ${{ secrets.GH_PAT }}
 
       - name: Refresh per-OS “latest” releases
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
           set -e
+          #for a in pythelix-*; do
+          #  os_tag=$(echo "$a" | cut -d'-' -f3)
+          #  latest="latest-${os_tag}"
+          #  gh release delete "$latest" -y || echo "No existing release to delete for $latest"
+          #  gh api -X DELETE "repos/${{ github.repository }}/git/refs/tags/$latest" || echo "No tag to delete for $latest"
+          #  gh release create "$latest" "$a" \
+          #    --title "Pythelix latest ($os_tag)" \
+          #    --notes "Auto-updated when ${GITHUB_REF#refs/heads/} advanced to ${GITHUB_REF_NAME}"
+          #done
           for a in pythelix-*; do
             os_tag=$(echo "$a" | cut -d'-' -f3)
+            ext=$(echo "$a" | sed -E 's/^.*\.(tar\.gz|zip)$/\1/')
             latest="latest-${os_tag}"
-            gh release delete "$latest" -y || true
-            gh api -X DELETE "repos/${{ github.repository }}/git/refs/tags/$latest" || true
-            gh release create "$latest" "$a" \
+            stable_name="pythelix-${os_tag}.${ext}"
+            COMMIT=$(git rev-parse HEAD)
+
+            # Copy with stable name
+            cp "$a" "$stable_name"
+
+            # Delete old release if exists
+            gh release delete "$latest" -y 2>/dev/null || true
+            gh api -X DELETE "repos/${{ github.repository }}/git/refs/tags/$latest" 2>/dev/null || true
+
+            # Create new "latest-*" release with stable filename
+            gh release create "$latest" "$stable_name" \
               --title "Pythelix latest ($os_tag)" \
-              --notes "Auto-updated when ${GITHUB_REF#refs/heads/} advanced to ${GITHUB_REF_NAME}"
+              --notes "Auto-updated from ${{ github.ref_name }}" \
+              --target "$COMMIT"
           done
