@@ -1,0 +1,111 @@
+name: Build & Release Pythelix
+
+on:
+  push:
+    branches: [releases]
+    tags:                              # … when the ref is ALSO a version tag
+      - '[0-9]+.[0-9]+.[0-9]+'         # 0.1.2, 2.3.4 …
+      - '[0-9]+.[0-9]+'                # 1.0, 2.1 …
+
+env:
+  MIX_ENV: prod
+  OTP_VERSION: '27'
+  ELIXIR_VERSION: '1.18'
+
+jobs:
+  build:
+    name: Build on ${{ matrix.os_short }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os_short: linux-x64
+            runner: ubuntu-latest
+            pack_ext: tar.gz
+          - os_short: macos-x64
+            runner: macos-latest
+            pack_ext: zip
+          - os_short: windows-x64
+            runner: windows-latest
+            pack_ext: zip
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Set up BEAM toolchain
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: ${{ env.ELIXIR_VERSION }}
+          otp-version:     ${{ env.OTP_VERSION }}
+
+      - name: Cache Mix build artefacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            deps
+            _build
+          key: ${{ runner.os }}-mix-${{ hashFiles('**/mix.lock') }}
+
+      - name: Install deps & compile
+        run: |
+          mix deps.get --only prod
+          mix compile
+          mix assets.deploy
+
+      - name: Produce the release
+        run: mix release          # default output goes to _build/prod/rel   :contentReference[oaicite:1]{index=1}
+
+      - name: Package OS-specific archive
+        id: pkg
+        shell: bash
+        run: |
+          REL_DIR="_build/prod/rel/pythelix"
+          VER=$(basename "$REL_DIR")
+          ARCHIVE="pythelix-${VER}-${{ matrix.os_short }}.${{ matrix.pack_ext }}"
+          cp "$REL_DIR/pythelix.${{ matrix.pack_ext }}" "$ARCHIVE"
+          echo "archive=$ARCHIVE" >>"$GITHUB_OUTPUT"
+
+      - name: Upload CI artefact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.pkg.outputs.archive }}
+          path: ${{ steps.pkg.outputs.archive }}
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write     # lets the workflow create / mutate releases
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+
+      - name: Publish versioned release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: "Pythelix ${{ github.ref_name }}"
+          files: pythelix-*                             # all OS builds
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}     # :contentReference[oaicite:2]{index=2}
+
+      - name: Install GitHub CLI
+        uses: cli/cli-action@v2        # lightweight wrapper around `gh`
+
+      - name: Refresh per-OS “latest” releases
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          for a in pythelix-*; do
+            os_tag=$(echo "$a" | cut -d'-' -f3)
+            latest="latest-${os_tag}"
+            gh release delete "$latest" -y || true
+            gh api -X DELETE "repos/${{ github.repository }}/git/refs/tags/$latest" || true
+            gh release create "$latest" "$a" \
+              --title "Pythelix latest ($os_tag)" \
+              --notes "Auto-updated when ${GITHUB_REF#refs/heads/} advanced to ${GITHUB_REF_NAME}"
+          done
