@@ -21,12 +21,42 @@ if System.get_env("PHX_SERVER") do
 end
 
 if config_env() == :prod do
+  # Load (or create and load) an environment file.
+  env_path = :filename.basedir(:user_data, "pythelix")
+
+  if !File.exists?(env_path) do
+    File.mkdir_p!(env_path)
+  end
+
+  env_file = Path.join(env_path, ".env")
+
+  if !File.exists?(env_file) do
+    IO.puts("Generating default environment file: #{env_file}")
+    secret =
+      :crypto.strong_rand_bytes(64)
+      |> Base.encode64()
+
+    File.write!(env_file, """
+    DATABASE_PATH=pythelix.db
+    SECRET_KEY_BASE=#{secret}
+    """)
+  end
+
+  env_vars =
+    File.read!(env_file)
+    |> String.split("\n", trim: true)
+    |> Enum.map(fn line ->
+      [key, val] = String.split(line, "=", parts: 2)
+      {key, val}
+    end)
+    |> Enum.into(%{})
+
   database_path =
-    System.get_env("DATABASE_PATH") ||
-      raise """
-      environment variable DATABASE_PATH is missing.
-      For example: /etc/pythelix/pythelix.db
-      """
+    env_vars["DATABASE_PATH"]
+    |> then(fn path ->
+      System.get_env("RELEASE_ROOT", File.cwd!())
+      |> Path.join(path)
+    end)
 
   config :pythelix, Pythelix.Repo,
     database: database_path,
@@ -37,12 +67,7 @@ if config_env() == :prod do
   # want to use a different value for prod and you most likely don't want
   # to check this value into version control, so we use an environment
   # variable instead.
-  secret_key_base =
-    System.get_env("SECRET_KEY_BASE") ||
-      raise """
-      environment variable SECRET_KEY_BASE is missing.
-      You can generate one by calling: mix phx.gen.secret
-      """
+  secret_key_base = env_vars["SECRET_KEY_BASE"]
 
   host = System.get_env("PHX_HOST") || "example.com"
   port = String.to_integer(System.get_env("PORT") || "8000")
