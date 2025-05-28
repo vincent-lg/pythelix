@@ -23,9 +23,6 @@ jobs:
           - os_short: linux-x64
             runner: ubuntu-latest
             pack_ext: tar.gz
-          - os_short: macos-x64
-            runner: macos-latest
-            pack_ext: zip
           - os_short: windows-x64
             runner: windows-latest
             pack_ext: zip
@@ -62,9 +59,15 @@ jobs:
         shell: bash
         run: |
           REL_DIR="_build/prod/rel/pythelix"
-          VER=$(basename "$REL_DIR")
+          VER=$(grep -m1 version mix.exs | sed -E 's/[^0-9.]+([0-9.]+).*/\1/')
           ARCHIVE="pythelix-${VER}-${{ matrix.os_short }}.${{ matrix.pack_ext }}"
-          cp "$REL_DIR/pythelix.${{ matrix.pack_ext }}" "$ARCHIVE"
+
+          if [[ "${{ matrix.pack_ext }}" == "zip" ]]; then
+            powershell -Command "Compress-Archive -Path '${REL_DIR}\\*' -DestinationPath '${ARCHIVE}'"
+          else
+            tar -czf "$ARCHIVE" -C "$REL_DIR" .
+          fi
+
           echo "archive=$ARCHIVE" >>"$GITHUB_OUTPUT"
 
       - name: Upload CI artefact
