@@ -11,9 +11,8 @@ defmodule Pythelix.Scripting.Interpreter.Script do
   alias Pythelix.Scripting.Callable
   alias Pythelix.Scripting.Callable.Method
   alias Pythelix.Scripting.Format
-  alias Pythelix.Scripting.Interpreter.{Debugger, Script}
+  alias Pythelix.Scripting.Interpreter.{Debugger, Script, VM}
   alias Pythelix.Scripting.Traceback
-  alias Pythelix.Scripting.Interpreter.VM
 
   @enforce_keys [:bytecode]
   defstruct [

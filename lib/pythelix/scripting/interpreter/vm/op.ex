@@ -3,9 +3,13 @@ defmodule Pythelix.Scripting.Interpreter.VM.Op do
   Grouping of frequent operations.
   """
 
-  alias Pythelix.Scripting.Callable
+  alias Pythelix.Scripting.{Callable, Namespace}
   alias Pythelix.Scripting.Interpreter.{Iterator, Script}
   alias Pythelix.Scripting.Namespace
+
+  @modules %{
+    "random" => Namespace.Module.Random
+  }
 
   def put(script, value) do
     script
@@ -20,7 +24,13 @@ defmodule Pythelix.Scripting.Interpreter.VM.Op do
   end
 
   def read(%{variables: variables} = script, variable) do
-    value = Map.get(variables, variable, :no_var)
+    value =
+      variables
+      |> Map.get(variable, :no_var)
+      |> then(fn
+        :no_var -> Map.get(@modules, variable, :no_var)
+        other -> other
+      end)
 
     if value == :no_var do
       Script.raise(script, NameError, "name '#{variable}' is not defined")

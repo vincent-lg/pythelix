@@ -178,6 +178,7 @@ defmodule Pythelix.Scripting.Namespace do
   @spec locate(term()) :: module()
   def locate(value) do
     case value do
+      atom when is_atom(value) -> value
       list when is_list(list) -> Namespace.List
       str when is_binary(str) -> Namespace.String
       %Pythelix.Entity{} -> Namespace.Entity
