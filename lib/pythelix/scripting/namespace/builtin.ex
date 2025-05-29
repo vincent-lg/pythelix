@@ -5,6 +5,8 @@ defmodule Pythelix.Scripting.Namespace.Builtin do
 
   use Pythelix.Scripting.Namespace
 
+  alias Pythelix.World
+
   deffun function_Entity(script, namespace), [
     {:key, keyword: "key", type: :string, default: nil},
     {:parent, keyword: "parent", type: :entity, default: nil},
@@ -14,6 +16,23 @@ defmodule Pythelix.Scripting.Namespace.Builtin do
     {:ok, entity} = Pythelix.Record.create_entity(opts)
 
     {script, entity}
+  end
+
+  deffun apply(script, namespace), [
+    {:file, index: 0, type: :string, default: :all}
+  ] do
+    case World.apply(namespace.file) do
+      {:ok, path, number} ->
+        IO.puts("Worldlet applied from #{path}: #{number} entities were added or updated.")
+
+      :nofile ->
+        IO.puts("The specified file #{inspect(namespace.file)} doesn't exist.")
+
+      :error ->
+        IO.puts("An error occurred, applying cancelled.")
+    end
+
+    {script, :none}
   end
 
   deffun entity(script, namespace), [

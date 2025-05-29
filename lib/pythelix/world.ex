@@ -26,14 +26,23 @@ defmodule Pythelix.World do
 
   Args:
 
-  - `worldlet`: the path leading to the directory or worldlet file.
+  - `worldlet` (or `:all`): the path leading to the directory or worldlet file.
   """
-  @spec apply(String.t()) :: {:ok, integer()} | :error | :nofile
+  @spec apply(String.t() | :all) :: {:ok, integer()} | :error | :nofile
+  def apply(:all) do
+    System.get_env("WORLDLETS_PATH", "worldlets")
+    |> then(fn path ->
+      System.get_env("RELEASE_ROOT", File.cwd!())
+      |> Path.join(path)
+    end)
+    |> apply()
+  end
+
   def apply(worldlet) do
     if File.exists?(worldlet) do
       case process_worldlets(worldlet) do
         :error -> :error
-        entities -> {:ok, length(entities)}
+        entities -> {:ok, worldlet, length(entities)}
       end
     else
       :nofile

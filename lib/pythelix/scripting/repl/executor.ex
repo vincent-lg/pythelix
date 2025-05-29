@@ -4,6 +4,7 @@ defmodule Pythelix.Scripting.REPL.Executor do
   """
 
   alias Pythelix.Scripting
+  alias Pythelix.Scripting.Callable
   alias Pythelix.Scripting.Interpreter.Script
   alias Pythelix.Scripting.Traceback
 
@@ -58,7 +59,9 @@ defmodule Pythelix.Scripting.REPL.Executor do
           %{old_script | bytecode: new_script.bytecode, cursor: 0}
       end
 
-    script = Script.refresh_entity_references(script)
+    script = script
+      |> Script.refresh_entity_references()
+
     exec_start_time = System.monotonic_time(:microsecond)
     case Scripting.Interpreter.Script.execute(script, input, "<stdin>") do
       %{error: %Traceback{} = traceback} ->

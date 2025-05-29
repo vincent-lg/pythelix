@@ -2,6 +2,14 @@ defmodule Pythelix.Task.Apply do
   alias Pythelix.Task
   alias Pythelix.World
 
+  def run([]) do
+    run([:all])
+  end
+
+  def run("") do
+    run([:all])
+  end
+
   def run(str) when is_binary(str) do
     run(OptionParser.split(str))
   end
@@ -35,8 +43,8 @@ defmodule Pythelix.Task.Apply do
       GenServer.cast({:global, Pythelix.Command.Hub}, {:start, id, %{file: file, pid: self()}, World.Executor})
 
       receive do
-        {:ok, number} ->
-          IO.puts("Worldlet applied: #{number} entities were added or updated.")
+        {:ok, path, number} ->
+          IO.puts("Worldlet applied from #{path}: #{number} entities were added or updated.")
 
         :nofile ->
           IO.puts("The specified file #{inspect(file)} doesn't exist.")

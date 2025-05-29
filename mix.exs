@@ -9,7 +9,12 @@ defmodule Pythelix.MixProject do
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
-      deps: deps()
+      deps: deps(),
+      releases: [
+        pythelix: [
+          steps: [:assemble, &copy_extra_files/1]
+        ]
+      ]
     ]
   end
 
@@ -85,5 +90,12 @@ defmodule Pythelix.MixProject do
         "phx.digest"
       ]
     ]
+  end
+
+  defp copy_extra_files(release) do
+    File.cp_r!("docs", Path.join(release.path, "docs"))
+    File.cp_r!("worldlets", Path.join(release.path, "worldlets"))
+
+    release
   end
 end
