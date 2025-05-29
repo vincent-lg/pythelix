@@ -23,16 +23,14 @@ defmodule Pythelix.Scripting.Namespace.Builtin do
   ] do
     case World.apply(namespace.file) do
       {:ok, path, number} ->
-        IO.puts("Worldlet applied from #{path}: #{number} entities were added or updated.")
+        {script, "Worldlet applied from #{path}: #{number} entities were added or updated."}
 
       :nofile ->
-        IO.puts("The specified file #{inspect(namespace.file)} doesn't exist.")
+        {script, "The specified file #{inspect(namespace.file)} doesn't exist."}
 
       :error ->
-        IO.puts("An error occurred, applying cancelled.")
+        {script, "An error occurred, applying cancelled."}
     end
-
-    {script, :none}
   end
 
   deffun entity(script, namespace), [
