@@ -150,14 +150,12 @@ defmodule Pythelix.Command.Hub do
   end
 
   def handle_info({:executor_done, executor_id, _result}, %{running: running} = state) do
-    IO.puts("#{executor_id} is down.")
     {ref, references} = Map.pop(state.references, executor_id)
     {_, references} = Map.pop(references, ref)
     {_, tasks} = Map.pop(state.tasks, executor_id)
     state = %{state | tasks: tasks, references: references, busy?: false, running: nil}
 
     if executor_id == running do
-      IO.puts("And it's the currently running one.")
       {next, state} = get_next_task(state)
 
       case next do

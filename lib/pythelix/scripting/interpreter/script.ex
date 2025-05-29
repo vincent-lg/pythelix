@@ -294,6 +294,7 @@ defmodule Pythelix.Scripting.Interpreter.Script do
   def references?(%Callable{}), do: false
   def references?(value) when is_reference(value), do: false
   def references?(value) when is_number(value), do: false
+  def references?(:none), do: false
   def references?(value) when is_boolean(value), do: false
   def references?(value) when is_binary(value), do: false
   def references?(value) when is_tuple(value), do: false

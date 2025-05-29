@@ -9,7 +9,7 @@ defmodule Pythelix.Scripting.Parser.Constants do
   import NimbleParsec
   import Pythelix.Scripting.Parser.Whitespace, only: [clear_whitespace: 1, check_end_symbol: 0]
 
-  @reserved_sym ["true", "false", "not", "and", "or", "endif", "done"]
+  @reserved_sym ["true", "false", "None", "not", "and", "or", "endif", "done"]
   @id_start "[[:L:][:Nl:][:Other_ID_Start:]-[:Pattern_Syntax:]-[:Pattern_White_Space:][_]]"
   @id_continue "[[:ID_Start:][:Mn:][:Mc:][:Nd:][:Pc:][:Other_ID_Continue:]-[:Pattern_Syntax:]-[:Pattern_White_Space:][_]]"
 
@@ -43,7 +43,14 @@ defmodule Pythelix.Scripting.Parser.Constants do
   end
 
   def id do
-    utf8_char(@id_start_range)
+    lookahead_not(
+      choice(
+        @reserved_sym
+        |> Enum.map(&string/1)
+      )
+      |> isolate()
+    )
+    |> utf8_char(@id_start_range)
     |> utf8_string(@id_continue_range, min: 0)
     |> isolate()
     |> post_traverse({__MODULE__, :to_varname, []})
@@ -54,10 +61,6 @@ defmodule Pythelix.Scripting.Parser.Constants do
   def to_varname(rest, acc, context, _line, _offset) do
     name = acc |> Enum.reverse() |> List.to_string()
 
-    if name in @reserved_sym do
-      {:error, name <> " is a reserved symbol"}
-    else
-      {rest, [name], context}
-    end
+    {rest, [name], context}
   end
 end

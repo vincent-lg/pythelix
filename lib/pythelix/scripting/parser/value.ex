@@ -31,7 +31,8 @@ defmodule Pythelix.Scripting.Parser.Value do
   globals =
     choice([
       string("true") |> replace(true),
-      string("false") |> replace(false)
+      string("false") |> replace(false),
+      string("None") |> replace(:none)
     ])
     |> isolate()
     |> label("global name")

@@ -111,15 +111,6 @@ jobs:
           GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
           set -e
-          #for a in pythelix-*; do
-          #  os_tag=$(echo "$a" | cut -d'-' -f3)
-          #  latest="latest-${os_tag}"
-          #  gh release delete "$latest" -y || echo "No existing release to delete for $latest"
-          #  gh api -X DELETE "repos/${{ github.repository }}/git/refs/tags/$latest" || echo "No tag to delete for $latest"
-          #  gh release create "$latest" "$a" \
-          #    --title "Pythelix latest ($os_tag)" \
-          #    --notes "Auto-updated when ${GITHUB_REF#refs/heads/} advanced to ${GITHUB_REF_NAME}"
-          #done
           for a in pythelix-*; do
             os_tag=$(echo "$a" | cut -d'-' -f3)
             ext=$(echo "$a" | sed -E 's/^.*\.(tar\.gz|zip)$/\1/')

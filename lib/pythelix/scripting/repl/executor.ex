@@ -74,7 +74,7 @@ defmodule Pythelix.Scripting.REPL.Executor do
         apply_elapsed = System.monotonic_time(:microsecond) - apply_start_time
 
         output =
-          if script.last_raw != nil do
+          if script.last_raw != nil && script.last_raw != :none do
             inspect(script.last_raw)
           else
             nil

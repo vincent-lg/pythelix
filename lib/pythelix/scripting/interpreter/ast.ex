@@ -68,7 +68,7 @@ defmodule Pythelix.Scripting.Interpreter.AST do
     |> read_nested_ast(sub)
   end
 
-  defp read_ast(code, global) when global in [true, false] do
+  defp read_ast(code, global) when global in [true, false, :none] do
     code
     |> add({:put, global})
   end
