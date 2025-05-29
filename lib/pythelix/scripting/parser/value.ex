@@ -30,8 +30,8 @@ defmodule Pythelix.Scripting.Parser.Value do
 
   globals =
     choice([
-      string("true") |> replace(true),
-      string("false") |> replace(false),
+      string("True") |> replace(true),
+      string("False") |> replace(false),
       string("None") |> replace(:none)
     ])
     |> isolate()

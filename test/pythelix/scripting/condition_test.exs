@@ -5,7 +5,7 @@ defmodule Pythelix.Scripting.ConditionTest do
 
   use Pythelix.ScriptingCase
 
-  test "test a true, simple comparison" do
+  test "test a True, simple comparison" do
     script =
       run("""
       if 1 < 2:
@@ -18,7 +18,7 @@ defmodule Pythelix.Scripting.ConditionTest do
     assert script.variables == %{"value" => "yes"}
   end
 
-  test "test a false, simple comparison" do
+  test "test a False, simple comparison" do
     script =
       run("""
       if -2 >= 8:
@@ -31,7 +31,7 @@ defmodule Pythelix.Scripting.ConditionTest do
     assert script.variables == %{"value" => "no"}
   end
 
-  test "test a true, scale comparison" do
+  test "test a True, scale comparison" do
     script =
       run("""
       if 1 < 2 <= 4:
@@ -44,7 +44,7 @@ defmodule Pythelix.Scripting.ConditionTest do
     assert script.variables == %{"value" => "yes"}
   end
 
-  test "test a false, scale comparison" do
+  test "test a False, scale comparison" do
     script =
       run("""
       if 10 >= 5 > 8:
@@ -57,11 +57,11 @@ defmodule Pythelix.Scripting.ConditionTest do
     assert script.variables == %{"value" => "no"}
   end
 
-  test "a true, and comparison" do
+  test "a True, and comparison" do
     script =
       run("""
       âge = 20
-      citizen = true
+      citizen = True
       if âge >= 18 and citizen:
         value = "yes"
       else:
@@ -72,11 +72,11 @@ defmodule Pythelix.Scripting.ConditionTest do
     assert script.variables["value"] == "yes"
   end
 
-  test "a true, or comparison" do
+  test "a True, or comparison" do
     script =
       run("""
       âge = 15
-      citizen = true
+      citizen = True
       if âge >= 18 or citizen:
         value = "yes"
       else:
@@ -87,11 +87,11 @@ defmodule Pythelix.Scripting.ConditionTest do
     assert script.variables["value"] == "yes"
   end
 
-  test "a false, and comparison" do
+  test "a False, and comparison" do
     script =
       run("""
       âge = 20
-      citizen = false
+      citizen = False
       if âge >= 18 and citizen:
         value = "yes"
       else:
@@ -102,11 +102,11 @@ defmodule Pythelix.Scripting.ConditionTest do
     assert script.variables["value"] == "no"
   end
 
-  test "a false, or comparison" do
+  test "a False, or comparison" do
     script =
       run("""
       âge = 15
-      citizen = false
+      citizen = False
       if âge >= 18 or citizen:
         value = "yes"
       else:

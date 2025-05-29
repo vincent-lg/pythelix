@@ -5,13 +5,18 @@ defmodule Pythelix.Scripting.Parser.GlobalsTest do
 
   use Pythelix.ScriptingCase
 
-  test "true should parse" do
-    ast = eval_ok("true")
+  test "True should parse" do
+    ast = eval_ok("True")
     assert ast == true
   end
 
-  test "false should parse" do
-    ast = eval_ok("false")
+  test "False should parse" do
+    ast = eval_ok("False")
     assert ast == false
+  end
+
+  test "None should parse" do
+    ast = eval_ok("None")
+    assert ast == :none
   end
 end

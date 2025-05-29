@@ -56,8 +56,8 @@ defmodule Pythelix.Scripting.Parser.IDTest do
   end
 
   test "a variable containing part of a keyword" do
-    ast = eval_ok("truer")
-    assert ast == {:var, "truer"}
+    ast = eval_ok("Truer")
+    assert ast == {:var, "Truer"}
   end
 
   test "variable name with punctuation marks should fail" do

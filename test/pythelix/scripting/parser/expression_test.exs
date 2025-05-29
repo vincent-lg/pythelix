@@ -146,7 +146,7 @@ defmodule Pythelix.Scripting.Parser.ExpressionTest do
   end
 
   test "not a bool in isolation" do
-    ast = eval_ok("not true")
+    ast = eval_ok("not True")
     assert ast == {:not, [true]}
   end
 
@@ -156,7 +156,7 @@ defmodule Pythelix.Scripting.Parser.ExpressionTest do
   end
 
   test "not a bool in and with parents" do
-    ast = eval_ok("1 and (not true)")
+    ast = eval_ok("1 and (not True)")
     assert ast == {:and, [1, {:not, [true]}]}
   end
 
@@ -166,7 +166,7 @@ defmodule Pythelix.Scripting.Parser.ExpressionTest do
   end
 
   test "not a bool in and without parents" do
-    ast = eval_ok("1 and not true")
+    ast = eval_ok("1 and not True")
     assert ast == {:and, [1, {:not, [true]}]}
   end
 

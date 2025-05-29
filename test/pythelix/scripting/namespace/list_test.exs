@@ -72,7 +72,7 @@ defmodule Pythelix.Scripting.Namespace.ListTest do
     test "a list with different types" do
       script =
         run("""
-        values = [true, 2 * 2, -3.2, 'ok']
+        values = [True, 2 * 2, -3.2, 'ok']
         """)
 
       assert Script.get_variable_value(script, "values") == [true, 4, -3.2, "ok"]

@@ -115,13 +115,13 @@ defmodule Pythelix.Scripting.VariableTest do
     assert script.variables == %{"cond" => false}
   end
 
-  test "assign not true" do
-    script = run("cond = not true")
+  test "assign not True" do
+    script = run("cond = not True")
     assert script.variables == %{"cond" => false}
   end
 
-  test "assign not false" do
-    script = run("cond = not false")
+  test "assign not False" do
+    script = run("cond = not False")
     assert script.variables == %{"cond" => true}
   end
 end
