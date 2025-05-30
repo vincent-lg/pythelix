@@ -1,0 +1,45 @@
+[room]
+
+[bakery]
+parent: "room"
+title: "A bakery"
+Description: """
+The warm, inviting scent of freshly baked bread and sweet pastries fills
+the air upon entering this cozy little shop. A fine dusting of flour clings
+lightly to the wooden floorboards and countertops. Shelves and display cases
+brim with golden-baked goods—loaves of crusty bread, delicate pastries,
+and confections in all shapes and sizes. Icing glistens under soft lighting,
+while nuts, berries, and chocolate chips adorn many of the treats with artistic
+precision. At the back of the shop, an antique wooden cash register rests
+atop a counter, its brass details dulled slightly with age and use.
+"""
+price: 30000
+
+{spill}
+author.msg("You swipe the merchandise and throw it to the ground. How rude!")
+author.announce(f"{author} swipes the merchandise and throws it to the ground. Really!")
+
+{honk}
+author.msg("You honk and that's nhot great.")
+
+{test}
+e = !bakery!
+e.id = 8
+
+[sidewalk]
+parent: "room"
+title: "The sidewalk"
+
+{walk}
+author.msg("You're walking... and that's already something.")
+
+{test}
+e = !bakery!
+e.test()
+
+[animal]
+height: 0
+weight: 0
+
+{call(client: Entity["generic/client"])}
+client.msg("The animal calls... don't know what.")

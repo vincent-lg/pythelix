@@ -1,0 +1,11 @@
+[command/shout]
+parent: "generic/command"
+name: "shout"
+syntax: "<message>"
+
+{refine}
+message = message.upper()
+
+{run}
+i = 15
+client.msg(f"And i]{i} and {message.center(10)}")
