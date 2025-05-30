@@ -4,7 +4,6 @@ defmodule Pythelix.Scripting.REPL.Executor do
   """
 
   alias Pythelix.Scripting
-  alias Pythelix.Scripting.Callable
   alias Pythelix.Scripting.Interpreter.Script
   alias Pythelix.Scripting.Traceback
 

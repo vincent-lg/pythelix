@@ -7,7 +7,11 @@ defmodule Pythelix.World.File do
 
   def parse_file(path) do
     File.stream!(path)
-    |> Enum.map(&String.trim_trailing(&1, "\n"))
+    |> Enum.map(fn string ->
+      string
+      |> String.replace_trailing("\r\n", "\n")
+      |> String.trim_trailing("\n")
+    end)
     |> Enum.with_index()
     |> parse_lines(%State{})
     |> case do

@@ -50,7 +50,7 @@ defmodule Pythelix.Scripting.Namespace.Module.Random do
     end
   end
 
-  defp valid_range?(start, stop, 0), do: false
+  defp valid_range?(_start, _stop, 0), do: false
   defp valid_range?(start, stop, step) when step > 0 and start + step > stop, do: false
   defp valid_range?(start, stop, step) when step < 0 and start + step < stop, do: false
   defp valid_range?(_start, _stop, _step), do: true
