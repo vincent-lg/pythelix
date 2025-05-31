@@ -46,7 +46,7 @@ if config_env() == :prod do
     File.read!(env_file)
     |> String.split("\n", trim: true)
     |> Enum.map(fn line ->
-      [key, val] = String.split(line.trim(), "=", parts: 2)
+      [key, val] = String.split(String.trim(line), "=", parts: 2)
       {key, val}
     end)
     |> Enum.into(%{})
