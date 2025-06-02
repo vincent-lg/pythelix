@@ -250,6 +250,15 @@ defmodule Pythelix.Scripting.Interpreter.AST do
     |> replace({:unset, end_block}, fn code -> {:iter, length_code(code)} end)
   end
 
+  defp read_ast(code, {:wait, [{_, {line, _}} | values]}) do
+    code
+    |> add({:line, line})
+    |> then(fn code ->
+      Enum.reduce(values, code, fn value, code -> read_ast(code, value) end)
+    end)
+    |> add({:wait, nil})
+  end
+
   defp read_ast(code, {:raw, expr, {line, _}}) do
     code
     |> add({:line, line})
