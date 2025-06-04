@@ -7,7 +7,7 @@ defmodule Pythelix.World do
   """
 
   @generic_client "generic/client"
-  @worldlet_dir "priv/worldlets"
+  @worldlet_dir "worldlets"
   @worldlet_pattern "*.txt"
 
   alias Pythelix.Command
@@ -225,11 +225,16 @@ defmodule Pythelix.World do
 
     for {name, value} <- attributes do
 
-      if is_binary(value) do
-        {:ok, value} = Scripting.eval(value) |> IO.inspect(label: "value")
+      value =
+        if is_binary(value) do
+          {:ok, value} = Scripting.eval(value) |> IO.inspect(label: "value")
 
-        Record.set_attribute(entity.key, name, value)
-      end
+          value
+        else
+          value
+        end
+
+      Record.set_attribute(entity.key, name, value)
     end
 
     for {name, {args, code}} <- entity.methods do

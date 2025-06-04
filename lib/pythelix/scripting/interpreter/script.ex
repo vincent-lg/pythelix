@@ -24,6 +24,7 @@ defmodule Pythelix.Scripting.Interpreter.Script do
     variables: %{},
     bound: %{},
     last_raw: nil,
+    pause: nil,
     error: nil,
     debugger: nil
   ]
@@ -38,6 +39,7 @@ defmodule Pythelix.Scripting.Interpreter.Script do
           variables: map(),
           bound: map(),
           last_raw: any(),
+          pause: nil | integer() | float(),
           error: nil | Traceback.t(),
           debugger: nil | %Debugger{}
         }
@@ -159,6 +161,10 @@ defmodule Pythelix.Scripting.Interpreter.Script do
     |> Stream.map(fn {op, index} -> {index, op} end)
     |> Map.new()
     |> run_next_bytecode(script, code, owner)
+  end
+
+  defp run_next_bytecode(_, %{pause: value} = script, _code, _owner) when value != nil do
+    script
   end
 
   defp run_next_bytecode(_, %{error: %Traceback{} = traceback} = script, code, owner) do

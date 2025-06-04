@@ -68,19 +68,19 @@ defmodule Pythelix.Command.Hub do
   end
 
   def assign_client(from_pid) do
-    GenServer.call(__MODULE__, {:assign_client, from_pid})
+    GenServer.call({:global, __MODULE__}, {:assign_client, from_pid})
   end
 
   def send_command(client_id, start_time, command) do
-    GenServer.cast(__MODULE__, {:command, client_id, start_time, command})
+    GenServer.cast({:global, __MODULE__}, {:command, client_id, start_time, command})
   end
 
   def start_task(task_id, args, handler) do
-    GenServer.cast(__MODULE__, {:start, task_id, args, handler})
+    GenServer.cast({:global, __MODULE__}, {:start, task_id, args, handler})
   end
 
   def send_task(task_id, message) do
-    GenServer.cast(__MODULE__, {:send_task, task_id, message})
+    GenServer.cast({:global, __MODULE__}, {:send_task, task_id, message})
   end
 
   def handle_call({:assign_client, from_pid}, _from, %{client_id: client_id} = state) do
@@ -106,6 +106,16 @@ defmodule Pythelix.Command.Hub do
   end
 
   def handle_cast({:script, _id, _name, _args} = script, state) do
+    if state.busy? do
+      queue = :queue.in(script, state.queue)
+
+      {:noreply, %{state | queue: queue}}
+    else
+      {:noreply, execute(script, state)}
+    end
+  end
+
+  def handle_cast({:unpause, _pid} = script, state) do
     if state.busy? do
       queue = :queue.in(script, state.queue)
 
@@ -209,9 +219,9 @@ defmodule Pythelix.Command.Hub do
     end
   end
 
-  defp execute({:unpause, pid}, state) do
-    send(pid, :unpause)
-    state
+  defp execute({:unpause, pid}, %{executor_id: executor_id} = state) do
+    GenServer.cast(pid, {:unpause, executor_id})
+    %{state | executor_id: executor_id + 1}
   end
 
   defp execute({:start, task_id, args, handler} = key, %{executor_id: executor_id} = state) do
@@ -227,7 +237,7 @@ defmodule Pythelix.Command.Hub do
     %{state | busy?: true, running: executor_id, executor_id: executor_id + 1}
   end
 
-  defp execute_command(state, _, _, nil, _, _), do: state
+  defp execute_command(state, _, _, nil, _, _), do: {:ok, state}
 
   defp execute_command(%{executor_id: executor_id} = state, client, start_time, command_key, command_args, key) do
     args = {client, start_time, command_key, command_args}

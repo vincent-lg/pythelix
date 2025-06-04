@@ -16,6 +16,10 @@ defmodule Pythelix.Command.Executor do
 
   def name(_), do: nil
 
+  def handle_cast(:unpause, executor_id, {script, code, name}) do
+    Pythelix.Scripting.Executor.handle_cast(:unpause, executor_id, {script, code, name})
+  end
+
   @doc """
   Executes a command.
 
@@ -50,6 +54,9 @@ defmodule Pythelix.Command.Executor do
 
       {:ok, script}
     else
+      {:keep, _} = wait ->
+        wait
+
       :parse_error ->
         parse_error(command, command_args, client)
 

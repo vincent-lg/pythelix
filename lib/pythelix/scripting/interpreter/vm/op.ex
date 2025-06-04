@@ -123,6 +123,12 @@ defmodule Pythelix.Scripting.Interpreter.VM.Op do
     |> Script.put_stack(value)
   end
 
+  def wait(script, nil) do
+    {script, wait_time} = Script.get_stack(script)
+
+    %{script | pause: wait_time}
+  end
+
   def raw(script, nil) do
     {script, value} = Script.get_stack(script)
 

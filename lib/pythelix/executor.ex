@@ -46,6 +46,9 @@ defmodule Pythelix.Executor do
 
   def process(executor_id, handler, args) do
     case handler.execute(executor_id, args) do
+      {:keep, new_state} ->
+        {:noreply, {handler, {executor_id, new_state}}}
+
       :keep ->
         {:noreply, {handler, {executor_id, args}}}
 
