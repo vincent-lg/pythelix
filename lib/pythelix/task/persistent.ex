@@ -8,8 +8,8 @@ defmodule Pythelix.Task.Persistent do
 
   require Logger
 
-  @enforce_keys [:id, :expire_at, :script]
-  defstruct [:id, :expire_at, :script]
+  @enforce_keys [:id, :expire_at, :name, :code, :script]
+  defstruct [:id, :expire_at, :name, :code, :script]
 
   @typedoc "A persistent task"
   @type t() :: %{id: integer(), expire_at: nil | DateTime.t(), script: Script.t()}
@@ -38,9 +38,10 @@ defmodule Pythelix.Task.Persistent do
     |> Enum.reject(& &1 == nil)
     |> Enum.reduce({get_status(), get_ids()}, fn task, {status, ids} ->
       task
-      |> schedule()
+      |> tap(& Cachex.put(@cache, &1.id, &1))
+      |> schedule(:new)
       |> case do
-        :ok -> {Map.put(status, task.id, :scheduled), [task.id | ids]}
+        {:ok, task} -> {Map.put(status, task.id, :scheduled), [task.id | ids]}
         _ -> {Map.put(status, task.id, :error), ids}
       end
     end)
@@ -58,16 +59,25 @@ defmodule Pythelix.Task.Persistent do
   Args:
 
   * expire_at (nil or DateTime): the expiration.
+  * name (string): tghe task name (usually the method's name)
+  * code (string): the task code (unparsed).
   * script (Script): the script to run.
+  * opts (Keyword): the options.
+
+  Available options:
+
+  - `:update`: force an update, the self() process will be notified when the task expires.
   """
-  @spec add(nil | DateTime.t(), Script.t()) :: t()
-  def add(expire_at, script) do
+  @spec add(nil | DateTime.t(), String.t(), String.t(), Script.t()) :: t()
+  def add(expire_at, name, code, script, opts \\ []) do
     {id, ids} = find_free_id()
     status = get_status()
 
-    task = %Task{id: id, expire_at: expire_at, script: script}
-    save(task)
-    schedule(task)
+    {:ok, task} =
+      %Task{id: id, expire_at: expire_at, name: name, code: code, script: script}
+      |> save()
+      |> schedule((opts[:update] && :update) || :new)
+
     ids = Enum.sort([id | ids])
     Cachex.put(@cache, :ids, ids)
     Cachex.put(@cache, :status, Map.put(status, id, :scheduled))
@@ -78,16 +88,28 @@ defmodule Pythelix.Task.Persistent do
   @doc """
   Update an existing task.
 
-  Foces a save on the task with the new expire_at and script.
+  Forces a save on the task with the new expire_at and script.
   If the task does not exist, do nothing.
+
+  Args:
+
+  * id (integer): the task ID.
+  * name (:same or string): the task name (if :same, remains the same).
+  * code (:name or string): the task code (if :same, remains the same).
+  * script (Script): the task script.
   """
-  @spec update(integer(), nil | DateTime.t(), Script.t()) :: :ok | :notask
-  def update(id, expire_at, script) do
+  @spec update(integer(), nil | DateTime.t(), :same | String.t(), :same | String.t(), Script.t()) :: :ok | :notask
+  def update(id, expire_at, name, code, script) do
     get(id)
     |> case do
       %Task{} = task->
-        task = %{task | expire_at: expire_at, script: script}
-        save(task)
+        name = (name == :same && task.name) || name
+        code = (code == :same && task.code) || code
+        {:ok, _task} =
+          %{task | expire_at: expire_at, name: name, code: code, script: script}
+          |> save()
+          |> schedule(:update)
+
         :ok
 
       nil ->
@@ -112,6 +134,7 @@ defmodule Pythelix.Task.Persistent do
         Cachex.put(@cache, :ids, ids)
         Cachex.put(@cache, :status, status)
         File.rm(get_task_path(id))
+        IO.puts("Remove task #{id}")
 
       nil
         -> :notask
@@ -134,6 +157,7 @@ defmodule Pythelix.Task.Persistent do
         System.get_env("RELEASE_ROOT", File.cwd!())
         |> Path.join(path)
       end)
+      |> String.replace("\\", "/")
 
     if !File.exists?(path) do
       File.mkdir_p!(path)
@@ -185,7 +209,14 @@ defmodule Pythelix.Task.Persistent do
     end
   end
 
-  defp schedule(task) do
+  defp schedule(task, operation) do
+    arg =
+      case operation do
+        :new -> task.id
+        :update -> self()
+        other -> raise "invalid operation #{inspect(other)}"
+      end
+
     if task.expire_at do
       now = DateTime.utc_now()
       time =
@@ -194,20 +225,21 @@ defmodule Pythelix.Task.Persistent do
         |> then(& (&1 > 0 && &1) || 0)
 
       hub = :global.whereis_name(Pythelix.Command.Hub)
-      Process.send_after(hub, {:"$gen_cast", {:restart_paused, task.id}}, time)
-      IO.puts("Task #{task.id} schedule in {time} ms")
+      Process.send_after(hub, {:"$gen_cast", {:unpause, arg}}, time)
+      IO.puts("Task #{task.id} schedule in #{time} ms")
     end
 
-    :ok
+    {:ok, task}
   end
 
-  def save(task) do
+  defp save(task) do
     Cachex.put(@cache, task.id, task)
     File.write!(get_task_path(task.id), :erlang.term_to_binary(task), [:write])
+    task
   end
 
-  defp find_free_id(), do: find_free_id(1, get_ids())
-  defp find_free_id(id, []), do: {id, []}
-  defp find_free_id(id, [first | _] = ids) when id < first, do: {id, ids}
-  defp find_free_id(id, ids), do: find_free_id(id + 1, ids)
+  defp find_free_id(), do: find_free_id(1, get_ids(), get_ids())
+  defp find_free_id(id, [], ids), do: {id, ids}
+  defp find_free_id(id, [first | _], ids) when id < first, do: {id, ids}
+  defp find_free_id(id, [_ | rest], ids), do: find_free_id(id + 1, rest, ids)
 end

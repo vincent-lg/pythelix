@@ -5,6 +5,9 @@ defmodule Pythelix.Scripting.Namespace.Builtin do
 
   use Pythelix.Scripting.Namespace
 
+  require Logger
+
+  alias Pythelix.Scripting.Format
   alias Pythelix.World
 
   deffun function_Entity(script, namespace), [
@@ -33,6 +36,14 @@ defmodule Pythelix.Scripting.Namespace.Builtin do
     end
   end
 
+  deffun log(script, namespace), [
+    {:message, index: 0, type: :string}
+  ] do
+    message = Format.String.format(namespace.message)
+    Logger.info(message)
+
+    {script, :none}
+  end
   deffun entity(script, namespace), [
     {:id, index: 0, type: :int, default: nil},
     {:key, keyword: "key", type: :string, default: nil}

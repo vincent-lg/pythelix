@@ -65,6 +65,15 @@ defmodule Pythelix.Command.Hub do
     else
       {:noreply, state}
     end
+    |> tap(fn _ ->
+      tasks_start_time = System.monotonic_time(:microsecond)
+      Pythelix.Task.Persistent.init()
+      number = Pythelix.Task.Persistent.load()
+      tasks_elapsed = System.monotonic_time(:microsecond) - tasks_start_time
+      if Application.get_env(:pythelix, :show_stats) do
+        IO.puts("⏱️ #{number} tasks were loaded in #{tasks_elapsed} µs")
+      end
+    end)
   end
 
   def assign_client(from_pid) do
@@ -217,6 +226,12 @@ defmodule Pythelix.Command.Hub do
 
         %{state | busy?: false, running: nil, executor_id: executor_id + 1}
     end
+  end
+
+  defp execute({:unpause, task_id} = key, %{executor_id: executor_id} = state) when is_integer(task_id) do
+    {:ok, state} =
+      start_executor(Pythelix.Scripting.Executor, executor_id, %{task_id: task_id}, key, state)
+    state
   end
 
   defp execute({:unpause, pid}, %{executor_id: executor_id} = state) do

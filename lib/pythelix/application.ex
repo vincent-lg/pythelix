@@ -19,6 +19,10 @@ defmodule Pythelix.Application do
         id: :px_diff,
         start: {Cachex, :start_link, [:px_diff, []]}
       },
+      %{
+        id: :px_tasks,
+        start: {Cachex, :start_link, [:px_tasks, []]}
+      },
       Pythelix.Repo,
       {Registry, keys: :unique, name: Registry.LongRunning},
       Pythelix.ExecutorSupervisor,

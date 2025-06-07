@@ -9,7 +9,7 @@ message = message.upper()
 {run}
 i = 15
 client.msg("Waiting...")
-wait 2
-client.msg("Still, hu, waiting...")
-wait 3
-client.msg(f"And i]{i} and {message.center(10)}")
+wait 10
+log("Still, hu, waiting...")
+wait 10
+log(f"And i]{i} and {message.center(10)}")

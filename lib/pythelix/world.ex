@@ -17,7 +17,7 @@ defmodule Pythelix.World do
 
   def init() do
     if Application.get_env(:pythelix, :worldlets) do
-      process_worldlets()
+      apply(:all)
     end
   end
 
@@ -35,34 +35,48 @@ defmodule Pythelix.World do
       System.get_env("RELEASE_ROOT", File.cwd!())
       |> Path.join(path)
     end)
+    |> String.replace("\\", "/")
     |> apply()
   end
 
   def apply(worldlet) do
     if File.exists?(worldlet) do
       case process_worldlets(worldlet) do
-        :error -> :error
-        entities -> {:ok, worldlet, length(entities)}
+        :error ->
+          :error
+
+        entities ->
+          worldlet =
+            case :os.type() do
+              {:win32, _} -> String.replace(worldlet, "/", "\\")
+              _ -> worldlet
+            end
+
+          {:ok, worldlet, length(entities)}
       end
     else
       :nofile
     end
   end
 
-  defp process_worldlets(path \\ nil) do
+  defp process_worldlets(path) do
     files =
       cond do
         path == nil ->
+          IO.puts("path is nil")
           Path.wildcard("#{@worldlet_dir}/**/#{@worldlet_pattern}")
 
         File.dir?(path) ->
+          IO.puts("Use #{path}")
           Path.wildcard("#{path}/**/#{@worldlet_pattern}")
 
         true ->
+          IO.puts("#{path} is a file")
           [path]
       end
 
     files
+    |> IO.inspect(label: "files")
     |> Enum.map(&Pythelix.World.File.parse_file/1)
     |> Enum.reduce_while([], fn
       {:ok, entities}, acc ->
@@ -71,8 +85,6 @@ defmodule Pythelix.World do
       {:error, reason}, _acc ->
         {:halt, {:error, reason}}
     end)
-    |> IO.inspect()
-    |> IO.inspect()
     |> case do
       {:error, reason} -> {:error, reason}
       entities -> {:ok, entities}
