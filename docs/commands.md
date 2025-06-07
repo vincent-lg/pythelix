@@ -383,6 +383,56 @@ You could also set the default value in `refine` by creating the variable there 
 
 > **Note:** This works well because the optional branch starts with a keyword (`from`). However, if you have two adjacent argument variables (one optional and one mandatory), the parser cannot disambiguate without a keyword or a symbol. The engine does not guess or do any "magic" of this sort.
 
+## Pausing in the Middle of Commands
+
+It is fairly common to want to pause during the execution of the `run` method. For example, you might want to begin an action, wait a minute, then provide feedback to the user. Pythelix is structured so that:
+
+- A pause does **not** block commands entered by this client or others.
+- However, no two commands run simultaneously.
+
+In other words, all commands (scripts, task executions, and so on) are queued and run one at a time. This is always true. Therefore, if you were to "freeze" the entire server for 5 seconds within your command, then no one would be able to do anything else during those 5 seconds—not ideal.
+
+On the other hand, pauses introduce some other considerations:
+
+- You can easily wait while a script is running. But others can send commands while the script is paused, which means the game state after the pause might differ from the one before it.
+- This includes the same player: they can send commands while the script is paused and might even run the same command, potentially causing nested pauses. In general, it's best to avoid such duplications.
+
+Usually, we want to do something once, wait for a pause, then allow it to happen again.
+
+The syntax is quite simple. For instance:
+
+```
+{run(client)}
+client.msg("Before the pause")
+wait 5  # Wait 5 seconds
+client.msg("After these five seconds")
+```
+
+This example looks straightforward: you send a message, wait 5 seconds, then send another message. But consider:
+
+- During the pause, the client might move on to another menu or action.
+- The client might disconnect during the pause; this will not cause a crash.
+- The server might restart during the pause; the task will resume when the server is back online, though the client may no longer exist. Again, this will not cause an error.
+
+You cannot prevent the client from disconnecting, nor can you prevent server restarts (although that is your responsibility). In other words, you should avoid giving important information **after** these five seconds if it is vital for the next connection, since it might not happen.
+
+You specify the pause in seconds after the keyword `wait`. It can be a variable, an integer, or a float. It can appear inside loops if needed—it's just a language construct.
+
+**WARNING**: You can use the `wait` keyword in any script. However, commands require immediate information, so you should **not** use `wait` inside the `parse` or `refine` methods of a command. If you do, the first part of the method will run, then the engine will gather data from it, and the next part will execute much later (after `run` has been executed too). Avoid using `wait` anywhere except in `run`.
+
+> The rest of this section is not yet implemented and refers to features that are approved but still need some work. These paragraphs may still be useful to describe the project's potential.
+
+You can also specify an interval with `min..max`. For example:
+
+```
+{run(client)}
+client.msg("Before the pause")
+wait 2..4
+client.msg("After this pause")
+```
+
+The pause will be between 2 and 4 seconds—not only 2, 3, or 4 seconds, but also any time in between, making the duration somewhat random. This is a "nice to have" feature, providing a shortcut to create semi-random pauses.
+
 ## Why aren't commands plain methods?
 
 If you're familiar with LambdaMOO, you might know that commands can just be verbs defined on objects. Pythelix could theoretically work similarly: commands would just be methods on entities.
