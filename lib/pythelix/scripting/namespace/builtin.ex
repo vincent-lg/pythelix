@@ -11,7 +11,7 @@ defmodule Pythelix.Scripting.Namespace.Builtin do
   alias Pythelix.World
 
   deffun function_Entity(script, namespace), [
-    {:key, keyword: "key", type: :string, default: nil},
+    {:key, keyword: "key", type: :str, default: nil},
     {:parent, keyword: "parent", type: :entity, default: nil},
     {:location, keyword: "location", type: :entity, default: nil}
   ] do
@@ -22,7 +22,7 @@ defmodule Pythelix.Scripting.Namespace.Builtin do
   end
 
   deffun apply(script, namespace), [
-    {:file, index: 0, type: :string, default: :all}
+    {:file, index: 0, type: :str, default: :all}
   ] do
     case World.apply(namespace.file) do
       {:ok, path, number} ->
@@ -37,25 +37,31 @@ defmodule Pythelix.Scripting.Namespace.Builtin do
   end
 
   deffun log(script, namespace), [
-    {:message, index: 0, type: :string}
+    {:message, index: 0, type: :str}
   ] do
     message = Format.String.format(namespace.message)
     Logger.info(message)
 
     {script, :none}
   end
+
   deffun entity(script, namespace), [
     {:id, index: 0, type: :int, default: nil},
-    {:key, keyword: "key", type: :string, default: nil}
+    {:key, keyword: "key", type: :str, default: nil}
   ] do
-    entity =
-      (namespace.id || namespace.key)
-      |> Pythelix.Record.get_entity()
-      |> then(fn
-        nil -> :none
-        valid -> valid
-      end)
+    if namespace.id == nil and namespace.key == nil do
+      message = "you must specify either the entity ID or key"
+      {Script.raise(script, ValueError, message), :none}
+    else
+      entity =
+        (namespace.id || namespace.key)
+        |> Pythelix.Record.get_entity()
+        |> then(fn
+          nil -> :none
+          valid -> valid
+        end)
 
-    {script, entity}
+      {script, entity}
+    end
   end
 end

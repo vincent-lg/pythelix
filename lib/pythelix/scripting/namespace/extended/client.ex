@@ -9,7 +9,7 @@ defmodule Pythelix.Scripting.Namespace.Extended.Client do
   alias Pythelix.Scripting.Format
 
   defmet msg(script, namespace), [
-    {:text, index: 0, keyword: "text", type: :string}
+    {:text, index: 0, keyword: "text", type: :str}
   ] do
     client = Script.get_value(script, namespace.self)
     pid = Record.get_attribute(client, "pid")

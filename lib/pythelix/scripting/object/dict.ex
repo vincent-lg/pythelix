@@ -139,6 +139,46 @@ defmodule Pythelix.Scripting.Object.Dict do
   end
 
   @doc """
+  Deletes a key from the dictionary and return its value with the new dictionary.
+
+  Args:
+
+  - `key`: the key to remove.
+  - `default`: the default value to return if the key doesn't exist (default `nil`).
+
+  ## Examples
+
+      iex> dict = Dict.new()
+      iex> dict = Dict.put(dict, "my key", 35)
+      iex> Dict.get(dict, "my key")
+      35
+      iex> {value, dict} = Dict.pop(dict, "my key")
+      iex> value
+      35
+      iex> Dict.get(dict, "my key")
+      nil
+
+      iex> dict = Dict.new()
+      iex> {value, _dict} = Dict.pop(dict, "another key")
+      iex> value
+      nil
+
+      iex> dict = Dict.new()
+      iex> {value, _dict} = Dict.pop(dict, "another key", :unset)
+      iex> value
+      :unset
+  """
+  @spec pop(t(), term(), term()) :: {term(), t()}
+  def pop(%Dict{} = dict, key, default \\ nil) do
+    {value, entries} = Map.pop(dict.entries, key, default)
+
+    case value do
+      ^default -> {value, %Dict{dict | entries: entries}}
+      {_key_id, new_value} -> {new_value, %Dict{dict | entries: entries}}
+    end
+  end
+
+  @doc """
   Returns the list of keys, in insertion order.
 
   ## Examples

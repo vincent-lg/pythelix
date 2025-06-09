@@ -200,16 +200,22 @@ defmodule Pythelix.Scripting.Namespace do
   Validate constraints and fills out an argument map if valid.
   """
   def validate(script, constraints, args, kwargs) do
-    {script, _, _, namespace} =
+    args =
+      args
+      |> Stream.with_index()
+      |> Stream.map(fn {arg, index} -> {index, arg} end)
+      |> Map.new()
+
+    {script, args, kwargs, namespace} =
       Enum.reduce(constraints, {script, args, kwargs, %{}}, &build_arg/2)
 
-    script = check_signature(script, constraints, args, kwargs)
+    script = check_signature(script, constraints, args, kwargs, namespace)
 
     {script, namespace}
   end
 
   def build_arg(constraint, {script, args, kwargs, namespace}) do
-    {script, value} =
+    {script, args, kwargs, value} =
       script
       |> enforce_arg_constraint(constraint, args, kwargs)
 
@@ -229,38 +235,48 @@ defmodule Pythelix.Scripting.Namespace do
     index = opts[:index]
     keyword = opts[:keyword]
 
-    from_pos = (index && Enum.at(args, index)) || nil
-    from_keyword = (keyword && Dict.get(kwargs, keyword)) || nil
+    {from_pos, args} = (index && Map.pop(args, index)) || {nil, args}
+    {from_keyword, kwargs} = (keyword && Dict.pop(kwargs, keyword)) || {nil, kwargs}
 
     cond do
-      from_pos && from_keyword ->
+      from_pos != nil && opts[:args] ->
+        args =
+          args
+          |> Enum.sort(fn {key, _} -> key end)
+          |> then(& [from_pos | &1])
+
+        {script, %{}, kwargs, args}
+
+      opts[:kwargs] ->
+        {script, args, Dict.new(), kwargs}
+
+      from_pos != nil && from_keyword != nil ->
         message =
           "positional argument #{index} has also been specified as keyword argument #{keyword}"
 
-        Traceback.raise(script, TypeError, message)
-        |> then(& {%{script | error: &1}, :error})
+        {Script.raise(script, TypeError, message), args, kwargs, :error}
 
       from_pos == nil and from_keyword == nil and Keyword.has_key?(opts, :default) ->
         value = Keyword.get(opts, :default)
 
-        {script, value}
+        {script, args, kwargs, value}
 
       from_pos == nil and from_keyword == nil ->
         type = (index && "positional") || "keyword"
         message = "expected #{type} argument #{set}"
 
-        Traceback.raise(script, TypeError, message)
-        |> then(& {%{script | error: &1}, :error})
+        {Script.raise(script, TypeError, message), args, kwargs, :error}
 
       true ->
         type = opts[:type]
         {script, value} = enforce_arg_type(script, set, from_pos || from_keyword, type)
 
-        {script, value}
+        {script, args, kwargs, value}
     end
   end
 
   defp enforce_arg_type(script, name, value, type) do
+
     case check_arg_type(script, value, type) do
       {:error, message} ->
         message = "argument #{name} expects #{message}"
@@ -314,59 +330,68 @@ defmodule Pythelix.Scripting.Namespace do
 
   defp check_arg_type(_, value, _), do: value
 
-  defp check_signature(script, constraints, args, kwargs) do
-    check_signature_positional_args(script, constraints, args)
-    |> check_signature_keyword_args(constraints, kwargs)
+  defp check_signature(script, constraints, args, kwargs, namespace) do
+    check_signature_positional_args(script, constraints, args, namespace)
+    |> check_signature_keyword_args(constraints, kwargs, namespace)
   end
 
-  defp check_signature_positional_args(script, constraints, args) do
-    constraints
-    |> Stream.map(fn {_, opts} -> opts end)
-    |> Stream.filter(fn opts -> opts[:index] end)
-    |> Enum.to_list()
-    |> then(fn constraints ->
-      needed = length(constraints)
-      received = length(args)
+  defp check_signature_positional_args(script, constraints, args, namespace) do
+    all_args = Enum.any?(constraints, fn {_set, opts} -> opts[:args] end)
+    map_constraints =
+      constraints
+      |> Stream.filter(fn {_set, opts} -> opts[:index] && !opts[:args] end)
+      |> Map.new()
 
-      if needed < received do
-        message = "expected at most #{needed} arguments, got #{received}"
-
-        Traceback.raise(script, TypeError, message)
-        |> then(& %{script | error: &1})
+    received =
+      if all_args do
+        length(constraints)
       else
-        script
+        namespace
+        |> Map.keys()
+        |> Stream.map(fn key -> {key, Map.get(map_constraints, key)} end)
+        |> Enum.reject(fn {_key, opts} -> opts == nil end)
+        |> Enum.concat(Map.keys(args))
+        |> length()
       end
-    end)
+
+    constraints =
+      constraints
+      |> Enum.filter(fn {_set, opts} -> opts[:index] end)
+
+    needed = length(constraints)
+
+    if needed < received do
+      message = "expected at most #{needed} arguments, got #{received}"
+
+      Script.raise(script, TypeError, message)
+    else
+      script
+    end
   end
 
-  defp check_signature_keyword_args(%Script{error: nil} = script, constraints, kwargs) do
-    constraints
-    |> Stream.map(fn {_, opts} -> opts end)
-    |> Stream.map(fn opts -> opts[:keyword] end)
-    |> Stream.reject(& &1 == nil)
-    |> Enum.to_list()
-    |> then(fn constraints ->
-      missing =
-        constraints
-        |> Enum.reduce(kwargs, fn constraint, args ->
-          case Dict.get(args, constraint, :none) do
-            :none -> args
-            _ -> Dict.delete(args, constraint)
-          end
-        end)
-        |> Dict.keys()
+  defp check_signature_keyword_args(%Script{error: nil} = script, constraints, kwargs, _namespace) do
+    all_kwargs = Enum.any?(constraints, fn {_set, opts} -> opts[:kwargs] end)
+    map_constraints =
+      constraints
+      |> Stream.filter(fn {_set, opts} -> opts[:keyword] && !opts[:kwargs] end)
+      |> Map.new()
 
-      if length(missing) > 0 do
-        name = Enum.at(missing, 0)
-        message = "this callable doesn't accept the #{name} keyword argument"
+    missing =
+      kwargs
+      |> Dict.items()
+      |> Stream.filter(fn {name, _value} -> {name, Map.get(map_constraints, name)} end)
+      |> Stream.reject(fn {_name, value} -> value == nil end)
+      |> Enum.map(fn {name, _value} -> name end)
 
-        Traceback.raise(script, TypeError, message)
-        |> then(& %{script | error: &1})
-      else
-        script
-      end
-    end)
+    if !all_kwargs && length(missing) > 0 do
+      name = Enum.at(missing, 0)
+      message = "this callable doesn't accept the #{name} keyword argument"
+
+      Script.raise(script, TypeError, message)
+    else
+      script
+    end
   end
 
-  defp check_signature_keyword_args(script, _, _), do: script
+  defp check_signature_keyword_args(script, _, _, _), do: script
 end

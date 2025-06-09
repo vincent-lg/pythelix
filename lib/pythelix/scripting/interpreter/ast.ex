@@ -291,7 +291,7 @@ defmodule Pythelix.Scripting.Interpreter.AST do
       Enum.reduce(kwargs, code, fn {key, value}, code ->
         code
         |> read_ast(value)
-        |> add({:put_dict, key, :no_reference})
+        |> add({:put_dict, {key, :no_reference}})
       end)
 
     code
