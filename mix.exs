@@ -32,6 +32,15 @@ defmodule Pythelix.MixProject do
   defp elixirc_paths(:test), do: ["lib", "test/support"]
   defp elixirc_paths(_), do: ["lib"]
 
+  def cli do
+    [
+      preferred_envs: [
+        "test.unit": :test,
+        "test.integration": :test
+      ]
+    ]
+  end
+
   # Specifies your project dependencies.
   #
   # Type `mix help deps` for examples and options.
@@ -66,7 +75,8 @@ defmodule Pythelix.MixProject do
       {:telemetry_poller, "~> 1.0"},
       {:jason, "~> 1.2"},
       {:dns_cluster, "~> 0.1.1"},
-      {:bandit, "~> 1.5"}
+      {:bandit, "~> 1.5"},
+      {:cabbage, "~> 0.4.1"}
     ]
   end
 
@@ -82,6 +92,8 @@ defmodule Pythelix.MixProject do
       "ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
       "ecto.reset": ["ecto.drop", "ecto.setup"],
       test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"],
+      "test.integration": ["ecto.create --quiet", "ecto.migrate --quiet", "test --only integration"],
+      "test.unit": ["ecto.create --quiet", "ecto.migrate --quiet", "test --exclude integration"],
       "assets.setup": ["tailwind.install --if-missing", "esbuild.install --if-missing"],
       "assets.build": ["tailwind pythelix", "esbuild pythelix"],
       "assets.deploy": [
