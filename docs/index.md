@@ -7,7 +7,7 @@ It is built in Elixir, but **ALL** of the game world can be created using Python
 - No programming experience needed to create your world, no matter how extensive.
 - [Commands](./command.md) are simply [scripts](./scripting.md) written in a friendly, Python-like language that you can learn as you go.
 - The game world can be defined in ["worldlets"](./worldlet.md), small files that describe your universe and facilitate replication and collaboration with builders.
-- Built-in support for game features: [menus](./menus.md), optional prompts, configurable help, random string generator, stackables.
+- Built-in support for game features: [menus](./menus.md), [password handling](./password.md), entity search, configurable help, random string generator, stackables.
 - The engine itself is extremely fast and can maintain high availability.
 - Errors don't crash the server. At worst, they will forward a message to the user (and administrators) that can be easily fixed.
 - Maintenance is simple, and there's virtually no need to restart the server (why not keep it running for years or even decades?).
