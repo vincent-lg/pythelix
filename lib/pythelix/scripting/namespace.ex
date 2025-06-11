@@ -9,7 +9,7 @@ defmodule Pythelix.Scripting.Namespace do
   alias Pythelix.Scripting.Format
   alias Pythelix.Scripting.Interpreter.Script
   alias Pythelix.Scripting.Namespace
-  alias Pythelix.Scripting.Object.Dict
+  alias Pythelix.Scripting.Object.{Dict, Password}
   alias Pythelix.Scripting.Traceback
 
   defmacro __using__(_opts) do
@@ -181,6 +181,7 @@ defmodule Pythelix.Scripting.Namespace do
       atom when is_atom(atom) -> value
       list when is_list(list) -> Namespace.List
       str when is_binary(str) -> Namespace.String
+      %Password{} -> Namespace.Password
       %Pythelix.Entity{} -> Namespace.Entity
     end
   end

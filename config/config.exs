@@ -72,6 +72,12 @@ config :pythelix,
   worldlets: true,
   show_stats: true
 
+# Password algorithms
+config :pythelix, :password_algorithms, [
+  Pythelix.Password.Algorithm.Argon2,
+  Pythelix.Password.Algorithm.Pbkdf2
+]
+
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
 import_config "#{config_env()}.exs"

@@ -8,6 +8,7 @@ defmodule Pythelix.Scripting.Interpreter.VM.Op do
   alias Pythelix.Scripting.Namespace
 
   @modules %{
+    "password" => Namespace.Module.Password,
     "random" => Namespace.Module.Random,
     "search" => Namespace.Module.Search
   }

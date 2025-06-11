@@ -78,6 +78,19 @@ defmodule Pythelix.MixProject do
       {:bandit, "~> 1.5"},
       {:cabbage, "~> 0.4.1"}
     ]
+    |> then(fn deps ->
+      impl = (match?({:win32, _}, :os.type) && "windows") || "linux"
+      IO.puts("Use backend implementation: #{impl}")
+      file = "deps_#{impl}.ex"
+
+      if File.exists?(file) do
+        {additions, _} = Code.eval_file(file)
+
+        Enum.concat(additions, deps)
+      else
+        Mix.raise("Unknown HASH_BACKEND=#{impl} or missing deps file.")
+      end
+    end)
   end
 
   # Aliases are shortcuts or tasks specific to the current project.

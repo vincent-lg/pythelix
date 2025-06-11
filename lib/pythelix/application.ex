@@ -5,12 +5,41 @@ defmodule Pythelix.Application do
 
   use Application
 
+  require Logger
+
   @impl true
   def start(_type, _args) do
+    load_password_algorithms()
+    |> maybe_start_application()
+  end
+
+  def load_password_algorithms() do
+    algorithms = Pythelix.Password.Finder.find()
+    Application.put_env(:pythelix, :password_algorithms, algorithms)
+    names = Enum.map(algorithms, & &1.name())
+    number =
+      case length(names) do
+        0 -> "No"
+        1 -> "Only one"
+        number -> to_string(number)
+      end
+
+    s = (length(names) > 1 && "s") || ""
+    f_names = Enum.join(names, ", ")
+
+    if length(names) > 0 do
+      Logger.info("#{number} available password algorithm#{s}: #{f_names}")
+      :ok
+    else
+      {:error, "no password algorithm is available"}
+    end
+  end
+
+  def maybe_start_application({:error, _} = error), do: error
+  def maybe_start_application(_) do
     topologies = Application.get_env(:libcluster, :topologies)
 
     children = [
-      {Cluster.Supervisor, [topologies, [name: Pythelix.ClusterSupervisor]]},
       %{
         id: :px_cache,
         start: {Cachex, :start_link, [:px_cache, []]}
@@ -39,6 +68,12 @@ defmodule Pythelix.Application do
       # Start to serve requests, typically the last entry
       PythelixWeb.Endpoint
     ]
+    |> then(fn children ->
+      case topologies do
+        nil -> children
+        _ -> [{Cluster.Supervisor, [topologies, [name: Pythelix.ClusterSupervisor]]} | children]
+      end
+    end)
 
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options
