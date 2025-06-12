@@ -37,6 +37,7 @@ defmodule Pythelix.Scripting.Interpreter.VM do
     iter: {VM.Op, :iter},
     call: {VM.Op, :call},
     wait: {VM.Op, :wait},
+    return: {VM.Op, :return},
     raw: {VM.Op, :raw},
     pop: {VM.Op, :pop},
     line: {VM.Op, :line}

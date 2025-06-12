@@ -43,3 +43,6 @@ weight: 0
 
 {call(client: Entity["generic/client"])}
 client.msg("The animal calls... don't know what.")
+
+{add(a: int, b: int)}
+return [a, b, 58]

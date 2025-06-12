@@ -259,6 +259,15 @@ defmodule Pythelix.Scripting.Interpreter.AST do
     |> add({:wait, nil})
   end
 
+  defp read_ast(code, {:return, [{_, {line, _}} | values]}) do
+    code
+    |> add({:line, line})
+    |> then(fn code ->
+      Enum.reduce(values, code, fn value, code -> read_ast(code, value) end)
+    end)
+    |> add({:return, nil})
+  end
+
   defp read_ast(code, {:raw, expr, {line, _}}) do
     code
     |> add({:line, line})

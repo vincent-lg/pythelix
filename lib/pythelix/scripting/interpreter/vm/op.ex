@@ -131,6 +131,12 @@ defmodule Pythelix.Scripting.Interpreter.VM.Op do
     %{script | pause: wait_time}
   end
 
+  def return(script, nil) do
+    {script, return_value} = Script.get_stack(script)
+
+    %{script | pause: :immediately, last_raw: return_value}
+  end
+
   def raw(script, nil) do
     {script, value} = Script.get_stack(script)
 

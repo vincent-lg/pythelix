@@ -39,7 +39,7 @@ defmodule Pythelix.Scripting.Interpreter.Script do
           variables: map(),
           bound: map(),
           last_raw: any(),
-          pause: nil | integer() | float(),
+          pause: nil | :immediately | integer() | float(),
           error: nil | Traceback.t(),
           debugger: nil | %Debugger{}
         }

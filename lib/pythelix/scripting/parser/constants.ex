@@ -9,7 +9,7 @@ defmodule Pythelix.Scripting.Parser.Constants do
   import NimbleParsec
   import Pythelix.Scripting.Parser.Whitespace, only: [clear_whitespace: 1, check_end_symbol: 0]
 
-  @reserved_sym ["True", "False", "None", "not", "and", "or", "endif", "done"]
+  @reserved_sym ["True", "False", "None", "not", "and", "or", "endif", "done", "return"]
   @id_start "[[:L:][:Nl:][:Other_ID_Start:]-[:Pattern_Syntax:]-[:Pattern_White_Space:][_]]"
   @id_continue "[[:ID_Start:][:Mn:][:Mc:][:Nd:][:Pc:][:Other_ID_Continue:]-[:Pattern_Syntax:]-[:Pattern_White_Space:][_]]"
 

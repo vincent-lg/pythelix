@@ -39,6 +39,9 @@ defmodule Pythelix.Scripting.Callable do
         %{traceback | chain: [{script, nil, nil} | chain]}
         |> then(& {%{script | error: &1}, :none})
 
+      %Script{pause: :immediately, last_raw: raw} ->
+        {script, raw}
+
       _script ->
         {script, :none}
     end

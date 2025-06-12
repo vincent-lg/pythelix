@@ -23,6 +23,7 @@ defmodule Pythelix.Scripting.Parser.Statement do
   for_kw = string("for") |> label("for") |> replace(:for) |> isolate(space: true)
   in_kw = string("in") |> label("in") |> replace(:in) |> isolate(space: true)
   wait_kw = string("wait") |> label("wait") |> replace(:wait) |> isolate(space: true)
+  return_kw = string("return") |> label("return") |> replace(:return) |> isolate(space: true)
 
   assignment =
     id()
@@ -116,6 +117,12 @@ defmodule Pythelix.Scripting.Parser.Statement do
     |> parsec({Pythelix.Scripting.Parser.Expression, :expr})
     |> tag(:wait)
 
+  return =
+    ignore(return_kw)
+    |> line()
+    |> parsec({Pythelix.Scripting.Parser.Expression, :expr})
+    |> tag(:return)
+
   defparsecp(
     :statement_list,
     repeat(newline)
@@ -148,6 +155,7 @@ defmodule Pythelix.Scripting.Parser.Statement do
       while_stmt,
       for_stmt,
       wait,
+      return,
       raw_value
     ])
   )

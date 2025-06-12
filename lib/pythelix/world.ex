@@ -63,20 +63,16 @@ defmodule Pythelix.World do
     files =
       cond do
         path == nil ->
-          IO.puts("path is nil")
           Path.wildcard("#{@worldlet_dir}/**/#{@worldlet_pattern}")
 
         File.dir?(path) ->
-          IO.puts("Use #{path}")
           Path.wildcard("#{path}/**/#{@worldlet_pattern}")
 
         true ->
-          IO.puts("#{path} is a file")
           [path]
       end
 
     files
-    |> IO.inspect(label: "files")
     |> Enum.map(&Pythelix.World.File.parse_file/1)
     |> Enum.reduce_while([], fn
       {:ok, entities}, acc ->
@@ -239,7 +235,7 @@ defmodule Pythelix.World do
 
       value =
         if is_binary(value) do
-          {:ok, value} = Scripting.eval(value) |> IO.inspect(label: "value")
+          {:ok, value} = Scripting.eval(value)
 
           value
         else
