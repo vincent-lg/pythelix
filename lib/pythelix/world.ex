@@ -86,6 +86,7 @@ defmodule Pythelix.World do
       entities -> {:ok, entities}
     end
     |> maybe_add_base_entities()
+    |> IO.inspect(label: "worldlets")
     |> maybe_deduce_parents()
     |> maybe_sort_entities()
     |> maybe_create_entities()
@@ -227,6 +228,7 @@ defmodule Pythelix.World do
         opts
       end
 
+    IO.inspect(opts)
     if Record.get_entity(entity.key) == nil do
       {:ok, _} = Record.create_entity(opts)
     end
@@ -249,6 +251,7 @@ defmodule Pythelix.World do
       Record.set_method(entity.key, name, args, code)
     end
 
+    IO.inspect(Cachex.export(:px_diff))
     Record.get_entity(entity.key)
   end
 end

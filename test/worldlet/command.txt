@@ -1,0 +1,6 @@
+[command/try]
+parent: "generic/command"
+name: "try"
+
+{run}
+client.msg("You tried.")

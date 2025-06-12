@@ -7,7 +7,10 @@ import Config
 # Run `mix help test` for more information.
 config :pythelix, Pythelix.Repo,
   database: Path.expand("../pythelix_test.db", __DIR__),
+  #database: ":memory:",
+  #database: "file::memory:?cache=shared",
   pool_size: 5,
+  #pool_size: 1,
   pool: Ecto.Adapters.SQL.Sandbox
 
 # We disable the worldlet creation for tests.
