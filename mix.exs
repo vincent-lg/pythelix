@@ -80,7 +80,6 @@ defmodule Pythelix.MixProject do
     ]
     |> then(fn deps ->
       impl = (match?({:win32, _}, :os.type) && "windows") || "linux"
-      IO.puts("Use backend implementation: #{impl}")
       file = "deps_#{impl}.ex"
 
       if File.exists?(file) do

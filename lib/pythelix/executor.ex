@@ -45,6 +45,8 @@ defmodule Pythelix.Executor do
   end
 
   def process(executor_id, handler, args) do
+    hub = :global.whereis_name(Pythelix.Command.Hub)
+
     case handler.execute(executor_id, args) do
       {:keep, new_state} ->
         {:noreply, {handler, {executor_id, new_state}}}
@@ -53,6 +55,7 @@ defmodule Pythelix.Executor do
         {:noreply, {handler, {executor_id, args}}}
 
       {:ok, _} ->
+        send(hub, {:executor_done, executor_id, :ok})
         {:stop, :normal, {handler, {executor_id, args}}}
 
       {:pause, ms} ->

@@ -134,7 +134,6 @@ defmodule Pythelix.Task.Persistent do
         Cachex.put(@cache, :ids, ids)
         Cachex.put(@cache, :status, status)
         File.rm(get_task_path(id))
-        IO.puts("Remove task #{id}")
 
       nil
         -> :notask
@@ -226,7 +225,6 @@ defmodule Pythelix.Task.Persistent do
 
       hub = :global.whereis_name(Pythelix.Command.Hub)
       Process.send_after(hub, {:"$gen_cast", {:unpause, arg}}, time)
-      IO.puts("Task #{task.id} schedule in #{time} ms")
     end
 
     {:ok, task}

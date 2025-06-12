@@ -12,11 +12,10 @@ defmodule Pythelix.Scripting.Namespace.Extended.Client do
     {:text, index: 0, keyword: "text", type: :str}
   ] do
     client = Script.get_value(script, namespace.self)
+    client_id = Record.get_attribute(client, "client_id")
     pid = Record.get_attribute(client, "pid")
-
     message = Format.String.format(namespace.text)
-
-    send(pid, {:message, message})
+    GenServer.cast({:global, Pythelix.Command.Hub}, {:message, client_id, message, pid})
 
     {script, :none}
   end

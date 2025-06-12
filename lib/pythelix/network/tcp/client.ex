@@ -6,30 +6,44 @@ defmodule Pythelix.Network.TCP.Client do
   end
 
   def init(socket) do
-    {:ok, {socket, nil}, {:continue, :assign_id}}
+    {:ok, {socket, nil, :queue.new()}, {:continue, :assign_id}}
   end
 
-  def handle_continue(:assign_id, {socket, _}) do
+  def handle_continue(:assign_id, {socket, _, messages}) do
     client_id = Pythelix.Command.Hub.assign_client(self())
 
-    {:noreply, {socket, client_id}}
+    {:noreply, {socket, client_id, messages}}
   end
 
-  def handle_info({:tcp, _socket, data}, {socket_state, client_id}) do
+  def handle_info({:tcp, _socket, data}, {socket_state, client_id, messages}) do
     start = System.monotonic_time(:microsecond)
     command = String.trim_trailing(data, "\r\n")
     Pythelix.Command.Hub.send_command(client_id, start, command)
 
-    {:noreply, {socket_state, client_id}}
+    {:noreply, {socket_state, client_id, messages}}
   end
 
-  def handle_info({:tcp_closed, _socket}, {socket_state, client_id}) do
+  def handle_info({:tcp_closed, _socket}, {socket_state, client_id, messages}) do
     IO.puts("Disconnect #{client_id}")
-    {:stop, :normal, {socket_state, client_id}}
+    {:stop, :normal, {socket_state, client_id, messages}}
   end
 
-  def handle_info({:message, message}, {socket, client_id}) do
-    :gen_tcp.send(socket, message <> "\n")
-    {:noreply, {socket, client_id}}
+  def handle_info({:message, message}, {socket, client_id, messages}) do
+    {:noreply, {socket, client_id, :queue.in(message, messages)}}
+  end
+
+  def handle_info({:full, prompt}, {socket, client_id, messages}) do
+    text =
+      messages
+      |> :queue.to_list()
+      |> then(fn messages ->
+        (prompt && Enum.concat(messages, [prompt])) || messages
+      end)
+      |> Enum.join("\n")
+      |> then(& (!String.ends_with?(&1, "\n") && &1 <> "\n") || &1)
+      |> String.replace("\n", "\r\n")
+
+    :gen_tcp.send(socket, text)
+    {:noreply, {socket, client_id, :queue.new()}}
   end
 end

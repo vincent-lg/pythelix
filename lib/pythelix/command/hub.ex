@@ -21,7 +21,8 @@ defmodule Pythelix.Command.Hub do
       busy?: false,
       running: nil,
       tasks: %{},
-      references: %{}
+      references: %{},
+      messages: MapSet.new()
     }
 
     {:ok, state, {:continue, :init_world}}
@@ -154,6 +155,25 @@ defmodule Pythelix.Command.Hub do
     end
   end
 
+  def handle_cast({:message, client_id, message, pid}, %{messages: messages} = state) do
+    IO.puts("Cast to #{client_id}")
+    send(pid, {:message, message})
+    {:noreply, %{state | messages: MapSet.put(messages, client_id)}}
+  end
+
+  def handle_cast({:full, :all, times}, state) do
+    if times < 3 do
+      IO.puts("Program another pass...")
+      Process.send_after(self(), {:"$gen_cast", {:full, :all, times + 1}}, 50)
+    end
+
+    {:noreply, send_full_all(state)}
+  end
+
+  def handle_cast({:full, client_id}, state) do
+    {:noreply, send_full(client_id, state)}
+  end
+
   def handle_info({:DOWN, ref, :process, _pid, reason}, %{running: running} = state) do
     task_id = Map.get(state.references, ref)
 
@@ -169,10 +189,14 @@ defmodule Pythelix.Command.Hub do
   end
 
   def handle_info({:executor_done, executor_id, _result}, %{running: running} = state) do
+    #IO.puts("Program another pass to #{inspect(state.messages)}...")
+    #Process.send_after(self(), {:"$gen_cast", {:full, :all, 0}}, 50)
+
     {ref, references} = Map.pop(state.references, executor_id)
     {_, references} = Map.pop(references, ref)
     {_, tasks} = Map.pop(state.tasks, executor_id)
     state = %{state | tasks: tasks, references: references, busy?: false, running: nil}
+    state = send_full_all(state)
 
     if executor_id == running do
       {next, state} = get_next_task(state)
@@ -293,6 +317,27 @@ defmodule Pythelix.Command.Hub do
 
       :empty ->
         {:empty, state}
+    end
+  end
+
+  defp send_full_all(%{messages: messages} = state) do
+    Enum.reduce(messages, state, fn client_id, state ->
+      send_full(client_id, state)
+    end)
+  end
+
+  def send_full(client_id, %{messages: messages} = state) do
+    key = "client/#{client_id}"
+
+    case Record.get_entity(key) do
+      nil ->
+        state
+
+      client ->
+        IO.puts("Try to send full to #{key}")
+        pid = Record.get_attribute(client, "pid")
+        send(pid, {:full, ""})
+        %{state | messages: MapSet.delete(messages, client_id)}
     end
   end
 end
