@@ -1,6 +1,12 @@
 defmodule Pythelix.Network.TCP.Client do
   use GenServer
 
+  alias Pythelix.Entity
+  alias Pythelix.Record
+  alias Pythelix.Scripting.Format
+
+  require Logger
+
   def start_link(socket) do
     GenServer.start_link(__MODULE__, socket)
   end
@@ -11,6 +17,7 @@ defmodule Pythelix.Network.TCP.Client do
 
   def handle_continue(:assign_id, {socket, _, messages}) do
     client_id = Pythelix.Command.Hub.assign_client(self())
+    Logger.debug("Connection of #{client_id}")
 
     {:noreply, {socket, client_id, messages}}
   end
@@ -24,7 +31,7 @@ defmodule Pythelix.Network.TCP.Client do
   end
 
   def handle_info({:tcp_closed, _socket}, {socket_state, client_id, messages}) do
-    IO.puts("Disconnect #{client_id}")
+    Logger.debug("Disconnection of #{client_id}")
     {:stop, :normal, {socket_state, client_id, messages}}
   end
 
@@ -45,5 +52,12 @@ defmodule Pythelix.Network.TCP.Client do
 
     :gen_tcp.send(socket, text)
     {:noreply, {socket, client_id, :queue.new()}}
+  end
+
+  def send(%Entity{} = client, message) do
+    client_id = Record.get_attribute(client, "client_id")
+    pid = Record.get_attribute(client, "pid")
+    message = Format.String.format(message)
+    GenServer.cast({:global, Pythelix.Command.Hub}, {:message, client_id, message, pid})
   end
 end

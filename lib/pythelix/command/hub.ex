@@ -97,10 +97,14 @@ defmodule Pythelix.Command.Hub do
     parent = Record.get_entity("generic/client")
     key = "client/#{client_id}"
 
-    {:ok, _} = Record.create_entity(virtual: true, key: key, parent: parent)
+    {:ok, client} = Record.create_entity(virtual: true, key: key, parent: parent)
 
     Record.set_attribute(key, "client_id", state.client_id)
     Record.set_attribute(key, "pid", from_pid)
+    menu = Record.get_entity("menu/motd")
+    Record.change_location(client, menu)
+    send(self(), {:"$gen_cast", {:full, client_id}})
+
 
     {:reply, client_id, %{state | client_id: state.client_id + 1}}
   end
@@ -156,14 +160,12 @@ defmodule Pythelix.Command.Hub do
   end
 
   def handle_cast({:message, client_id, message, pid}, %{messages: messages} = state) do
-    IO.puts("Cast to #{client_id}")
     send(pid, {:message, message})
     {:noreply, %{state | messages: MapSet.put(messages, client_id)}}
   end
 
   def handle_cast({:full, :all, times}, state) do
     if times < 3 do
-      IO.puts("Program another pass...")
       Process.send_after(self(), {:"$gen_cast", {:full, :all, times + 1}}, 50)
     end
 
@@ -189,9 +191,6 @@ defmodule Pythelix.Command.Hub do
   end
 
   def handle_info({:executor_done, executor_id, _result}, %{running: running} = state) do
-    #IO.puts("Program another pass to #{inspect(state.messages)}...")
-    #Process.send_after(self(), {:"$gen_cast", {:full, :all, 0}}, 50)
-
     {ref, references} = Map.pop(state.references, executor_id)
     {_, references} = Map.pop(references, ref)
     {_, tasks} = Map.pop(state.tasks, executor_id)
@@ -213,22 +212,21 @@ defmodule Pythelix.Command.Hub do
     end
   end
 
-  defp execute({:command, client_id, start_time, command} = key, %{commands: commands} = state) do
+  defp execute({:command, client_id, start_time, command} = key, %{executor_id: executor_id} = state) do
     client_key = "client/#{client_id}"
     client = Record.get_entity(client_key)
+    menu = (client && Record.get_location_entity(client)) || nil
 
-    {command_name, command_args} =
-      case String.split(command, " ", parts: 2) do
-        [just_key] -> {just_key, ""}
-        [cmd, str] -> {cmd, str}
-      end
+    if menu == nil do
+      state
+    else
+      args = {menu.key, client, start_time, command}
 
-    command_key = Map.get(commands, command_name)
+      {:ok, state} =
+        start_executor(Pythelix.Menu.Executor, executor_id, args, key, state)
 
-    {:ok, state} =
-      execute_command(state, client, start_time, command_key, command_args, key)
-
-    state
+      state
+    end
   end
 
   defp execute({:script, id_or_key, name, args} = key, %{executor_id: executor_id} = state) do
@@ -274,14 +272,6 @@ defmodule Pythelix.Command.Hub do
     name = {:via, Registry, {Registry.LongRunning, task_id}}
     GenServer.cast(name, {message, executor_id})
     %{state | busy?: true, running: executor_id, executor_id: executor_id + 1}
-  end
-
-  defp execute_command(state, _, _, nil, _, _), do: {:ok, state}
-
-  defp execute_command(%{executor_id: executor_id} = state, client, start_time, command_key, command_args, key) do
-    args = {client, start_time, command_key, command_args}
-
-    start_executor(Pythelix.Command.Executor, executor_id, args, key, state)
   end
 
   defp start_executor(handler, executor_id, args, key, state) do
@@ -334,9 +324,26 @@ defmodule Pythelix.Command.Hub do
         state
 
       client ->
-        IO.puts("Try to send full to #{key}")
+        menu = Record.get_location_entity(client)
+
+        prompt =
+          case menu do
+            nil ->
+              ""
+
+            :none ->
+              ""
+
+            menu ->
+              try do
+                Method.call_entity(menu, "get_prompt")
+              rescue
+                _ -> "error"
+              end
+          end
+
         pid = Record.get_attribute(client, "pid")
-        send(pid, {:full, ""})
+        send(pid, {:full, prompt})
         %{state | messages: MapSet.delete(messages, client_id)}
     end
   end

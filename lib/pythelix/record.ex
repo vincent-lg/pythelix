@@ -103,6 +103,8 @@ defmodule Pythelix.Record do
     if opts[:recursive] do
       get_location_entity(entity, opts)
     end
+
+    entity
   end
 
   @doc """
@@ -154,6 +156,26 @@ defmodule Pythelix.Record do
     |> Entity.get_id_or_key()
     |> Cache.get_ancestors_id_or_key()
     |> Enum.map(&get_entity/1)
+  end
+
+  @doc """
+  Returns whether this entity has this parent in its ancestors.
+
+  Args:
+
+  * entity (Entity): the entity to test.
+  * parent (Entity, String or integer): the entity parent.
+  """
+  @spec has_parent?(Entity.t(), Entity.t() | String.t() | integer()) :: boolean()
+  def has_parent?(%Entity{} = entity, %Entity{} = parent) do
+    has_parent?(entity, Entity.get_id_or_key(parent))
+  end
+
+  def has_parent?(%Entity{} = entity, parent) when is_integer(parent) or is_binary(parent) do
+    entity
+    |> Entity.get_id_or_key()
+    |> Cache.get_ancestors_id_or_key()
+    |> Enum.member?(parent)
   end
 
   @doc """
@@ -423,6 +445,15 @@ defmodule Pythelix.Record do
     entity
     |> Cache.change_location(new_location)
     |> Cache.cache_entity()
+    |> tap(& handle_new_location(&1, new_location))
+  end
+
+  defp handle_new_location(entity, location) do
+    if has_parent?(entity, "generic/client") && has_parent?(location, "generic/menu") do
+      if text = get_attribute(location, "text") do
+        Pythelix.Network.TCP.Client.send(entity, text)
+      end
+    end
   end
 
   @doc """

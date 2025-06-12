@@ -1,0 +1,7 @@
+[command/try]
+parent: "generic/command"
+location: "menu/motd"
+name: "try"
+
+{run}
+client.msg("You tried.")

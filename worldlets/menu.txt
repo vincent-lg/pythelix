@@ -1,0 +1,4 @@
+[menu/motd]
+parent: "generic/menu"
+text: "Welcome to Pythelix!"
+prompt: "MOTD>"

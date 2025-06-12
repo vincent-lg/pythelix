@@ -4,6 +4,7 @@ defmodule Pythelix.Method do
   """
 
   alias Pythelix.Method
+  alias Pythelix.Record
   alias Pythelix.Scripting
   alias Pythelix.Scripting.Interpreter.Script
   alias Pythelix.Scripting.Namespace
@@ -44,15 +45,53 @@ defmodule Pythelix.Method do
   * name (string): the method name.
 
   """
-  @spec call(t(), list(), map(), String.t()) :: :ok | {:error, binary()}
-  def call(method, args, kwargs, name) do
+  @spec call(t(), list(), Dict.t(), String.t(), list()) :: term() | :ok | {:error, binary()}
+  def call(method, args, kwargs, name, opts \\ []) do
     with script <- fetch_script(method),
          {%Script{error: nil} = script, namespace} <- check_args(script, method, args, kwargs, name),
          %Script{error: nil} = script <- maybe_run(script, method, namespace, name) do
-      script
+      (opts[:return] && script.last_raw) || script
     else
       {%Script{error: %Traceback{}} = script, _} -> script
       other -> other
+    end
+  end
+
+  @doc """
+  Calls a method from an entity.
+
+  Args:
+  * entity (Entity): the entity.
+  * name (name): the method name.
+  * args (list): the positional arguments (can be nil).
+  * iwargs (Dict): the keyword arguments (can be nil).
+
+  Returns:
+    The returned result of the method or :nomethod, :noresult, :traceback.
+  """
+  @spec call_entity(Entity.t(), String.t(), list() | nil, Dict.t() | nil) :: term() | :nomethod | :noresult | :traceback
+  def call_entity(entity, name, args \\ nil, kwargs \\ nil) do
+    method_name = "#{inspect(entity)}, method #{name}"
+
+    args = (args == nil && []) || args
+    kwargs =
+      case kwargs do
+        %Dict{} -> kwargs
+        map when is_map(map) -> Dict.new(map)
+        nil -> Dict.new()
+      end
+      |> then(& Dict.put(&1, "self", entity))
+
+    with %Method{} = method <- Record.get_method(entity, name),
+         %Script{error: nil} = script <- Method.call(method, args, kwargs, method_name) do
+      (script.last_raw == nil && :noresult) || script.last_raw
+    else
+      :nomethod ->
+        :nomethod
+
+      %Script{error: %Traceback{} = traceback} ->
+        IO.puts(Traceback.format(traceback))
+        :traceback
     end
   end
 

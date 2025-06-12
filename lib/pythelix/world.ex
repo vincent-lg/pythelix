@@ -7,6 +7,8 @@ defmodule Pythelix.World do
   """
 
   @generic_client "generic/client"
+  @generic_menu "generic/menu"
+  @motd_menu "menu/motd"
   @worldlet_dir "worldlets"
   @worldlet_pattern "*.txt"
 
@@ -96,6 +98,8 @@ defmodule Pythelix.World do
   defp maybe_add_base_entities({:ok, entities}) do
     {:ok,
       entities
+      |> add_motd_menu_entity()
+      |> add_base_menu_entity()
       |> add_base_client_entity()
       |> Command.add_base_command_entity()
     }
@@ -107,6 +111,35 @@ defmodule Pythelix.World do
         virtual: true,
         key: @generic_client,
         attributes: %{"msg" => {:extended, Extended.Client, :m_msg}},
+        methods: %{},
+      } | entities
+    ]
+  end
+
+  defp add_base_menu_entity(entities) do
+    [
+      %{
+        virtual: true,
+        key: @generic_menu,
+        attributes: %{},
+        methods: %{
+          "get_prompt" => {
+            [
+              {"self", keyword: "self", type: {:entity, "generic/menu"}}
+            ],
+            "return self.prompt"
+          }
+        },
+      } | entities
+    ]
+  end
+
+  defp add_motd_menu_entity(entities) do
+    [
+      %{
+        virtual: true,
+        key: @motd_menu,
+        attributes: %{"parent" => "\"#{@generic_menu}\"", "text" => "\"Welcome!\""},
         methods: %{},
       } | entities
     ]
@@ -211,12 +244,43 @@ defmodule Pythelix.World do
 
   defp maybe_create_entities({:ok, entities}) do
     Enum.map(entities, fn entity -> create_entity(entity) end)
+    |> tap(fn records ->
+      locations =
+        Enum.map(entities, fn entity ->
+          {entity.key, Map.get(entity.attributes, "location")}
+        end)
+        |> Map.new()
+
+      Enum.each(records, fn record ->
+        location =
+          Map.get(locations, record.key)
+          |> then(fn
+            nil -> nil
+            location ->
+              {:ok, location} = Scripting.eval(location)
+              location
+          end)
+          |> then(& (&1 && Record.get_entity(&1)) || nil)
+
+        place_entity(record, location)
+      end)
+    end)
     |> tap(fn _ -> Record.Diff.apply() end)
+    |> tap(fn _ -> link_commands() end)
   end
 
   defp create_entity(entity) do
     {parent, attributes} = Map.pop(entity.attributes, "parent")
+    {location, attributes} = Map.pop(attributes, "location")
     parent = (parent && Record.get_entity(parent)) || nil
+    location =
+      if location do
+        {:ok, location} = Scripting.eval(location)
+        Record.get_entity(location)
+      else
+        nil
+      end
+
     virtual_parent = (parent && parent.id == :virtual) || false
     opts = [key: entity.key, parent: parent]
 
@@ -227,8 +291,17 @@ defmodule Pythelix.World do
         opts
       end
 
-    if Record.get_entity(entity.key) == nil do
-      {:ok, _} = Record.create_entity(opts)
+    record = Record.get_entity(entity.key)
+    record =
+      if record == nil do
+        {:ok, record} = Record.create_entity(opts)
+        record
+      else
+        record
+      end
+
+    if location do
+      Record.change_location(record, location)
     end
 
     for {name, value} <- attributes do
@@ -250,5 +323,35 @@ defmodule Pythelix.World do
     end
 
     Record.get_entity(entity.key)
+  end
+
+  def link_commands() do
+    Record.get_entity("generic/menu")
+    |> Record.get_children()
+    |> Enum.each(fn menu ->
+      commands =
+        menu
+        |> Record.get_contained()
+        |> Enum.filter(& Record.has_parent?(&1, "generic/command"))
+        |> tap(fn commands ->
+          commands
+          |> Enum.map(& Command.build_syntax_pattern(&1.key))
+        end)
+        |> Enum.flat_map(fn command ->
+          command.key
+          |> Command.get_command_names()
+          |> Enum.flat_map(fn name ->
+            1..String.length(name)
+            |> Enum.map(fn len -> {String.slice(name, 0, len), command.key} end)
+          end)
+        end)
+        |> Enum.into(%{})
+
+      Record.set_attribute(menu.key, "commands", commands)
+    end)
+  end
+
+  defp place_entity(entity, location) do
+    Record.change_location(entity, location)
   end
 end

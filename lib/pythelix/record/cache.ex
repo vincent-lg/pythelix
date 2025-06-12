@@ -501,7 +501,7 @@ defmodule Pythelix.Record.Cache do
 
     case Cachex.get(:px_cache, {:method, id_or_key, name}) do
       {:ok, nil} ->
-        nil
+        :nomethod
 
       {:ok, {:parent, parent_id_or_key}} when raw_parents == nil->
         parent = Record.get_entity(parent_id_or_key)
