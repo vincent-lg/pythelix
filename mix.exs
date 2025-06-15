@@ -76,7 +76,7 @@ defmodule Pythelix.MixProject do
       {:jason, "~> 1.2"},
       {:dns_cluster, "~> 0.1.1"},
       {:bandit, "~> 1.5"},
-      {:cabbage, "~> 0.4.1"}
+      {:gherkin, "~> 2.0"}
     ]
     |> then(fn deps ->
       impl = (match?({:win32, _}, :os.type) && "windows") || "linux"

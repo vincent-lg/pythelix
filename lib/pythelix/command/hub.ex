@@ -39,29 +39,7 @@ defmodule Pythelix.Command.Hub do
         IO.puts("⏱️ World initialized in #{init_elapsed} µs")
       end
 
-      cmd_start_time = System.monotonic_time(:microsecond)
-      commands =
-        Command.get_command_keys()
-        |> tap(fn commands ->
-          commands
-          |> Enum.map(&Command.build_syntax_pattern/1)
-        end)
-        |> Enum.flat_map(fn key ->
-          key
-          |> Command.get_command_names()
-          |> Enum.flat_map(fn name ->
-            1..String.length(name)
-            |> Enum.map(fn len -> {String.slice(name, 0, len), key} end)
-          end)
-        end)
-        |> Enum.into(%{})
-
-      cmd_elapsed = System.monotonic_time(:microsecond) - cmd_start_time
-      if Application.get_env(:pythelix, :show_stats) do
-        IO.puts("⏱️ Commands loaded in #{cmd_elapsed} µs")
-      end
-
-      {:noreply, %{state | commands: commands}}
+      {:noreply, state}
     else
       {:noreply, state}
     end
@@ -289,21 +267,12 @@ defmodule Pythelix.Command.Hub do
     {:ok, state}
   end
 
-  defp get_next_task(%{queue: queue, references: references, tasks: tasks} = state) do
+  defp get_next_task(%{queue: queue} = state) do
     {next, queue} = :queue.out(queue)
 
     case next do
       {:value, task} ->
-        {{:task, task}, state}
-        #{_reference, references} = Map.pop(references, task_id)
-        #{task, tasks} = Map.pop(tasks, task_id)
-        #state = %{state | queue: queue, references: references, tasks: tasks}
-
-        #if task == nil do
-        #  get_next_task(state)
-        #else
-        #  {task, state}
-        #end
+        {{:task, task}, %{state | queue: queue}}
 
       :empty ->
         {:empty, state}

@@ -36,7 +36,7 @@ defmodule Pythelix.Menu.Executor do
     |> then(& (&1 == false && call_command(args)) || &1)
   end
 
-  defp call_input({menu, client, input, start_time, executor_id}) do
+  defp call_input({menu, client, input, _start_time, _executor_id}) do
     case Scripting.Executor.run_method(menu, "input", [client, input]) do
       :nomethod ->
         false
