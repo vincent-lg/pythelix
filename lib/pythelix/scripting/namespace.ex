@@ -379,6 +379,7 @@ defmodule Pythelix.Scripting.Namespace do
 
     missing =
       kwargs
+      |> Dict.delete("self")
       |> Dict.items()
       |> Stream.filter(fn {name, _value} -> {name, Map.get(map_constraints, name)} end)
       |> Stream.reject(fn {_name, value} -> value == nil end)

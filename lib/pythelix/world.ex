@@ -9,6 +9,7 @@ defmodule Pythelix.World do
   @generic_client "generic/client"
   @generic_menu "generic/menu"
   @motd_menu "menu/motd"
+  @game_menu "menu/game"
   @worldlet_dir "worldlets"
   @worldlet_pattern "*.txt"
 
@@ -99,6 +100,7 @@ defmodule Pythelix.World do
     {:ok,
       entities
       |> add_motd_menu_entity()
+      |> add_game_menu_entity()
       |> add_base_menu_entity()
       |> add_base_client_entity()
       |> Command.add_base_command_entity()
@@ -128,6 +130,20 @@ defmodule Pythelix.World do
               {"self", keyword: "self", type: {:entity, "generic/menu"}}
             ],
             "return self.prompt"
+          },
+          "get_text" => {
+            [
+              {"self", keyword: "self", type: {:entity, "generic/menu"}}
+            ],
+            "return self.text"
+          },
+          "invalid_input" => {
+            [
+              {"self", keyword: "self", type: {:entity, "generic/menu"}},
+              {"client", index: 0, type: {:entity, "generic/client"}},
+              {"input", index: 1, type: :str}
+            ],
+            "client.msg('Invalid input')"
           }
         },
       } | entities
@@ -139,7 +155,18 @@ defmodule Pythelix.World do
       %{
         virtual: true,
         key: @motd_menu,
-        attributes: %{"parent" => "\"#{@generic_menu}\"", "text" => "\"Welcome!\""},
+        attributes: %{"parent" => "\"#{@generic_menu}\""},
+        methods: %{},
+      } | entities
+    ]
+  end
+
+  defp add_game_menu_entity(entities) do
+    [
+      %{
+        virtual: true,
+        key: @game_menu,
+        attributes: %{"parent" => "\"#{@generic_menu}\""},
         methods: %{},
       } | entities
     ]

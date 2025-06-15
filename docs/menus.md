@@ -1,5 +1,3 @@
-> Menus aren't implemented as of 0.3.0.
-
 In Pythelix, menus are used to define "what the player can do." They are especially useful during login (although commands can also be used, menu-based login experiences are more common). Menus remain useful even after the user has logged in.
 
 ## Menus display and receive text
@@ -29,7 +27,7 @@ Here's a very simple Message Of The Day (MOTD) menu:
 ```
 [menu/motd]
 parent: "generic/menu"
-text = """
+text: """
 Welcome to this AWESOME MUD!!!
 We hope you have fun.
                                      Powered by Pythelix.
@@ -53,7 +51,7 @@ It becomes more interesting when multiple menus exist. Let's create another menu
 ```
 [menu/contact]
 parent: "generic/menu"
-text = """
+text: """
 Don't hesitate to contact us if you have any questions, if you cannot connect
 to your account, or if you just want to say hi.
 Email contact@myveryownmud.com
@@ -65,15 +63,15 @@ Now we need to connect the two menus. The most common approach is to intercept c
 ```
 [menu/motd]
 parent: "generic/menu"
-text = """
+text: """
 Welcome to this AWESOME MUD!!!
 We hope you have fun.
 Type CONTACT to contact us.
                                      Powered by Pythelix.
 """
 
-{input}
-if text.lower() == "contact":
+{input(client, input)}
+if input.lower() == "contact":
     client.location = !menu/contact!
 else:
     client.msg("That's not a valid command.")
@@ -81,18 +79,22 @@ endif
 
 [menu/contact]
 parent: "generic/menu"
-text = """
+text: """
 Don't hesitate to contact us if you have any questions, if you cannot connect
 to your account, or if you just want to say hi.
 Email contact@myveryownmud.com
 Press ENTER to close this menu.
 """
 
-{input}
+{input(client, _input)}
 client.location = !menu/motd!
 ```
 
-For both menus, we redefine the `input` method. This method is called every time the client sends some text while inside this menu. Our first menu (`menu/motd`) redirects to `menu/contact` if the client enters "contact." Otherwise, it provides a helpful message. Our `menu/contact` menu will, regardless of input, return to the previous menu.
+For both menus, we redefine the `input` method. This method is called every time the client sends some text while inside this menu. It takes two arguments: the client and the input text (notice the method definition).
+
+Our first menu (`menu/motd`) redirects to `menu/contact` if the client enters "contact." Otherwise, it provides a helpful message. Our `menu/contact` menu will, regardless of input, return to the previous menu.
+
+Notice that we specify two arguments in our input methods (we call them `client` and `input`, but that's our choice). The second menu actually asks for `_input` (with an underscore) because we don't really need this method. This is just a convention and by no means an obligation. Both methods, regardless, takes two arguments and that's what you should focus on.
 
 Note that in order to change the "current menu for this client", we only update `client.location`. This might seem unusual at first, but a client should always be inside a menu (and can move between menus by changing its `location`).
 
@@ -143,7 +145,7 @@ If not, you can enter 'new' to create a new account.
 """
 
 {input}
-account = search.find_one(!account!, username=text.lower())
+account = search.one(!account!, username=text.lower())
 if account:
     client.account = account
     client.location = !menu/password!
@@ -160,7 +162,7 @@ This menu is a bit more involved, so let's break it down:
 
 1. The menu key and text require little explanation at this point.
 2. We override the `input` method.
-3. It checks whether the entered text corresponds to an account (we won't discuss `search.find_one(...)` here, but for more info, see [the search module documentation](./module/search.md)).
+3. It checks whether the entered text corresponds to an account (we won't discuss `search.one(...)` here, but for more info, see [the search module documentation](./module/search.md)).
 4. If it finds an account, it assigns it to the client, moves the client to the `menu/password` menu, and returns `True`.
 5. If no account is found, it returns `False`.
 6. We also override `unknown_input` to provide a better error message.

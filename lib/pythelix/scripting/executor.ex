@@ -3,8 +3,11 @@ defmodule Pythelix.Scripting.Executor do
   Execute a script, handle pauses.
   """
 
+  alias Pythelix.Entity
   alias Pythelix.Method
+  alias Pythelix.Record
   alias Pythelix.Scripting.Interpreter.Script
+  alias Pythelix.Scripting.Object.Dict
   alias Pythelix.Scripting.Traceback
 
   require Logger
@@ -52,9 +55,9 @@ defmodule Pythelix.Scripting.Executor do
     end
   end
 
-  def execute(executor_id, %{method: method, args: args, kwargs: kwargs}) do
+  def execute(executor_id, %{method: method, args: args, kwargs: kwargs, name: name}) do
     hub = :global.whereis_name(Pythelix.Command.Hub)
-    Method.call(method, args, kwargs, "unknown")
+    Method.call(method, args, kwargs, name)
     |> case do
       %Script{pause: wait_time} = script when wait_time != nil ->
         send(hub, {:executor_done, executor_id, :ok})
@@ -71,6 +74,10 @@ defmodule Pythelix.Scripting.Executor do
         send(hub, {:executor_done, executor_id, :ok})
         {:ok, script}
     end
+  end
+
+  def execute(executor_id, %{method: method, args: args, kwargs: kwargs}) do
+    execute(executor_id, %{method: method, args: args, kwargs: kwargs, name: "unknown"})
   end
 
   def handle_cast(:unpause, executor_id, {script, code, name, task_id}) do
@@ -107,6 +114,34 @@ defmodule Pythelix.Scripting.Executor do
         Pythelix.Task.Persistent.del(task_id)
 
         {:noreply, {script, code, name, task_id}}
+    end
+  end
+
+  def run_method(%Entity{} = entity, name, args \\ [], kwargs \\ nil) do
+    method_name = "#{inspect(entity)}, method #{name}"
+
+    args = (args == nil && []) || args
+    kwargs =
+      case kwargs do
+        %Dict{} -> kwargs
+        map when is_map(map) -> Dict.new(map)
+        nil -> Dict.new()
+      end
+      |> then(& Dict.put(&1, "self", entity))
+
+    case Record.get_method(entity, name) do
+      :nomethod ->
+        :nomethod
+
+      %Method{} = method ->
+        state = %{
+          method: method,
+          args: args,
+          kwargs: kwargs,
+          name: method_name
+        }
+
+        execute(nil, state)
     end
   end
 end

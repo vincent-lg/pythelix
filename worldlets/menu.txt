@@ -1,4 +1,27 @@
 [menu/motd]
 parent: "generic/menu"
-text: "Welcome to Pythelix!"
-prompt: "MOTD>"
+text: """
+Welcome to this AWESOME MUD!!!
+We hope you have fun.
+Type CONTACT to contact us.
+                                     Powered by Pythelix.
+"""
+
+{input(client, input)}
+if input.lower() == "contact":
+    client.location = !menu/contact!
+else:
+    client.msg("That's not a valid command.")
+endif
+
+[menu/contact]
+parent: "generic/menu"
+text: """
+Don't hesitate to contact us if you have any questions, if you cannot connect
+to your account, or if you just want to say hi.
+Email contact@myveryownmud.com
+Press ENTER to close this menu.
+"""
+
+{input(client, _input)}
+client.location = !menu/motd!
