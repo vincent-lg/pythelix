@@ -3,7 +3,6 @@ defmodule Pythelix.Command.Hub do
 
   require Logger
 
-  alias Pythelix.Command
   alias Pythelix.Entity
   alias Pythelix.Method
   alias Pythelix.Record

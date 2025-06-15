@@ -7,13 +7,6 @@ Type CONTACT to contact us.
                                      Powered by Pythelix.
 """
 
-{input(client, input)}
-if input.lower() == "contact":
-    client.location = !menu/contact!
-else:
-    client.msg("That's not a valid command.")
-endif
-
 [menu/contact]
 parent: "generic/menu"
 text: """
@@ -25,3 +18,11 @@ Press ENTER to close this menu.
 
 {input(client, _input)}
 client.location = !menu/motd!
+
+[command/motd/contact]
+parent: "generic/command"
+location: "menu/motd"
+name: "contact"
+
+{run(client)}
+client.location = !menu/contact!

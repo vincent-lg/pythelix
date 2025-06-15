@@ -4,7 +4,7 @@ defmodule Pythelix.MixProject do
   def project do
     [
       app: :pythelix,
-      version: "0.4.0",
+      version: "0.5.0",
       elixir: "~> 1.14",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
@@ -35,8 +35,6 @@ defmodule Pythelix.MixProject do
   def cli do
     [
       preferred_envs: [
-        "test.unit": :test,
-        "test.integration": :test
       ]
     ]
   end
@@ -104,8 +102,6 @@ defmodule Pythelix.MixProject do
       "ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
       "ecto.reset": ["ecto.drop", "ecto.setup"],
       test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"],
-      "test.integration": ["ecto.create --quiet", "ecto.migrate --quiet", "test --only integration"],
-      "test.unit": ["ecto.create --quiet", "ecto.migrate --quiet", "test --exclude integration"],
       "assets.setup": ["tailwind.install --if-missing", "esbuild.install --if-missing"],
       "assets.build": ["tailwind pythelix", "esbuild pythelix"],
       "assets.deploy": [
