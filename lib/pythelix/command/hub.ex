@@ -15,7 +15,6 @@ defmodule Pythelix.Command.Hub do
   def init(_) do
     state = %{
       client_id: 1,
-      commands: %{},
       executor_id: 1,
       queue: :queue.new(),
       busy?: false,
@@ -97,14 +96,14 @@ defmodule Pythelix.Command.Hub do
     parent = Record.get_entity("generic/client")
     key = "client/#{client_id}"
 
-    {:ok, client} = Record.create_entity(virtual: true, key: key, parent: parent)
+    {:ok, _} = Record.create_entity(virtual: true, key: key, parent: parent)
 
     Record.set_attribute(key, "client_id", state.client_id)
     Record.set_attribute(key, "pid", from_pid)
-    menu = Record.get_entity("menu/motd")
-    Record.change_location(client, menu)
-    send(self(), {:"$gen_cast", {:full, client_id}})
+    {:ok, state} =
+      start_executor(Pythelix.Menu.Connector, state.executor_id, {key}, {:connect, key}, state)
 
+    #send(self(), {:"$gen_cast", {:full, client_id}})
 
     {:reply, client_id, %{state | client_id: state.client_id + 1}}
   end
@@ -201,11 +200,11 @@ defmodule Pythelix.Command.Hub do
       {next, state} = get_next_task(state)
 
       case next do
-        {task, _} ->
-          {:noreply, execute(task, state)}
-
         :empty ->
           {:noreply, state}
+
+        {:task, task} ->
+          {:noreply, execute(task, state)}
       end
     else
       {:noreply, state}
@@ -294,16 +293,17 @@ defmodule Pythelix.Command.Hub do
     {next, queue} = :queue.out(queue)
 
     case next do
-      {:value, task_id} ->
-        {_reference, references} = Map.pop(references, task_id)
-        {task, tasks} = Map.pop(tasks, task_id)
-        state = %{state | queue: queue, references: references, tasks: tasks}
+      {:value, task} ->
+        {{:task, task}, state}
+        #{_reference, references} = Map.pop(references, task_id)
+        #{task, tasks} = Map.pop(tasks, task_id)
+        #state = %{state | queue: queue, references: references, tasks: tasks}
 
-        if task == nil do
-          get_next_task(state)
-        else
-          {task, state}
-        end
+        #if task == nil do
+        #  get_next_task(state)
+        #else
+        #  {task, state}
+        #end
 
       :empty ->
         {:empty, state}
@@ -331,12 +331,9 @@ defmodule Pythelix.Command.Hub do
             nil ->
               ""
 
-            :none ->
-              ""
-
             menu ->
               try do
-                Method.call_entity(menu, "get_prompt")
+                Method.call_entity(menu, "get_prompt", [client])
               rescue
                 _ -> "error"
               end

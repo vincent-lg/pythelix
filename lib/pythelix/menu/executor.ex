@@ -32,19 +32,19 @@ defmodule Pythelix.Menu.Executor do
 
   defp maybe_execute(%Entity{} = menu, client, input, start_time, executor_id) do
     args = {menu, client, input, start_time, executor_id}
-    call_input(args) || call_command(args)
+    call_input(args)
+    |> then(& (&1 == false && call_command(args)) || &1)
   end
 
   defp call_input({menu, client, input, start_time, executor_id}) do
     case Scripting.Executor.run_method(menu, "input", [client, input]) do
       :nomethod ->
-        call_command({menu, client, input, start_time, executor_id})
+        false
 
       {:ok, %Script{pause: :immediate, last_raw: value} = script} ->
-        IO.inspect(value, label: "returned value")
 
         if value do
-          call_command({menu, client, input, start_time, executor_id})
+          false
         else
           {:ok, script}
         end

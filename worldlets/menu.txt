@@ -14,6 +14,12 @@ else:
     client.msg("That's not a valid command.")
 endif
 
+{enter(client)}
+client.msg("You enter MOTD")
+
+{leave(client)}
+client.msg("You leave MOTD")
+
 [menu/contact]
 parent: "generic/menu"
 text: """

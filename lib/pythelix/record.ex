@@ -7,6 +7,7 @@ defmodule Pythelix.Record do
   alias Pythelix.Repo
   alias Pythelix.Entity
   alias Pythelix.Method
+  alias Pythelix.Network.TCP.Client
   alias Pythelix.Record
   alias Pythelix.Record.Cache
   alias Pythelix.Record.Diff
@@ -167,6 +168,8 @@ defmodule Pythelix.Record do
   * parent (Entity, String or integer): the entity parent.
   """
   @spec has_parent?(Entity.t(), Entity.t() | String.t() | integer()) :: boolean()
+  def has_parent?(nil, _menu), do: false
+  def has_parent?(_entity, nil), do: false
   def has_parent?(%Entity{} = entity, %Entity{} = parent) do
     has_parent?(entity, Entity.get_id_or_key(parent))
   end
@@ -443,15 +446,44 @@ defmodule Pythelix.Record do
     end
 
     entity
+    |> tap(& handle_changed_location(&1, new_location))
     |> Cache.change_location(new_location)
     |> Cache.cache_entity()
     |> tap(& handle_new_location(&1, new_location))
   end
 
+  defp handle_changed_location(%{location_id: old_id} = entity, location) do
+    old_location = (old_id && get_entity(old_id)) || nil
+
+    if location != old_location do
+      if has_parent?(entity, "generic/client") && has_parent?(old_location, "generic/menu") do
+        try do
+          Method.call_entity(old_location, "leave", [entity])
+        rescue
+          _ -> nil
+        end
+      end
+    end
+  end
+
   defp handle_new_location(entity, location) do
     if has_parent?(entity, "generic/client") && has_parent?(location, "generic/menu") do
-      if text = get_attribute(location, "text") do
-        Pythelix.Network.TCP.Client.send(entity, text)
+      try do
+        case Method.call_entity(location, "get_text", [entity]) do
+          :nomethod ->
+            nil
+
+          text ->
+            Client.send(entity, text)
+        end
+      rescue
+        _ -> nil
+      end
+
+      try do
+        Method.call_entity(location, "enter", [entity])
+      rescue
+        _ -> nil
       end
     end
   end

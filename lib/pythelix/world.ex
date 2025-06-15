@@ -123,17 +123,22 @@ defmodule Pythelix.World do
       %{
         virtual: true,
         key: @generic_menu,
-        attributes: %{},
+        attributes: %{
+          "prompt" => "\"\"",
+          "text" => "\"\""
+        },
         methods: %{
           "get_prompt" => {
             [
-              {"self", keyword: "self", type: {:entity, "generic/menu"}}
+              {"self", keyword: "self", type: {:entity, "generic/menu"}},
+              {"client", index: 0, type: {:entity, "generic/client"}}
             ],
             "return self.prompt"
           },
           "get_text" => {
             [
-              {"self", keyword: "self", type: {:entity, "generic/menu"}}
+              {"self", keyword: "self", type: {:entity, "generic/menu"}},
+              {"client", index: 0, type: {:entity, "generic/client"}}
             ],
             "return self.text"
           },
