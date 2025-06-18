@@ -172,6 +172,7 @@ defmodule Pythelix.Command.Hub do
     {_, tasks} = Map.pop(state.tasks, executor_id)
     state = %{state | tasks: tasks, references: references, busy?: false, running: nil}
     state = send_full_all(state)
+    Pythelix.Record.Diff.apply()
 
     if executor_id == running do
       {next, state} = get_next_task(state)

@@ -58,7 +58,7 @@ defmodule Pythelix.Menu.Executor do
       [cmd, str] -> {cmd, str}
     end
     |> handle_command_input(menu, client, start_time, executor_id)
-    |> maybe_call_unknown_input(menu, client, start_time)
+    |> maybe_call_unknown_input(menu, client, start_time, input)
   end
 
   defp handle_command_input({cmd, args}, menu, client, start_time, executor_id) do
@@ -74,9 +74,7 @@ defmodule Pythelix.Menu.Executor do
     end
   end
 
-  defp maybe_call_unknown_input({:nocommand, cmd, args}, menu, client, start_time) do
-    input = "#{cmd} #{args}"
-
+  defp maybe_call_unknown_input({:nocommand, _cmd, _args}, menu, client, start_time, input) do
     case Scripting.Executor.run_method(menu, "unknown_input", [client, input]) do
       :nomethod ->
         log_performance(start_time)
@@ -88,7 +86,7 @@ defmodule Pythelix.Menu.Executor do
     end
   end
 
-  defp maybe_call_unknown_input(anything, _menu, _client, _start_time), do: anything
+  defp maybe_call_unknown_input(anything, _menu, _client, _start_time, _input), do: anything
 
   defp log_performance(start_time) do
     if start_time != nil && Application.get_env(:pythelix, :show_stats, false) do

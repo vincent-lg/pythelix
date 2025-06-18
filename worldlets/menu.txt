@@ -1,28 +1,97 @@
 [menu/motd]
 parent: "generic/menu"
 text: """
-Welcome to this AWESOME MUD!!!
-We hope you have fun.
-Type CONTACT to contact us.
-                                     Powered by Pythelix.
+Pythelix
 """
 
-[menu/contact]
+{enter(client)}
+client.location = !menu/username!
+
+[menu/username]
 parent: "generic/menu"
 text: """
-Don't hesitate to contact us if you have any questions, if you cannot connect
-to your account, or if you just want to say hi.
-Email contact@myveryownmud.com
-Press ENTER to close this menu.
+Enter your username or 'new' to create a new one.
 """
 
-{input(client, _input)}
-client.location = !menu/motd!
+{unknown_input(client, input)}
+account = search.one(!account!, username=input.strip().lower())
+if account:
+    client.account = account
+    client.location = !menu/password!
+else:
+    client.msg(f"The username {input} doesn't exist. Want to create one? Enter NEW.")
+endif
 
-[command/motd/contact]
+[command/username/new]
 parent: "generic/command"
-location: "menu/motd"
-name: "contact"
+location: "menu/username"
+name: "new"
 
 {run(client)}
-client.location = !menu/contact!
+client.location = !menu/new/username!
+
+[menu/password]
+parent: "generic/menu"
+text: """
+Enter the password for this account.
+"""
+
+{input(client, input)}
+account = client.account
+if account.password.verify(input):
+    client.msg("Good.")
+    client.location = !menu/game!
+else:
+    client.location = !menu/invalid/password!
+endif
+
+[menu/invalid/password]
+parent: "generic/menu"
+text: """
+Invalid password. Waiting...
+"""
+
+{enter(client)}
+client.msg("Before wait")
+wait 3
+client.location = !menu/password!
+
+{unknown_input(client, _input)}
+client.msg("Wait a bit...")
+
+[menu/new/username]
+parent: "generic/menu"
+text: """
+Welcome! Enter your new username.
+"""
+
+{input(client, input)}
+account = search.one(!account!, username=input.lower())
+if account:
+    client.msg("This account already exists. Try a new one.")
+else:
+    account = Entity(parent=!account!)
+    account.username = input.lower()
+    client.account = account
+    client.location = !menu/new/password!
+endif
+
+[menu/new/password]
+parent: "generic/menu"
+text: """
+Great! Enter your new password.
+"""
+
+{input(client, input)}
+client.account.password = password.hash(input)
+client.msg("Awesome!")
+client.location = !menu/username!
+
+[menu/game]
+parent: "generic/menu"
+text: """
+And that's pythelix!
+"""
+
+{get_prompt(_client)}
+return "HP: 200"

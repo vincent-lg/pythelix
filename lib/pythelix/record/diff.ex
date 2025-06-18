@@ -420,6 +420,22 @@ defmodule Pythelix.Record.Diff do
     for {key, _} <- entries do
       Cachex.del(:px_diff, key)
     end
+
+    case Cachex.get(:px_diff, :entities) do
+      {:ok, nil} ->
+        nil
+
+      {:ok, gen_id} ->
+        Cachex.put(:px_diff, :org_entities, gen_id)
+    end
+
+    case Cachex.get(:px_diff, :attributes) do
+      {:ok, nil} ->
+        nil
+
+      {:ok, gen_id} ->
+        Cachex.put(:px_diff, :org_attributes, gen_id)
+    end
   end
 
   defp handle_apply(result, _) do
