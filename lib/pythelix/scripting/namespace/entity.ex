@@ -131,11 +131,12 @@ defmodule Pythelix.Scripting.Namespace.Entity do
   def setattr(script, self, name, to_ref) do
     to_value = Script.get_value(script, to_ref)
     entity = Script.get_value(script, self)
+    id_or_key = Entity.get_id_or_key(entity)
 
-    entity = Pythelix.Record.set_attribute(entity.id, name, to_value)
+    entity = Pythelix.Record.set_attribute(id_or_key, name, to_value)
     script = Script.update_reference(script, self, entity)
 
-    {script, {:setattr, entity.id, name, to_ref}}
+    {script, {:setattr, id_or_key, name, to_ref}}
   end
 
   defp get_attribute(entity, name) do

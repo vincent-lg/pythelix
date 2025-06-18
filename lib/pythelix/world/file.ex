@@ -67,16 +67,16 @@ defmodule Pythelix.World.File do
         state = parse_method_name(state, {line, index})
         parse_lines(rest, state)
 
-      !need_more && String.contains?(line, ":") ->
-        state = parse_attribute(state, {line, index})
-        parse_lines(rest, state)
-
       !need_more && line =~ @pattern_entity ->
         state = parse_entity_key(state, line, index)
         parse_lines(rest, state)
 
       current != nil and method != nil ->
         state = parse_method_content(state, {line, index})
+        parse_lines(rest, state)
+
+      !need_more && String.contains?(line, ":") ->
+        state = parse_attribute(state, {line, index})
         parse_lines(rest, state)
 
       String.trim(line) == "" ->

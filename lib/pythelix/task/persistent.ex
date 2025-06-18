@@ -39,7 +39,7 @@ defmodule Pythelix.Task.Persistent do
     |> Enum.reduce({get_status(), get_ids()}, fn task, {status, ids} ->
       task
       |> tap(& Cachex.put(@cache, &1.id, &1))
-      |> schedule(:new)
+      |> schedule()
       |> case do
         {:ok, task} -> {Map.put(status, task.id, :scheduled), [task.id | ids]}
         _ -> {Map.put(status, task.id, :error), ids}
@@ -69,14 +69,14 @@ defmodule Pythelix.Task.Persistent do
   - `:update`: force an update, the self() process will be notified when the task expires.
   """
   @spec add(nil | DateTime.t(), String.t(), String.t(), Script.t()) :: t()
-  def add(expire_at, name, code, script, opts \\ []) do
+  def add(expire_at, name, code, script) do
     {id, ids} = find_free_id()
     status = get_status()
 
     {:ok, task} =
       %Task{id: id, expire_at: expire_at, name: name, code: code, script: script}
       |> save()
-      |> schedule((opts[:update] && :update) || :new)
+      |> schedule()
 
     ids = Enum.sort([id | ids])
     Cachex.put(@cache, :ids, ids)
@@ -108,7 +108,7 @@ defmodule Pythelix.Task.Persistent do
         {:ok, _task} =
           %{task | expire_at: expire_at, name: name, code: code, script: script}
           |> save()
-          |> schedule(:update)
+          |> schedule()
 
         :ok
 
@@ -208,14 +208,7 @@ defmodule Pythelix.Task.Persistent do
     end
   end
 
-  defp schedule(task, operation) do
-    arg =
-      case operation do
-        :new -> task.id
-        :update -> self()
-        other -> raise "invalid operation #{inspect(other)}"
-      end
-
+  defp schedule(task) do
     if task.expire_at do
       now = DateTime.utc_now()
       time =
@@ -224,7 +217,7 @@ defmodule Pythelix.Task.Persistent do
         |> then(& (&1 > 0 && &1) || 0)
 
       hub = :global.whereis_name(Pythelix.Command.Hub)
-      Process.send_after(hub, {:"$gen_cast", {:unpause, arg}}, time)
+      Process.send_after(hub, {:"$gen_cast", {:unpause, task.id}}, time)
     end
 
     {:ok, task}

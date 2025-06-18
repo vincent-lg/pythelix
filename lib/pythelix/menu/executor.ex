@@ -14,10 +14,6 @@ defmodule Pythelix.Menu.Executor do
 
   def name(_), do: nil
 
-  def handle_cast(:unpause, executor_id, {script, code, name, task_id}) do
-    Pythelix.Scripting.Executor.handle_cast(:unpause, executor_id, {script, code, name, task_id})
-  end
-
   @doc """
   Executes user input.
   """
@@ -36,7 +32,7 @@ defmodule Pythelix.Menu.Executor do
     |> then(& (&1 == false && call_command(args)) || &1)
   end
 
-  defp call_input({menu, client, input, _start_time, _executor_id}) do
+  defp call_input({menu, client, input, start_time, _executor_id}) do
     case Scripting.Executor.run_method(menu, "input", [client, input]) do
       :nomethod ->
         false
@@ -46,10 +42,12 @@ defmodule Pythelix.Menu.Executor do
         if value do
           false
         else
+          log_performance(start_time)
           {:ok, script}
         end
 
       anything ->
+        log_performance(start_time)
         anything
     end
   end
@@ -76,17 +74,26 @@ defmodule Pythelix.Menu.Executor do
     end
   end
 
-  defp maybe_call_unknown_input({:nocommand, cmd, args}, menu, client, _start_time) do
+  defp maybe_call_unknown_input({:nocommand, cmd, args}, menu, client, start_time) do
     input = "#{cmd} #{args}"
 
     case Scripting.Executor.run_method(menu, "unknown_input", [client, input]) do
       :nomethod ->
+        log_performance(start_time)
         Scripting.Executor.run_method(menu, "invalid_input", [client, input])
 
       anything ->
+        log_performance(start_time)
         anything
     end
   end
 
   defp maybe_call_unknown_input(anything, _menu, _client, _start_time), do: anything
+
+  defp log_performance(start_time) do
+    if start_time != nil && Application.get_env(:pythelix, :show_stats, false) do
+      elapsed = System.monotonic_time(:microsecond) - start_time
+      IO.puts("⏱️ Run in #{elapsed} µs")
+    end
+  end
 end

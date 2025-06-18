@@ -35,6 +35,7 @@ defmodule Pythelix.MixProject do
   def cli do
     [
       preferred_envs: [
+        pumpkin: :test,
       ]
     ]
   end

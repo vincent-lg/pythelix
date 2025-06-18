@@ -105,13 +105,13 @@ defmodule Pythelix.Command.Hub do
     end
   end
 
-  def handle_cast({:unpause, _pid} = script, state) do
+  def handle_cast({:unpause, _task_id} = task, state) do
     if state.busy? do
-      queue = :queue.in(script, state.queue)
+      queue = :queue.in(task, state.queue)
 
       {:noreply, %{state | queue: queue}}
     else
-      {:noreply, execute(script, state)}
+      {:noreply, execute(task, state)}
     end
   end
 
@@ -226,15 +226,10 @@ defmodule Pythelix.Command.Hub do
     end
   end
 
-  defp execute({:unpause, task_id} = key, %{executor_id: executor_id} = state) when is_integer(task_id) do
+  defp execute({:unpause, task_id} = key, %{executor_id: executor_id} = state) do
     {:ok, state} =
       start_executor(Pythelix.Scripting.Executor, executor_id, %{task_id: task_id}, key, state)
     state
-  end
-
-  defp execute({:unpause, pid}, %{executor_id: executor_id} = state) do
-    GenServer.cast(pid, {:unpause, executor_id})
-    %{state | executor_id: executor_id + 1}
   end
 
   defp execute({:start, task_id, args, handler} = key, %{executor_id: executor_id} = state) do

@@ -16,10 +16,6 @@ defmodule Pythelix.Command.Executor do
 
   def name(_), do: nil
 
-  def handle_cast(:unpause, executor_id, {script, code, name, task_id}) do
-    Pythelix.Scripting.Executor.handle_cast(:unpause, executor_id, {script, code, name, task_id})
-  end
-
   @doc """
   Executes a command.
 
@@ -47,7 +43,7 @@ defmodule Pythelix.Command.Executor do
          {:ok, parsed} <- parse_command_syntax(pattern, command_args),
          {:ok, refined} <- refine_command(command, parsed, client),
          {:ok, script} <- run_command(command, refined, client) do
-      if start_time != nil  do
+      if start_time != nil && Application.get_env(:pythelix, :show_stats, false) do
         elapsed = System.monotonic_time(:microsecond) - start_time
         IO.puts("⏱️ Run in #{elapsed} µs")
       end

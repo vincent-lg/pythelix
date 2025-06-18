@@ -3,6 +3,8 @@ defmodule Pythelix.Network.TCP.Server do
 
   @port 4000
 
+  require Logger
+
   def start_link(_) do
     GenServer.start_link(__MODULE__, nil, name: __MODULE__)
   end
@@ -12,6 +14,7 @@ defmodule Pythelix.Network.TCP.Server do
       :gen_tcp.listen(@port, [:binary, packet: :line, active: true, reuseaddr: true])
 
     Task.start(fn -> accept_loop(socket) end)
+    Logger.info("Starting Telnet server on port #{@port}")
     {:ok, socket}
   end
 

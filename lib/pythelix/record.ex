@@ -11,6 +11,7 @@ defmodule Pythelix.Record do
   alias Pythelix.Record
   alias Pythelix.Record.Cache
   alias Pythelix.Record.Diff
+  alias Pythelix.Scripting.Executor
 
   def warmup() do
     warmup_database()
@@ -458,7 +459,7 @@ defmodule Pythelix.Record do
     if location != old_location do
       if has_parent?(entity, "generic/client") && has_parent?(old_location, "generic/menu") do
         try do
-          Method.call_entity(old_location, "leave", [entity])
+          Executor.run_method(old_location, "leave", [entity])
         rescue
           _ -> nil
         end
@@ -481,7 +482,7 @@ defmodule Pythelix.Record do
       end
 
       try do
-        Method.call_entity(location, "enter", [entity])
+        Executor.run_method(location, "enter", [entity])
       rescue
         _ -> nil
       end

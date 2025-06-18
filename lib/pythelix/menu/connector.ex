@@ -8,10 +8,6 @@ defmodule Pythelix.Menu.Connector do
 
   def name(_), do: nil
 
-  def handle_cast(:unpause, executor_id, {script, code, name, task_id}) do
-    Pythelix.Scripting.Executor.handle_cast(:unpause, executor_id, {script, code, name, task_id})
-  end
-
   @doc """
   Executes connection.
   """

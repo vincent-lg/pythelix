@@ -297,6 +297,17 @@ defmodule Pythelix.World do
         place_entity(record, location)
       end)
     end)
+    |> tap(fn records ->
+      default_location = Record.get_entity("menu/game")
+
+      Enum.each(records, fn record ->
+        if Record.has_parent?(record, "generic/command") do
+          if Record.get_location_entity(record) == nil do
+            place_entity(record, default_location)
+          end
+        end
+      end)
+    end)
     |> tap(fn _ -> Record.Diff.apply() end)
     |> tap(fn _ -> link_commands() end)
   end
