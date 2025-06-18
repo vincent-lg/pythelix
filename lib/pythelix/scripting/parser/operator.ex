@@ -58,6 +58,18 @@ defmodule Pythelix.Scripting.Parser.Operator do
     |> isolate()
   end
 
+  def lbrace do
+    ascii_char([?{])
+    |> label("{")
+    |> isolate(check: false)
+  end
+
+  def rbrace do
+    ascii_char([?}])
+    |> label("}")
+    |> isolate(check: false)
+  end
+
   def comma do
     string(",")
     |> label(",")

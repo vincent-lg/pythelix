@@ -93,6 +93,19 @@ defmodule Pythelix.Scripting.Interpreter.AST do
     |> add({:list, length(seq)})
   end
 
+  defp read_ast(code, {:dict, elements}) do
+    code =
+      code
+      |> add({:dict, nil})
+
+    Enum.reduce(elements, code, fn {:element, [key, value]}, code ->
+      code
+      |> read_ast(value)
+      |> read_ast(key)
+      |> add({:put_dict, :last})
+    end)
+  end
+
   defp read_ast(code, {op, [left, right]}) when op in [:+, :-, :*, :/] do
     code
     |> read_ast(left)

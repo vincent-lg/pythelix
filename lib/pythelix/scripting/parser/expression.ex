@@ -55,11 +55,34 @@ defmodule Pythelix.Scripting.Parser.Expression do
 
   def reduce_list([{:list, value}]), do: value
 
+  dict_pair =
+    parsec(:expr)
+    |> ignore(string(":") |> isolate())
+    |> parsec(:expr)
+    |> tag(:element)
+
+  dict =
+    ignore(lbrace())
+    |> concat(
+      optional(
+        dict_pair
+        |> repeat(
+          ignore(comma())
+          |> concat(dict_pair)
+        )
+        |> optional(ignore(comma()))
+      )
+      |> tag(:dict)
+    )
+    |> ignore(rbrace())
+    |> label("list")
+
   defcombinatorp(
     :nested,
     choice([
       ignore(lparen()) |> parsec(:expr) |> ignore(rparen()),
       value_list,
+      dict,
       parsec({Pythelix.Scripting.Parser.Value, :value})
     ])
   )

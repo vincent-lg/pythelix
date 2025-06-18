@@ -19,7 +19,7 @@ defmodule Pythelix.Scripting.Parser.Whitespace do
   import NimbleParsec
 
   @whitespace "[[:space:]-[\n]]"
-  @end_symbol "[[:space:][+*/\(\)=<>!:,.\\[\\]][\\-]]"
+  @end_symbol "[[:space:][+*/\(\)=<>!:,.\\[\\]\\{\\}][\\-]]"
 
   @whitespace_range Unicode.Set.to_utf8_char(@whitespace) |> elem(1)
   @end_symbol_range Unicode.Set.to_utf8_char(@end_symbol) |> elem(1)
