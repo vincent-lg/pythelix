@@ -57,8 +57,16 @@ defmodule Pythelix.Scripting.Object.Dict do
       3
 
   """
-  @spec new(map()) :: t()
-  def new(map \\ %{}) when is_map(map) do
+  @spec new(map() | t()) :: t()
+  def new(map \\ %{})
+
+  def new(%Dict{} = dict) do
+    Enum.reduce(Dict.items(dict), %Dict{}, fn {key, value}, dict ->
+      Dict.put(dict, key, value)
+    end)
+  end
+
+  def new(map) when is_map(map) do
     Enum.reduce(map, %Dict{}, fn {key, value}, dict ->
       Dict.put(dict, key, value)
     end)
@@ -106,7 +114,7 @@ defmodule Pythelix.Scripting.Object.Dict do
   def put(%Dict{entries: entries} = dict, key, value) do
     Map.get_and_update(entries, key, fn
       nil -> {dict.key_id, {dict.key_id, value}}
-      _old_value -> {nil, value}
+      {id, _} -> {nil, {id, value}}
     end)
     |> then(fn
       {nil, map} -> %{dict | entries: map}
@@ -232,6 +240,31 @@ defmodule Pythelix.Scripting.Object.Dict do
     |> Enum.map(fn {k, {_id, v}} -> {k, v} end)
   end
 
+  @doc """
+  Update a dictionary based on a given dictionary.
+
+  The keys and values in the new dictionary will override the former
+  dictionary.
+
+  ## Examples
+
+      iex> dict1 = Dict.new()
+      iex> dict1 = Dict.put(dict1, "my key", 35)
+      iex> dict1 = Dict.put(dict1, "my second key", "something")
+      iex> dict2 = Dict.new()
+      iex> dict2 = Dict.put(dict2, "my key", 12)
+      iex> dict2 = Dict.put(dict2, "my third key", -5)
+      iex> dict = Dict.update(dict1, dict2)
+      iex> Dict.items(dict)
+      [{"my key", 12}, {"my second key", "something"}, {"my third key", -5}]
+  """
+  @spec update(t(), t()) :: t()
+  def update(dict1, dict2) do
+    Enum.reduce(Dict.items(dict2), dict1, fn {key, value}, dict ->
+      Dict.put(dict, key, value)
+    end)
+  end
+
   defimpl Inspect do
     import Inspect.Algebra
 
@@ -249,7 +282,7 @@ defmodule Pythelix.Scripting.Object.Dict do
 
       entries =
         entries
-        |> fold_doc(fn doc, acc -> concat([doc, ",", acc]) end)
+        |> fold_doc(fn doc, acc -> concat([doc, ", ", acc]) end)
 
       concat(["{", entries, "}"])
     end

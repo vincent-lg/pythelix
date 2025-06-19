@@ -301,6 +301,8 @@ defmodule Pythelix.Scripting.Namespace do
   defp check_arg_type(_, value, :str) when not is_binary(value), do: :error
   defp check_arg_type(_, value, :int) when not is_integer(value), do: :error
   defp check_arg_type(_, value, :float) when not is_float(value), do: :error
+  defp check_arg_type(_, %Dict{} = value, :dict), do: value
+  defp check_arg_type(_, _value, :dict), do: :error
 
   defp check_arg_type(script, value, :entity) do
     entity = Script.get_value(script, value)
@@ -329,7 +331,7 @@ defmodule Pythelix.Scripting.Namespace do
     end
   end
 
-  defp check_arg_type(_, value, _), do: value
+  defp check_arg_type(_, value, _), do: :error
 
   defp check_signature(script, constraints, args, kwargs, namespace) do
     check_signature_positional_args(script, constraints, args, namespace)

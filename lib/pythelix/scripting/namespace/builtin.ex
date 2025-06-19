@@ -8,6 +8,7 @@ defmodule Pythelix.Scripting.Namespace.Builtin do
   require Logger
 
   alias Pythelix.Scripting.Format
+  alias Pythelix.Scripting.Object.Dict
   alias Pythelix.World
 
   deffun function_Entity(script, namespace), [
@@ -63,5 +64,26 @@ defmodule Pythelix.Scripting.Namespace.Builtin do
 
       {script, entity}
     end
+  end
+
+  deffun dict(script, namespace), [
+    {:iterable, index: 0, type: :dict, default: nil},
+    {:kwargs, kwargs: true},
+  ] do
+    iterable = Script.get_value(script, namespace.iterable) |> IO.inspect()
+    kwargs = namespace.kwargs
+
+    dict =
+      case iterable do
+        nil ->
+          kwargs
+
+        iterable ->
+          iterable
+          |> Dict.new()
+          |> Dict.update(kwargs)
+      end
+
+    {script, dict}
   end
 end
