@@ -181,6 +181,7 @@ defmodule Pythelix.Scripting.Namespace do
       atom when is_atom(atom) -> value
       list when is_list(list) -> Namespace.List
       str when is_binary(str) -> Namespace.String
+      %Dict{} -> Namespace.Dict
       %Password{} -> Namespace.Password
       %Pythelix.Entity{} -> Namespace.Entity
     end
@@ -298,11 +299,10 @@ defmodule Pythelix.Scripting.Namespace do
 
   defp check_arg_type(_, value, :any), do: value
   defp check_arg_type(_, %Format.String{} = value, :str), do: value
-  defp check_arg_type(_, value, :str) when not is_binary(value), do: :error
-  defp check_arg_type(_, value, :int) when not is_integer(value), do: :error
-  defp check_arg_type(_, value, :float) when not is_float(value), do: :error
+  defp check_arg_type(_, value, :str) when is_binary(value), do: value
+  defp check_arg_type(_, value, :int) when is_integer(value), do: value
+  defp check_arg_type(_, value, :float) when is_float(value), do: value
   defp check_arg_type(_, %Dict{} = value, :dict), do: value
-  defp check_arg_type(_, _value, :dict), do: :error
 
   defp check_arg_type(script, value, :entity) do
     entity = Script.get_value(script, value)
@@ -331,7 +331,7 @@ defmodule Pythelix.Scripting.Namespace do
     end
   end
 
-  defp check_arg_type(_, value, _), do: :error
+  defp check_arg_type(_, _value, _), do: :error
 
   defp check_signature(script, constraints, args, kwargs, namespace) do
     check_signature_positional_args(script, constraints, args, namespace)

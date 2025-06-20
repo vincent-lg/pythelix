@@ -55,4 +55,22 @@ defmodule Pythelix.ScriptingCase do
   def exec_fail(code) do
     assert {:error, _} = Pythelix.Scripting.Parser.exec(code)
   end
+
+  @doc """
+  Test to evaluate an expression and return it.
+  """
+  def expr_ok(code) do
+    assert {:ok, value} = Pythelix.Scripting.eval(code)
+
+    value
+  end
+
+  @doc """
+  Make sure the evaluated code throws an exception.
+  """
+  def expr_fail(code) do
+    assert {:error, traceback} = Pythelix.Scripting.eval(code)
+
+    traceback
+  end
 end
