@@ -232,4 +232,99 @@ defmodule Pythelix.Scripting.Namespace.DictTest do
       assert value == 8
     end
   end
+
+  describe "popitem" do
+    test "an empty dictionary" do
+      traceback = expr_fail("""
+      d = {}
+      d.popitem()
+      """)
+      assert traceback.exception == KeyError
+    end
+
+    test "a dictionary with two keys should return the last" do
+      value = expr_ok("""
+      d = {"first": 1, "second": 2}
+      d.popitem()
+      """)
+      assert value == ["second", 2]
+    end
+  end
+
+  describe "setdefault" do
+    test "an empty dictionary" do
+      items = expr_ok("""
+      d = {}
+      d.setdefault("something", 2)
+      d.items()
+      """)
+      assert items == [["something", 2]]
+    end
+
+    test "a dictionary with existing key should not update" do
+      items = expr_ok("""
+      d = {"first": 1}
+      d.setdefault("first", 2)
+      d.items()
+      """)
+      assert items == [["first", 1]]
+    end
+  end
+
+  describe "update" do
+    test "update with keyword arguments" do
+      items = expr_ok("""
+      d = {"first": 1, "second": 2}
+      d.update(second=3, third=4)
+      d.items()
+      """)
+      assert items == [["first", 1], ["second", 3], ["third", 4]]
+    end
+
+    test "update with dictionary and keyword arguments" do
+      items = expr_ok("""
+      e = {"second": 5, "fourth": 6}
+      d = {"first": 1, "second": 2}
+      d.update(e, second=3, third=4)
+      d.items()
+      """)
+      assert items == [["first", 1], ["second", 3], ["fourth", 6], ["third", 4]]
+    end
+
+    test "update with dictionary only" do
+      items = expr_ok("""
+      e = {"second": 5, "fourth": 6}
+      d = {"first": 1, "second": 2}
+      d.update(e)
+      d.items()
+      """)
+      assert items == [["first", 1], ["second", 5], ["fourth", 6]]
+    end
+  end
+
+  describe "values" do
+    test "an empty dictionary" do
+      values = expr_ok("""
+      d = {}
+      d.values()
+      """)
+      assert values == []
+    end
+
+    test "a dictionary with one key/value" do
+      values = expr_ok("""
+      d = {'key': 2 + 5}
+      d.values()
+      """)
+      assert values == [7]
+    end
+
+    test "a dictionary with two key/value pairs" do
+      values = expr_ok("""
+      d = {'key': -2, 4 + 4: 'ok'}
+      d.values()
+      """)
+      assert values == [-2, "ok"]
+    end
+  end
 end

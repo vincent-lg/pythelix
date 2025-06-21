@@ -187,6 +187,37 @@ defmodule Pythelix.Scripting.Object.Dict do
   end
 
   @doc """
+  Pop the last inserted item, removing it from the dictionary.
+  Returns `:empty` if the dictionary is empty or `{key, value, dict}`
+  if the dictionary is not empty. The last inserted key is removed first.
+
+  ## Examples
+
+      iex> dict = Dict.new()
+      iex> dict = Dict.put(dict, "first", 1)
+      iex> dict = Dict.put(dict, "second", 2)
+      iex> {key, value, dict} = Dict.popitem(dict)
+      iex> {key, value}
+      {"second", 2}
+      iex> Dict.keys(dict)
+      ["first"]
+
+      iex> dict = Dict.new()
+      iex> Dict.popitem(dict)
+      :empty
+  """
+  @spec popitem(t()) :: :empty | {Sring.t(), String.t(), t()}
+  def popitem(%Dict{entries: entries} = dict) do
+    if map_size(entries) == 0 do
+      :empty
+    else
+      entries
+      |> Enum.sort_by(fn {_k, {id, _v}} -> id end, :desc)
+      |> then(fn [{k, {_id, v}} | rest] -> {k, v, %{dict | entries: rest}} end)
+    end
+  end
+
+  @doc """
   Returns the list of keys, in insertion order.
 
   ## Examples
