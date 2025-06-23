@@ -40,6 +40,7 @@ defmodule Pythelix.Scripting.Interpreter.VM do
     return: {VM.Op, :return},
     raw: {VM.Op, :raw},
     pop: {VM.Op, :pop},
+    getitem: {VM.Item, :get},
     line: {VM.Op, :line}
   }
 

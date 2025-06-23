@@ -116,14 +116,6 @@ defmodule Pythelix.Scripting.Parser.Value do
     |> reduce(:reduce_function)
   )
 
-  defcombinatorp(
-    :formatted_string,
-    ignore(string("f"))
-    |> parsec(:string)
-    |> unwrap_and_tag(:formatted)
-    |> isolate()
-  )
-
   def reduce_function([{:function, [{:var, name}]}]) do
     {:function, name, [], %{}}
   end
@@ -139,6 +131,24 @@ defmodule Pythelix.Scripting.Parser.Value do
     {:function, name, args, kwargs}
   end
 
+  defcombinatorp(
+    :formatted_string,
+    ignore(string("f"))
+    |> parsec(:string)
+    |> unwrap_and_tag(:formatted)
+    |> isolate()
+  )
+
+  defcombinator :getitem,
+    id()
+    |> times(
+      ignore(lbracket())
+      |> parsec({Pythelix.Scripting.Parser.Expression, :expr})
+      |> ignore(rbracket()),
+      min: 1
+    )
+    |> tag(:getitem)
+
   defcombinator(
     :nested_values,
     choice([
@@ -150,12 +160,13 @@ defmodule Pythelix.Scripting.Parser.Value do
       ignore(string("-")) |> concat(id()) |> tag(:neg),
       parsec(:function),
       parsec(:entity),
+      parsec(:getitem),
       id()
     ])
     |> optional(
       repeat(
         ignore(dot())
-        |> choice([parsec(:function), id()])
+        |> choice([parsec(:function), parsec(:getitem), id()])
         |> reduce(:reduce_nested_values)
       )
       |> tag(:nested)

@@ -7,6 +7,21 @@ defmodule Pythelix.Scripting.Namespace.Dict do
 
   alias Pythelix.Scripting.Object.Dict
 
+  defmet __getitem__(script, namespace), [
+    {:item, index: 0, type: :any}
+  ] do
+    dict = Script.get_value(script, namespace.self)
+
+    case Dict.get(dict, namespace.item, nil) do
+      nil ->
+        message = inspect(namespace.item)
+        {Script.raise(script, KeyError, message), :none}
+
+      value ->
+        {script, value}
+    end
+  end
+
   defmet clear(script, namespace), [] do
     dict = Dict.new()
 

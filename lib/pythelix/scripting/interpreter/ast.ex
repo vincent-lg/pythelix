@@ -56,6 +56,20 @@ defmodule Pythelix.Scripting.Interpreter.AST do
     |> add({:call, length(args)})
   end
 
+  defp read_ast(code, {:getitem, [{:var, var} | items]}) do
+    code
+    |> read_ast({:var, var})
+    |> then(fn code ->
+      Enum.reduce(items, code, fn item, code ->
+        code
+        |> add({:getattr, "__getitem__"})
+        |> add({:dict, :no_reference})
+        |> read_ast(item)
+        |> add({:call, 1})
+      end)
+    end)
+  end
+
   defp read_ast(code, [{:function, name, args, kwargs}, {:nested, sub}]) when is_list(sub) do
     code
     |> read_ast({:function, name, args, kwargs})
@@ -296,6 +310,20 @@ defmodule Pythelix.Scripting.Interpreter.AST do
 
   def read_asts(code, asts) do
     Enum.reduce(asts, code, fn ast, code -> read_ast(code, ast) end)
+  end
+
+  defp read_nested_ast(code, {:getitem, [{:var, to_get} | items]}) do
+    code
+    |> add({:getattr, to_get})
+    |> then(fn code ->
+      Enum.reduce(items, code, fn item, code ->
+        code
+        |> add({:getattr, "__getitem__"})
+        |> add({:dict, :no_reference})
+        |> read_ast(item)
+        |> add({:call, 1})
+      end)
+    end)
   end
 
   defp read_nested_ast(code, {:var, to_get}) when is_binary(to_get) do
