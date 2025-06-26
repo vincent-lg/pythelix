@@ -44,6 +44,7 @@ defmodule Pythelix.Scripting.Interpreter.VM do
     line: {VM.Op, :line}
   }
 
+  def handle(script, {:noop, nil}), do: script
   def handle(script, {op_type, op_args}) do
     {module, dispatch} = @dispatch[op_type]
 

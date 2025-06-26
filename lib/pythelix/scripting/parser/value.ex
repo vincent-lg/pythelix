@@ -140,7 +140,12 @@ defmodule Pythelix.Scripting.Parser.Value do
   )
 
   defcombinator :getitem,
-    id()
+    choice([
+      parsec(:formatted_string),
+      parsec(:string) |> isolate(),
+      parsec(:function),
+      id()
+    ])
     |> times(
       ignore(lbracket())
       |> parsec({Pythelix.Scripting.Parser.Expression, :expr})

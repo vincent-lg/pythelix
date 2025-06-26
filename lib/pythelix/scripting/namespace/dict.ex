@@ -22,6 +22,21 @@ defmodule Pythelix.Scripting.Namespace.Dict do
     end
   end
 
+  defmet __setitem__(script, namespace), [
+    {:item, index: 0, type: :any},
+    {:value, index: 1, type: :any}
+  ] do
+    dict = Script.get_value(script, namespace.self)
+    item = Script.get_value(script, namespace.item)
+    value = Script.get_value(script, namespace.value)
+
+    dict = Dict.put(dict, item, value)
+
+    script = Script.update_reference(script, namespace.self, dict)
+
+    {script, value}
+  end
+
   defmet clear(script, namespace), [] do
     dict = Dict.new()
 

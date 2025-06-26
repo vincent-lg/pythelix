@@ -24,6 +24,98 @@ defmodule Pythelix.Scripting.Namespace.DictTest do
     end
   end
 
+  describe "__getitem__" do
+    test "a dictionary without the specified key" do
+      traceback = expr_fail("""
+      d = {}
+      d[8]
+      """)
+      assert traceback.exception == KeyError
+    end
+
+    test "a dictionary with the key" do
+      value = expr_ok("""
+      d = {"ok": 8}
+      d["ok"]
+      """)
+      assert value == 8
+    end
+
+    test "an embeeded dictionary without the specified key" do
+      traceback = expr_fail("""
+      d = {8: {}}
+      d[8][0]
+      """)
+      assert traceback.exception == KeyError
+      assert traceback.message == "0"
+    end
+
+    test "an embedded dictionary with the key" do
+      value = expr_ok("""
+      d = {"ok": {8: 3}}
+      d["ok"][8]
+      """)
+      assert value == 3
+    end
+  end
+
+  describe "__setitem__" do
+    test "a dictionary without the specified key" do
+      dict = expr_ok("""
+      d = {}
+      d[8] = 'ok'
+      d
+      """)
+      assert Dict.items(dict) == [{8, "ok"}]
+    end
+
+    test "a dictionary with the key" do
+      dict = expr_ok("""
+      d = {"ok": 8}
+      d["ok"] = 5
+      d
+      """)
+      assert Dict.items(dict) == [{"ok", 5}]
+    end
+
+    test "an embedded dictionary" do
+      dict = expr_ok("""
+      d = {"ok": {8: 3}}
+      d["ok"][8] = 9
+      d["ok"]
+      """)
+      assert Dict.items(dict) == [{8, 9}]
+    end
+
+    test "in-place: a dictionary without the specified key" do
+      traceback = expr_fail("""
+      d = {}
+      d[8] += 2
+      d
+      """)
+      assert traceback.exception == KeyError
+      assert traceback.message == "8"
+    end
+
+    test "in-place: a dictionary with the key" do
+      dict = expr_ok("""
+      d = {"ok": 8}
+      d["ok"] -= 2
+      d
+      """)
+      assert Dict.items(dict) == [{"ok", 6}]
+    end
+
+    test "in-place: an embedded dictionary" do
+      dict = expr_ok("""
+      d = {"ok": {8: 3}}
+      d["ok"][8] *= 2
+      d["ok"]
+      """)
+      assert Dict.items(dict) == [{8, 6}]
+    end
+  end
+
   describe "clear" do
     test "clear an empty dictionary" do
       dict = expr_ok("""

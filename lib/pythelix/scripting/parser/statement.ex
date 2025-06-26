@@ -25,11 +25,15 @@ defmodule Pythelix.Scripting.Parser.Statement do
   wait_kw = string("wait") |> label("wait") |> replace(:wait) |> isolate(space: true)
   return_kw = string("return") |> label("return") |> replace(:return) |> isolate(space: true)
 
+  setitem =
+    parsec({Pythelix.Scripting.Parser.Value, :getitem})
+    |> tag(:setitem)
+
   assignment =
-    id()
+    choice([setitem, id()])
     |> repeat(
       ignore(dot())
-      |> concat(id())
+      |> choice([setitem, id()])
     )
     |> tag(:nested)
     |> line()
