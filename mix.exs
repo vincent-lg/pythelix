@@ -14,7 +14,8 @@ defmodule Pythelix.MixProject do
         pythelix: [
           steps: [:assemble, &copy_extra_files/1]
         ]
-      ]
+      ],
+      compilers: Mix.compilers() ++ [:pythello],
     ]
   end
 

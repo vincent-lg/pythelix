@@ -42,6 +42,9 @@ npm-debug.log
 *.db
 *.db-*
 
+# Pytello registry
+lib/pythello.ex
+
 # Pythelix worldlets
 /priv/worldlets/*
 !priv/worldlets/.gitkeep
