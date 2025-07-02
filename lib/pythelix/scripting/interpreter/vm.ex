@@ -21,6 +21,8 @@ defmodule Pythelix.Scripting.Interpreter.VM do
     !=: {VM.Cmp, :ne},
     put_dict: {VM.Dict, :put},
     dict: {VM.Dict, :new},
+    put_set: {VM.Set, :put},
+    set: {VM.Set, :new},
     list: {VM.List, :new},
     iffalse: {VM.Jump, :iffalse},
     iftrue: {VM.Jump, :iftrue},

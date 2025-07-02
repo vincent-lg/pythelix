@@ -75,7 +75,23 @@ defmodule Pythelix.Scripting.Parser.Expression do
       |> tag(:dict)
     )
     |> ignore(rbrace())
-    |> label("list")
+    |> label("dict")
+
+  set =
+    ignore(lbrace())
+    |> concat(
+      parsec(:expr)
+      |> tag(:element)
+      |> repeat(
+        ignore(comma())
+        |> parsec(:expr)
+        |> tag(:element)
+      )
+      |> optional(ignore(comma()))
+      |> tag(:set)
+    )
+    |> ignore(rbrace())
+    |> label("set")
 
   defcombinatorp(
     :nested,
@@ -83,6 +99,7 @@ defmodule Pythelix.Scripting.Parser.Expression do
       ignore(lparen()) |> parsec(:expr) |> ignore(rparen()),
       value_list,
       dict,
+      set,
       parsec({Pythelix.Scripting.Parser.Value, :value})
     ])
   )
