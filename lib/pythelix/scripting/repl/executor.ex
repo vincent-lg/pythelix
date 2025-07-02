@@ -77,7 +77,9 @@ defmodule Pythelix.Scripting.REPL.Executor do
 
         output =
           if script.last_raw != nil && script.last_raw != :none do
-            inspect(script.last_raw)
+            script
+            |> Script.get_value(script.last_raw)
+            |> inspect()
           else
             nil
           end

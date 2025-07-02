@@ -108,7 +108,7 @@ defmodule Pythelix.Scripting.Interpreter.VM.Op do
     {script, args} =
       if len > 0 do
         Enum.reduce(1..len, {script, []}, fn _, {script, values} ->
-          {script, {ref, _}} = Script.get_stack(script, :reference)
+          {script, {_, ref}} = Script.get_stack(script, :reference)
 
           {script, [ref | values]}
         end)
@@ -132,13 +132,13 @@ defmodule Pythelix.Scripting.Interpreter.VM.Op do
   end
 
   def return(script, nil) do
-    {script, return_value} = Script.get_stack(script)
+    {script, {_, return_value}} = Script.get_stack(script, :reference)
 
     %{script | pause: :immediately, last_raw: return_value}
   end
 
   def raw(script, nil) do
-    {script, value} = Script.get_stack(script)
+    {script, {_, value}} = Script.get_stack(script, :reference)
 
     %{script | last_raw: value}
   end

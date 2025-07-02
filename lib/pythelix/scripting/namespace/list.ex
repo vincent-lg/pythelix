@@ -5,14 +5,15 @@ defmodule Pythelix.Scripting.Namespace.List do
 
   use Pythelix.Scripting.Namespace
 
-  defmet append(script, self, args, _kwargs) do
-    [value] = args
-    former = Script.get_value(script, self)
+  defmet append(script, namespace), [
+    {:value, index: 0, type: :any}
+  ] do
+    former = Script.get_value(script, namespace.self, recursive: false)
 
     script =
       script
-      |> Script.update_reference(self, List.insert_at(former, -1, value))
+      |> Script.update_reference(namespace.self, List.insert_at(former, -1, namespace.value))
 
-    {script, nil}
+    {script, :none}
   end
 end

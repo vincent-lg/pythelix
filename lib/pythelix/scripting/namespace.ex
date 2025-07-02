@@ -277,9 +277,10 @@ defmodule Pythelix.Scripting.Namespace do
     end
   end
 
-  defp enforce_arg_type(script, name, value, type) do
+  defp enforce_arg_type(script, name, ref, type) do
+    value = Script.get_value(script, ref, recursive: false)
 
-    case check_arg_type(script, value, type) do
+    case check_arg_type(value, type) do
       {:error, message} ->
         message = "argument #{name} expects #{message}"
 
@@ -292,36 +293,32 @@ defmodule Pythelix.Scripting.Namespace do
         Traceback.raise(script, TypeError, message)
         |> then(& {%{script | error: &1}, :error})
 
-      valid ->
-        {script, valid}
+      _ ->
+        {script, ref}
     end
   end
 
-  defp check_arg_type(_, value, :any), do: value
-  defp check_arg_type(_, %Format.String{} = value, :str), do: value
-  defp check_arg_type(_, value, :str) when is_binary(value), do: value
-  defp check_arg_type(_, value, :int) when is_integer(value), do: value
-  defp check_arg_type(_, value, :float) when is_float(value), do: value
-  defp check_arg_type(_, %Dict{} = value, :dict), do: value
+  defp check_arg_type(value, :any), do: value
+  defp check_arg_type(%Format.String{} = value, :str), do: value
+  defp check_arg_type(value, :str) when is_binary(value), do: value
+  defp check_arg_type( value, :int) when is_integer(value), do: value
+  defp check_arg_type(value, :float) when is_float(value), do: value
+  defp check_arg_type(%Dict{} = value, :dict), do: value
 
-  defp check_arg_type(script, value, :entity) do
-    entity = Script.get_value(script, value)
-
+  defp check_arg_type(entity, :entity) do
     case entity do
-      %Entity{} -> value
+      %Entity{} -> entity
       _ -> {:error, "an entity"}
     end
   end
 
-  defp check_arg_type(script, value, {:entity, parent_key}) when is_binary(parent_key) do
-    entity = Script.get_value(script, value)
-
+  defp check_arg_type(entity, {:entity, parent_key}) when is_binary(parent_key) do
     case entity do
       %Entity{} ->
         ancestors = Record.get_ancestors(entity)
 
         if Enum.any?(ancestors, & &1.key == parent_key) do
-          value
+          entity
         else
           {:error, "an entity inhering from !#{parent_key}!"}
         end
@@ -331,7 +328,7 @@ defmodule Pythelix.Scripting.Namespace do
     end
   end
 
-  defp check_arg_type(_, _value, _), do: :error
+  defp check_arg_type(_value, _), do: :error
 
   defp check_signature(script, constraints, args, kwargs, namespace) do
     check_signature_positional_args(script, constraints, args, namespace)

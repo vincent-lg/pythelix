@@ -244,7 +244,7 @@ defmodule Pythelix.Scripting.REPL do
   end
 
   defp parse_token({"done", line}, _, :normal) do
-    {:error, "'ddone' keyword at line #{line} doesn't close anything"}
+    {:error, "'done' keyword at line #{line} doesn't close anything"}
   end
 
   # Anything else is fair game.

@@ -112,7 +112,7 @@ defmodule Pythelix.Scripting do
         {:error, traceback}
 
       script ->
-        {:ok, script.last_raw}
+        {:ok, Interpreter.Script.get_value(script, script.last_raw)}
     end)
   end
 end

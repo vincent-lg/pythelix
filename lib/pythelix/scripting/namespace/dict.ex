@@ -59,11 +59,9 @@ defmodule Pythelix.Scripting.Namespace.Dict do
     {:key, index: 0, type: :any},
     {:value, index: 1, type: :any, default: :none}
   ] do
-    dict = Script.get_value(script, namespace.self)
-    key = Script.get_value(script, namespace.key)
+    dict = Script.get_value(script, namespace.self, recursive: false)
 
-
-    {script, Dict.get(dict, key, namespace.value)}
+    {script, Dict.get(dict, namespace.key, namespace.value)}
   end
 
   defmet items(script, namespace), [] do

@@ -3,7 +3,7 @@ defmodule Pythelix.Scripting.Namespace.Module.Random do
   Module defining the random module.
   """
 
-  use Pythelix.Scripting.Namespace
+  use Pythelix.Scripting.Module, name: "random"
 
   defmet choice(script, namespace), [
     {:collection, index: 0}
@@ -12,6 +12,7 @@ defmodule Pythelix.Scripting.Namespace.Module.Random do
 
     {script, Enum.random(collection)}
   end
+
   defmet randint(script, namespace), [
     {:a, index: 0, type: :int},
     {:b, index: 1, type: :int}

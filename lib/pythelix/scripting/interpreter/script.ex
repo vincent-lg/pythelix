@@ -76,18 +76,29 @@ defmodule Pythelix.Scripting.Interpreter.Script do
   """
   def get_variable_value(script, name) do
     Map.get(script.variables, name)
-    |> reference_to_value(script)
+    |> reference_to_value(script, MapSet.new())
+    |> then(fn {value, _} -> value end)
   end
 
   @doc """
   Gets the value from a reference or value.
   """
-  @spec get_value(Script.t(), term()) :: term()
-  def get_value(script, reference) when is_reference(reference) do
+  @spec get_value(Script.t(), term(), Keyword.t()) :: term()
+  def get_value(script, reference, opts \\ [])
+
+  def get_value(script, reference, opts) when is_reference(reference) do
     Map.get(script.references, reference)
+    |> then(fn value ->
+      if Keyword.get(opts, :recursive, true) do
+        reference_to_value(value, script, MapSet.new([reference]))
+        |> then(fn {value, _} -> value end)
+      else
+        value
+      end
+    end)
   end
 
-  def get_value(_script, other), do: other
+  def get_value(_script, other, _opts), do: other
 
   @doc """
   Updates entity references.
@@ -305,16 +316,24 @@ defmodule Pythelix.Scripting.Interpreter.Script do
   def references?(value) when is_tuple(value), do: false
   def references?(_value), do: true
 
-  def reference_to_value(value, script) when is_reference(value) do
-    Map.get(script.references, value)
-    |> reference_to_value(script)
+  def reference_to_value(value, script, references) when is_reference(value) do
+    if MapSet.member?(references, value) do
+      {:ellipsis, references}
+    else
+      Map.get(script.references, value)
+      |> reference_to_value(script, MapSet.put(references, value))
+    end
   end
 
-  def reference_to_value(value, script) when is_list(value) do
-    Enum.map(value, fn element -> reference_to_value(element, script) end)
+  def reference_to_value(value, script, references) when is_list(value) do
+    Enum.reduce(value, {[], references}, fn element, {list, references} ->
+      {element, references} = reference_to_value(element, script, references)
+      {[element | list], references}
+    end)
+    |> then(fn {list, references} -> {Enum.reverse(list), references} end)
   end
 
-  def reference_to_value(value, _script), do: value
+  def reference_to_value(value, _script, references), do: {value, references}
 
   def update_bound(script, reference, value) do
     script.bound
