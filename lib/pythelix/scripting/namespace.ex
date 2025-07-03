@@ -183,6 +183,7 @@ defmodule Pythelix.Scripting.Namespace do
       str when is_binary(str) -> Namespace.String
       %Dict{} -> Namespace.Dict
       %Password{} -> Namespace.Password
+      %MapSet{} -> Namespace.Set
       %Pythelix.Entity{} -> Namespace.Entity
     end
   end
@@ -244,7 +245,8 @@ defmodule Pythelix.Scripting.Namespace do
       from_pos != nil && opts[:args] ->
         args =
           args
-          |> Enum.sort(fn {key, _} -> key end)
+          |> Enum.sort_by(fn {key, _} -> key end)
+          |> Enum.map(fn {_key, value} -> value end)
           |> then(& [from_pos | &1])
 
         {script, %{}, kwargs, args}
@@ -303,6 +305,8 @@ defmodule Pythelix.Scripting.Namespace do
   defp check_arg_type(value, :str) when is_binary(value), do: value
   defp check_arg_type( value, :int) when is_integer(value), do: value
   defp check_arg_type(value, :float) when is_float(value), do: value
+  defp check_arg_type(value, :list) when is_list(value), do: value
+  defp check_arg_type(%MapSet{} = value, :set), do: value
   defp check_arg_type(%Dict{} = value, :dict), do: value
 
   defp check_arg_type(entity, :entity) do

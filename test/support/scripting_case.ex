@@ -11,6 +11,7 @@ defmodule Pythelix.ScriptingCase do
 
   setup tags do
     Pythelix.DataCase.setup_sandbox(tags)
+    Pythelix.Record.Cache.clear()
     :ok
   end
 

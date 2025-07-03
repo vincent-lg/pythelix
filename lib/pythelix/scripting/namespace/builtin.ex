@@ -86,4 +86,21 @@ defmodule Pythelix.Scripting.Namespace.Builtin do
 
     {script, dict}
   end
+
+  deffun set(script, namespace), [
+    {:iterable, index: 0, type: :list, default: nil}
+  ] do
+    iterable = Script.get_value(script, namespace.iterable, recursive: false)
+
+    set =
+      case iterable do
+        nil ->
+          MapSet.new()
+
+        iterable ->
+          MapSet.new(iterable)
+      end
+
+    {script, set}
+  end
 end

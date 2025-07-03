@@ -333,6 +333,12 @@ defmodule Pythelix.Scripting.Interpreter.Script do
     |> then(fn {list, references} -> {Enum.reverse(list), references} end)
   end
 
+  def reference_to_value(%MapSet{} = value, script, references) do
+    Enum.to_list(value)
+    |> reference_to_value(script, references)
+    |> then(fn {values, references} -> {MapSet.new(values), references} end)
+  end
+
   def reference_to_value(value, _script, references), do: {value, references}
 
   def update_bound(script, reference, value) do
