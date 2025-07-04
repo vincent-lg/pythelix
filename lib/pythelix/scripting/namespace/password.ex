@@ -5,6 +5,14 @@ defmodule Pythelix.Scripting.Namespace.Password do
 
   use Pythelix.Scripting.Namespace
 
+  defmet __repr__(script, namespace), [] do
+    {script, inspect(namespace.self)}
+  end
+
+  defmet __str__(script, namespace), [] do
+    {script, inspect(namespace.self)}
+  end
+
   defmet verify(script, namespace), [
     {:password, index: 0, type: :str}
   ] do

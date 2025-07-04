@@ -7,6 +7,7 @@ defmodule Pythelix.Scripting.Namespace.Builtin do
 
   require Logger
 
+  alias Pythelix.Scripting.Display
   alias Pythelix.Scripting.Format
   alias Pythelix.Scripting.Object.Dict
   alias Pythelix.World
@@ -102,5 +103,17 @@ defmodule Pythelix.Scripting.Namespace.Builtin do
       end
 
     {script, set}
+  end
+
+  deffun repr(script, namespace), [
+    {:object, index: 0, type: :any}
+  ] do
+    {script, Display.repr(script, namespace.object)}
+  end
+
+  deffun str(script, namespace), [
+    {:object, index: 0, type: :any}
+  ] do
+    {script, Display.str(script, namespace.object)}
   end
 end

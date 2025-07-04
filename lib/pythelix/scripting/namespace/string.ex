@@ -8,6 +8,14 @@ defmodule Pythelix.Scripting.Namespace.String do
 
   use Pythelix.Scripting.Namespace
 
+  defmet __repr__(script, namespace), [] do
+    {script, inspect(namespace.self)}
+  end
+
+  defmet __str__(script, namespace), [] do
+    {script, namespace.self}
+  end
+
   defmet capitalize(script, namespace), [] do
     {script, String.capitalize(namespace.self)}
   end

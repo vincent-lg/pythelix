@@ -5,12 +5,21 @@ defmodule Pythelix.Scripting.Namespace.Dict do
 
   use Pythelix.Scripting.Namespace
 
+  alias Pythelix.Scripting.Display
   alias Pythelix.Scripting.Object.Dict
+
+  defmet __repr__(script, namespace), [] do
+    repr(script, namespace.self)
+  end
+
+  defmet __str__(script, namespace), [] do
+    repr(script, namespace.self)
+  end
 
   defmet __getitem__(script, namespace), [
     {:item, index: 0, type: :any}
   ] do
-    dict = Script.get_value(script, namespace.self)
+    dict = Script.get_value(script, namespace.self, recursive: false)
 
     case Dict.get(dict, namespace.item, nil) do
       nil ->
@@ -26,15 +35,13 @@ defmodule Pythelix.Scripting.Namespace.Dict do
     {:item, index: 0, type: :any},
     {:value, index: 1, type: :any}
   ] do
-    dict = Script.get_value(script, namespace.self)
-    item = Script.get_value(script, namespace.item)
-    value = Script.get_value(script, namespace.value)
+    dict = Script.get_value(script, namespace.self, recursive: false)
 
-    dict = Dict.put(dict, item, value)
+    dict = Dict.put(dict, namespace.item, namespace.value)
 
     script = Script.update_reference(script, namespace.self, dict)
 
-    {script, value}
+    {script, :none}
   end
 
   defmet clear(script, namespace), [] do
@@ -169,5 +176,19 @@ defmodule Pythelix.Scripting.Namespace.Dict do
     dict = Script.get_value(script, namespace.self)
 
     {script, Dict.values(dict)}
+  end
+
+  defp repr(script, self) do
+    Script.get_value(script, self)
+    |> Dict.items()
+    |> IO.inspect(label: "dict")
+    |> Enum.map(fn
+      {:ellipsis, :ellipsis} -> "...: {...}"
+      {key, :ellipsis} -> "#{Display.repr(script, key)}: {...}"
+      {:ellipsis, value} -> "...: #{Display.repr(script, value)}"
+      {key, value} -> "#{Display.repr(script, key)}: #{Display.repr(script, value)}"
+    end)
+    |> Enum.join(", ")
+    |> then(fn set -> {script, "{#{set}}"} end)
   end
 end

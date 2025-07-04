@@ -5,6 +5,16 @@ defmodule Pythelix.Scripting.Namespace.Set do
 
   use Pythelix.Scripting.Namespace
 
+  alias Pythelix.Scripting.Display
+
+  defmet __repr__(script, namespace), [] do
+    repr(script, namespace.self)
+  end
+
+  defmet __str__(script, namespace), [] do
+    repr(script, namespace.self)
+  end
+
   defmet __getitem__(script, _namespace), [
     {:item, index: 0, type: :any}
   ] do
@@ -212,6 +222,17 @@ defmodule Pythelix.Scripting.Namespace.Set do
     else
       {Script.update_reference(script, namespace.self, updated), :none}
     end
+  end
+
+  defp repr(script, self) do
+    self = Script.get_value(script, self)
+    MapSet.to_list(self)
+    |> Enum.map(fn
+      :ellipsis -> "{...}"
+      value -> Display.repr(script, value)
+    end)
+    |> Enum.join(", ")
+    |> then(fn set -> {script, "{#{set}}"} end)
   end
 
   defp reduce_set(script, args, set, reduce_fun) do

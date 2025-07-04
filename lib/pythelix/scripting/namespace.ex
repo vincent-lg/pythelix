@@ -178,9 +178,15 @@ defmodule Pythelix.Scripting.Namespace do
   @spec locate(term()) :: module()
   def locate(value) do
     case value do
-      atom when is_atom(atom) -> value
+      atom when is_boolean(atom) -> Namespace.Bool
+      :none -> Namespace.None
+      :ellipsis -> Namespace.Ellipsis
+      atom when is_atom(atom) -> atom
+      int when is_integer(int) -> Namespace.Integer
+      float when is_float(float) -> Namespace.Float
       list when is_list(list) -> Namespace.List
       str when is_binary(str) -> Namespace.String
+      %Format.String{} -> Namespace.String
       %Dict{} -> Namespace.Dict
       %Password{} -> Namespace.Password
       %MapSet{} -> Namespace.Set

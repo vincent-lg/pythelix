@@ -12,6 +12,7 @@ defmodule Pythelix.Scripting.Interpreter.Script do
   alias Pythelix.Scripting.Callable.Method
   alias Pythelix.Scripting.Format
   alias Pythelix.Scripting.Interpreter.{Debugger, Script, VM}
+  alias Pythelix.Scripting.Object.Dict
   alias Pythelix.Scripting.Traceback
 
   @enforce_keys [:bytecode]
@@ -331,6 +332,16 @@ defmodule Pythelix.Scripting.Interpreter.Script do
       {[element | list], references}
     end)
     |> then(fn {list, references} -> {Enum.reverse(list), references} end)
+  end
+
+  def reference_to_value(%Dict{} = value, script, references) do
+    Dict.items(value)
+    |> Enum.reduce({Dict.new(), references}, fn {key, value}, {dict, references} ->
+      {key, references} = reference_to_value(key, script, references)
+      {value, references} = reference_to_value(value, script, references)
+
+      {Dict.put(dict, key, value), references}
+    end)
   end
 
   def reference_to_value(%MapSet{} = value, script, references) do

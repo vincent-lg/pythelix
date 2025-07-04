@@ -72,6 +72,12 @@ defmodule Pythelix.Scripting.Object.Dict do
     end)
   end
 
+  def new(list) when is_list(list) do
+    Enum.reduce(list, %Dict{}, fn {key, value}, dict ->
+      Dict.put(dict, key, value)
+    end)
+  end
+
   @doc """
   Gets the value for a given key, retuning `default` if not present.
 

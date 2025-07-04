@@ -4,6 +4,7 @@ defmodule Pythelix.Scripting.REPL.Executor do
   """
 
   alias Pythelix.Scripting
+  alias Pythelix.Scripting.Display
   alias Pythelix.Scripting.Interpreter.Script
   alias Pythelix.Scripting.Traceback
 
@@ -79,7 +80,7 @@ defmodule Pythelix.Scripting.REPL.Executor do
           if script.last_raw != nil && script.last_raw != :none do
             script
             |> Script.get_value(script.last_raw)
-            |> inspect()
+            |> then(& Display.repr(script, &1))
           else
             nil
           end

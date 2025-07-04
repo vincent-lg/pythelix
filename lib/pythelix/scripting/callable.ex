@@ -8,6 +8,7 @@ defmodule Pythelix.Scripting.Callable do
 
   alias Pythelix.Scripting.Callable
   alias Pythelix.Scripting.Object.Dict
+  alias Pythelix.Scripting.Namespace
   alias Pythelix.Record
   alias Pythelix.Scripting.Callable
   alias Pythelix.Scripting.Interpreter.Script
@@ -50,6 +51,34 @@ defmodule Pythelix.Scripting.Callable do
   def call(%Script{} = script, %Callable{} = callable, args, kwargs) do
     kwargs = (kwargs == nil && Dict.new()) || kwargs
     apply(callable.module, callable.name, find_arguments(script, callable, args, kwargs))
+  end
+
+  @doc """
+  Wraps and calls a method, returning its return value.
+
+  Args:
+
+  * script: the Pythello script.
+  * object: the object of a Pythello-supported type.
+  * name: the method name.
+  * args: a list of arguments.
+  * kwargs: a dictionary of keyword arguments.
+  """
+  @spec call!(Script.t(), term(), String.t(), list(), Dict.t()) :: term()
+  def call!(%Script{} = script, object, name, args \\ [], kwargs \\ nil) do
+    name = (is_binary(name) && String.to_existing_atom("m_#{name}")) || name
+
+    module = Namespace.locate(object)
+    callable = %Callable{module: module, object: object, name: name}
+
+    call(script, callable, args, kwargs)
+    |> then(fn
+      {%Script{error: traceback}, _} when traceback != nil ->
+        {:traceback, traceback}
+
+      {script, value} ->
+        Script.get_value(script, value)
+    end)
   end
 
   defp find_arguments(%Script{} = script, %{object: nil}, args, kwargs) do
