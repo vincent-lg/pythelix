@@ -1,3 +1,7 @@
+---
+title: Installing Pythelix
+---
+
 Pythelix can be run in several ways, depending on your familiarity with Elixir.
 
 ## Binaries

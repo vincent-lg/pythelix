@@ -1,3 +1,7 @@
+---
+title: Password handling in Pythelix
+---
+
 Pythelix offers a convenient abstraction for password generation and verification. Using the tool is quite simple, but if you're curious, there are more explanations below.
 
 ## How to Use the Interface?

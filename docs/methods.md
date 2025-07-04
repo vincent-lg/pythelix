@@ -1,3 +1,7 @@
+---
+title: Methods in Pythelix
+---
+
 Methods define behavior (what to do when something happens). [Entities](./entities.md) can have one or more methods. For most entities, these methods are defined in [worldlets](./worldlets.md).
 
 ## Basic syntax

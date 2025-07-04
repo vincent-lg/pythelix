@@ -1,3 +1,7 @@
+---
+title: Pythelix technical documentation
+---
+
 Pythelix is meant to be flexible and highly dynamic through scripting. But it can happen that not everything one wants to do can be done with scripts. Whether you're curious or need something that Pythello (Pythelix scripting language) doesn't provide, here are several topics.
 
 The following documents expect you to have the source code handy (to read or modify), so you'd probably need the instructions [to run from source](../installing.md#run-from-source).

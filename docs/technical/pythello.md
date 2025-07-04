@@ -1,3 +1,7 @@
+---
+title: Pythello in technical terms
+---
+
 Pythelix relies on Pythello, a simple scripting language with a syntax very close to Python. This document describes how to interact with the engine and how it works behind the scenes.
 
 If you don't know Pythello or its syntax, it's better to first read [the documentation on Pythello](../scripting.md).

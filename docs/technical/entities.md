@@ -1,5 +1,5 @@
 ---
-title: entities in a technical context
+title: Entities in a technical context with Pythelix
 ---
 
 This document describes in different layers the manipulation of entities, attributes and methods. It then dives deeper into the structure of entities and how they are stored within cache and database.

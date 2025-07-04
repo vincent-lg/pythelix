@@ -1,3 +1,7 @@
+---
+title: Modules and namespaces in Pythelix
+---
+
 Pythello is designed to be flexible and to provide useful functions out of the box. However, you might want to add more operations. This document explains how you can extend or add new modules, as well as how to extend and add new namespaces.
 
 ## What features might I need to add?

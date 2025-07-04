@@ -1,3 +1,7 @@
+---
+title: Menus in Pythelix
+---
+
 In Pythelix, menus are used to define "what the player can do." They are especially useful during login (although commands can also be used, menu-based login experiences are more common). Menus remain useful even after the user has logged in.
 
 ## Menus display and receive text

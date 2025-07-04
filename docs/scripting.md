@@ -1,3 +1,7 @@
+---
+title: Scripting with Pythello
+---
+
 In Pythelix, almost everything can be scripted. A script is a description of what happens at a given time:
 
 - What happens when a new client connects to the server?

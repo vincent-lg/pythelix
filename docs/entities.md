@@ -1,3 +1,7 @@
+---
+title: Entities in Pythelix
+---
+
 Simply put: your game cannot exist without entities. Everything in the game is an entity (a room, an object, a non-player character, a vehicle, etc.). If you're not familiar with entities in Pythelix, it is recommended to read this chapter sequentially. If you already know LambdaMOO, you can go directly to the [section about LambdaMOO](#Coming-from-LambdaMOO).
 
 ## What is an entity?

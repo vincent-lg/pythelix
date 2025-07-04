@@ -1,3 +1,7 @@
+---
+title: Using worldlets in Pythelix
+---
+
 Worldlets are files stored on the server that contain definitions of your game world. You are free to use them exclusively, rely on a more traditional game-building approach with commands, or even combine both methods.
 
 ## What are worldlets?

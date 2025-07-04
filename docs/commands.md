@@ -1,3 +1,7 @@
+---
+title: Commands in Pythelix
+---
+
 It's easy to create commands in Pythelix. It's even easier to keep track of which commands are available and to provide a robust help system that doesn't leave anything out.
 
 ## Commands are entities

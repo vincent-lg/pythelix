@@ -1,3 +1,7 @@
+---
+title: Pythelix documentation
+---
+
 Pythelix is a flexible and dynamic text-based engine for creating multi-user games (`MU*`).
 
 It is built in Elixir, but **ALL** of the game world can be created using Python-like scripting, hence the name.
