@@ -286,6 +286,7 @@ defmodule Pythelix.Scripting.Namespace do
   end
 
   defp enforce_arg_type(script, name, ref, type) do
+    type = (type == nil && :any) || type
     value = Script.get_value(script, ref, recursive: false)
 
     case check_arg_type(value, type) do

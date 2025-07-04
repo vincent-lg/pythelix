@@ -112,7 +112,10 @@ defmodule Pythelix.World do
       %{
         virtual: true,
         key: @generic_client,
-        attributes: %{"msg" => {:extended, Extended.Client, :m_msg}},
+        attributes: %{
+          "disconnect" => {:extended, Extended.Client, :m_disconnect},
+          "msg" => {:extended, Extended.Client, :m_msg}
+        },
         methods: %{},
       } | entities
     ]

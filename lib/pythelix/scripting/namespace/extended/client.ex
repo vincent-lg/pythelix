@@ -13,4 +13,11 @@ defmodule Pythelix.Scripting.Namespace.Extended.Client do
 
     {script, :none}
   end
+
+  defmet disconnect(script, namespace), [] do
+    client = Script.get_value(script, namespace.self)
+    Pythelix.Network.TCP.Client.disconnect(client)
+
+    {script, :none}
+  end
 end

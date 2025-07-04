@@ -481,11 +481,11 @@ defmodule Pythelix.Record do
         _ -> nil
       end
 
-      try do
+      #try do
         Executor.run_method(location, "enter", [entity])
-      rescue
-        _ -> nil
-      end
+      #rescue
+      #  _ -> nil
+      #end
     end
   end
 
