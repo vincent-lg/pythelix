@@ -9,6 +9,7 @@ defmodule Pythelix.Method do
   alias Pythelix.Scripting.Interpreter.Script
   alias Pythelix.Scripting.Namespace
   alias Pythelix.Scripting.Object.Dict
+  alias Pythelix.Scripting.Store
   alias Pythelix.Scripting.Traceback
 
   @enforce_keys [:args, :code, :bytecode]
@@ -23,7 +24,7 @@ defmodule Pythelix.Method do
   def new(args, code, bytecode \\ nil) do
     bytecode =
       if bytecode == nil do
-        script = Scripting.run(code, call: false)
+        script = Scripting.run(code, id: "method", call: false)
         script.bytecode
       else
         bytecode
@@ -47,9 +48,9 @@ defmodule Pythelix.Method do
   """
   @spec call(t(), list(), Dict.t(), String.t(), list()) :: term() | :ok | {:error, binary()}
   def call(method, args, kwargs, name, opts \\ []) do
-    with script <- fetch_script(method),
+    with script <- fetch_script(method, opts),
          {%Script{error: nil} = script, namespace} <- check_args(script, method, args, kwargs, name),
-         %Script{error: nil} = script <- maybe_run(script, method, namespace, name) do
+         %Script{error: nil} = script <- maybe_run(script, method, namespace, name, opts) do
       (opts[:return] && script.last_raw) || script
     else
       {%Script{error: %Traceback{}} = script, _} -> script
@@ -84,19 +85,22 @@ defmodule Pythelix.Method do
 
     with %Method{} = method <- Record.get_method(entity, name),
          %Script{error: nil} = script <- Method.call(method, args, kwargs, method_name) do
-      (script.last_raw == nil && :noresult) || script.last_raw
+      result = (script.last_raw == nil && :noresult) || script.last_raw
+      Script.destroy(script)
+      result
     else
       :nomethod ->
         :nomethod
 
-      %Script{error: %Traceback{} = traceback} ->
+      %Script{error: %Traceback{} = traceback} = script ->
         IO.puts(Traceback.format(traceback))
+        Script.destroy(script)
         :traceback
     end
   end
 
-  def fetch_script(%Pythelix.Method{bytecode: bytecode}) do
-    %Script{bytecode: bytecode}
+  def fetch_script(%Pythelix.Method{bytecode: bytecode}, opts) do
+    %Script{id: (opts[:owner] || Store.new_script), bytecode: bytecode}
   end
 
   defp check_args(%Script{} = script, %Method{} = method, args, kwargs, _name) do
@@ -108,15 +112,21 @@ defmodule Pythelix.Method do
       constraints ->
         Namespace.validate(script, constraints, args, kwargs)
     end)
+    |> then(fn {script, namespace} ->
+      case Dict.get(kwargs, "self", :unset) do
+        :unset -> {script, namespace}
+        value -> {script, Map.put(namespace, "self", value)}
+      end
+    end)
   end
 
-  defp maybe_run(%Script{error: nil} = script, method, namespace, name) do
+  defp maybe_run(%Script{error: nil} = script, method, namespace, name, _opts) do
     %{script | cursor: 0}
     |> write_arguments(Enum.to_list(namespace))
     |> Script.execute(method.code, name)
   end
 
-  defp maybe_run(%Script{} = script, _method, _namespace, _name), do: script
+  defp maybe_run(%Script{} = script, _method, _namespace, _name, _opts), do: script
 
   defp write_arguments(%Script{} = script, []), do: script
 

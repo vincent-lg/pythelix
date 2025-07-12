@@ -43,7 +43,7 @@ defmodule Pythelix.Scripting.Namespace.String do
   end
 
   defmet lower(script, self, _args, _kwargs) do
-    string = Script.get_value(script, self)
+    string = Store.get_value(self)
 
     {script, String.downcase(string)}
   end
@@ -78,7 +78,7 @@ defmodule Pythelix.Scripting.Namespace.String do
   end
 
   defmet upper(script, self, _args, _kwargs) do
-    string = Script.get_value(script, self)
+    string = Store.get_value(self)
 
     {script, String.upcase(string)}
   end

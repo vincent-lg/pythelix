@@ -8,6 +8,7 @@ defmodule Pythelix.Scripting.Executor do
   alias Pythelix.Record
   alias Pythelix.Scripting.Interpreter.Script
   alias Pythelix.Scripting.Object.Dict
+  alias Pythelix.Task.Persistent, as: Task
   alias Pythelix.Scripting.Traceback
 
   require Logger
@@ -24,7 +25,7 @@ defmodule Pythelix.Scripting.Executor do
   """
   @spec execute(integer(), map()) :: {:ok, any()} | {:error, any()}
   def execute(executor_id, %{task_id: task_id}) do
-    task = Pythelix.Task.Persistent.get(task_id)
+    task = Task.get(task_id)
 
     if task == nil do
       Logger.warning("Cannot run unknown task #{task_id}")
@@ -33,6 +34,8 @@ defmodule Pythelix.Scripting.Executor do
       hub = :global.whereis_name(Pythelix.Command.Hub)
       script = task.script
 
+      Task.restore(task)
+
       %Script{script | cursor: script.cursor + 1, pause: nil}
       |> Script.execute(task.code, task.name)
       |> case do
@@ -40,16 +43,18 @@ defmodule Pythelix.Scripting.Executor do
           send(hub, {:executor_done, executor_id, :ok})
           now = DateTime.utc_now()
           expire_at = DateTime.add(now, wait_time, :second)
-          Pythelix.Task.Persistent.update(task.id, expire_at, :same, :same, script)
+          Task.update(task.id, expire_at, :same, :same, script)
           {:ok, script}
 
         %Script{error: %Traceback{} = traceback} ->
           IO.puts(Traceback.format(traceback))
-          Pythelix.Task.Persistent.del(task.id)
+          Script.destroy(script)
+          Task.del(task.id)
           {:error, "traceback"}
 
         _script ->
-          Pythelix.Task.Persistent.del(task.id)
+          Task.del(task.id)
+          Script.destroy(script)
           {:ok, script}
       end
     end
@@ -63,15 +68,17 @@ defmodule Pythelix.Scripting.Executor do
         send(hub, {:executor_done, executor_id, :ok})
         now = DateTime.utc_now()
         expire_at = DateTime.add(now, wait_time, :second)
-        Pythelix.Task.Persistent.add(expire_at, name, method.code, script)
+        Task.add(expire_at, name, method.code, script)
         {:ok, script}
 
-      %Script{error: %Traceback{} = traceback} ->
+      %Script{error: %Traceback{} = traceback} = script ->
         send(hub, {:executor_done, executor_id, :ok})
+        Script.destroy(script)
         {:error, traceback}
 
       script ->
         send(hub, {:executor_done, executor_id, :ok})
+        Script.destroy(script)
         {:ok, script}
     end
   end

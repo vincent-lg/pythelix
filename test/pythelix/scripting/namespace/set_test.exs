@@ -133,7 +133,7 @@ defmodule Pythelix.Scripting.Namespace.SetTest do
       b = {9, 8, 3}
       a.difference(b)
       """)
-      set = Script.get_value(script, script.last_raw)
+      set = Store.get_value(script.last_raw)
       assert set == MapSet.new([5])
       assert Script.get_variable_value(script, "a") == MapSet.new([5, 8])
       assert Script.get_variable_value(script, "b") == MapSet.new([9, 8, 3])
@@ -177,7 +177,7 @@ defmodule Pythelix.Scripting.Namespace.SetTest do
       b = {9, 8, 3}
       a.intersection(b)
       """)
-      assert Script.get_value(script, script.last_raw) == MapSet.new([8])
+      assert Store.get_value(script.last_raw) == MapSet.new([8])
       assert Script.get_variable_value(script, "a") == MapSet.new([5, 8])
       assert Script.get_variable_value(script, "b") == MapSet.new([9, 8, 3])
     end
@@ -202,7 +202,7 @@ defmodule Pythelix.Scripting.Namespace.SetTest do
       b = {3, 4}
       a.isdisjoint(b)
       """)
-      assert Script.get_value(script, script.last_raw) == true
+      assert Store.get_value(script.last_raw) == true
       # originals untouched
       assert Script.get_variable_value(script, "a") == MapSet.new([1, 2])
       assert Script.get_variable_value(script, "b") == MapSet.new([3, 4])
@@ -214,7 +214,7 @@ defmodule Pythelix.Scripting.Namespace.SetTest do
       b = {2, 3}
       a.isdisjoint(b)
       """)
-      assert Script.get_value(script, script.last_raw) == false
+      assert Store.get_value(script.last_raw) == false
     end
 
     test "empty set is disjoint with anything" do
@@ -223,7 +223,7 @@ defmodule Pythelix.Scripting.Namespace.SetTest do
       b = {7}
       a.isdisjoint(b)
       """)
-      assert Script.get_value(script, script.last_raw) == true
+      assert Store.get_value(script.last_raw) == true
     end
   end
 
@@ -234,7 +234,7 @@ defmodule Pythelix.Scripting.Namespace.SetTest do
       b = {1, 2, 3}
       a.issubset(b)
       """)
-      assert Script.get_value(script, script.last_raw) == true
+      assert Store.get_value(script.last_raw) == true
       # originals still intact
       assert Script.get_variable_value(script, "a") == MapSet.new([1, 2])
       assert Script.get_variable_value(script, "b") == MapSet.new([1, 2, 3])
@@ -246,7 +246,7 @@ defmodule Pythelix.Scripting.Namespace.SetTest do
       b = {1, 2}
       a.issubset(b)
       """)
-      assert Script.get_value(script, script.last_raw) == true
+      assert Store.get_value(script.last_raw) == true
     end
 
     test "not a subset when extra elements" do
@@ -255,7 +255,7 @@ defmodule Pythelix.Scripting.Namespace.SetTest do
       b = {1, 2, 3}
       a.issubset(b)
       """)
-      assert Script.get_value(script, script.last_raw) == false
+      assert Store.get_value(script.last_raw) == false
     end
 
     test "empty set is subset of anything" do
@@ -264,7 +264,7 @@ defmodule Pythelix.Scripting.Namespace.SetTest do
       b = {5, 6}
       a.issubset(b)
       """)
-      assert Script.get_value(script, script.last_raw) == true
+      assert Store.get_value(script.last_raw) == true
     end
   end
 
@@ -275,7 +275,7 @@ defmodule Pythelix.Scripting.Namespace.SetTest do
       b = {2, 3}
       a.issuperset(b)
       """)
-      assert Script.get_value(script, script.last_raw) == true
+      assert Store.get_value(script.last_raw) == true
     end
 
     test "equal sets count as superset" do
@@ -284,7 +284,7 @@ defmodule Pythelix.Scripting.Namespace.SetTest do
       b = {1, 2}
       a.issuperset(b)
       """)
-      assert Script.get_value(script, script.last_raw) == true
+      assert Store.get_value(script.last_raw) == true
     end
 
     test "not a superset when missing elements" do
@@ -293,7 +293,7 @@ defmodule Pythelix.Scripting.Namespace.SetTest do
       b = {1, 2, 3}
       a.issuperset(b)
       """)
-      assert Script.get_value(script, script.last_raw) == false
+      assert Store.get_value(script.last_raw) == false
     end
   end
 
@@ -303,7 +303,7 @@ defmodule Pythelix.Scripting.Namespace.SetTest do
       a = {42}
       a.pop()
       """)
-      assert Script.get_value(script, script.last_raw) == 42
+      assert Store.get_value(script.last_raw) == 42
       assert Script.get_variable_value(script, "a") == MapSet.new()
     end
 
@@ -342,7 +342,7 @@ defmodule Pythelix.Scripting.Namespace.SetTest do
       b = {2, 3}
       a.symmetric_difference(b)
       """)
-      assert Script.get_value(script, script.last_raw) == MapSet.new([1, 3])
+      assert Store.get_value(script.last_raw) == MapSet.new([1, 3])
       # originals unchanged
       assert Script.get_variable_value(script, "a") == MapSet.new([1, 2])
       assert Script.get_variable_value(script, "b") == MapSet.new([2, 3])
@@ -369,7 +369,7 @@ defmodule Pythelix.Scripting.Namespace.SetTest do
       b = {2, 3}
       a.union(b)
       """)
-      assert Script.get_value(script, script.last_raw) == MapSet.new([1, 2, 3])
+      assert Store.get_value(script.last_raw) == MapSet.new([1, 2, 3])
       # originals untouched
       assert Script.get_variable_value(script, "a") == MapSet.new([1, 2])
       assert Script.get_variable_value(script, "b") == MapSet.new([2, 3])
@@ -382,7 +382,7 @@ defmodule Pythelix.Scripting.Namespace.SetTest do
       c = {3, 4}
       a.union(b, c)
       """)
-      assert Script.get_value(script, script.last_raw) == MapSet.new([1, 2, 3, 4])
+      assert Store.get_value(script.last_raw) == MapSet.new([1, 2, 3, 4])
     end
   end
 

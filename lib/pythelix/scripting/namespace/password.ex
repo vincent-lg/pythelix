@@ -16,7 +16,7 @@ defmodule Pythelix.Scripting.Namespace.Password do
   defmet verify(script, namespace), [
     {:password, index: 0, type: :str}
   ] do
-    password = Script.get_value(script, namespace.self)
+    password = Store.get_value(namespace.self)
     module = password.algorithm
 
     {script, module.verify(password.hash, namespace.password)}

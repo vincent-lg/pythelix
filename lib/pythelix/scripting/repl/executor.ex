@@ -5,7 +5,7 @@ defmodule Pythelix.Scripting.REPL.Executor do
 
   alias Pythelix.Scripting
   alias Pythelix.Scripting.Display
-  alias Pythelix.Scripting.Interpreter.Script
+  alias Pythelix.Scripting.Store
   alias Pythelix.Scripting.Traceback
 
   @doc """
@@ -43,11 +43,12 @@ defmodule Pythelix.Scripting.REPL.Executor do
   defp handle_input(script, "/s", pid) do
     output = inspect(script)
     send(pid, {:text, output})
+    script
   end
 
   defp handle_input(script, input, pid) do
     eval_start_time = System.monotonic_time(:microsecond)
-    new_script = Scripting.run(input, call: false)
+    new_script = Scripting.run(input, call: false, id: (script && script.id))
     eval_elapsed = System.monotonic_time(:microsecond) - eval_start_time
 
     script =
@@ -58,9 +59,6 @@ defmodule Pythelix.Scripting.REPL.Executor do
         old_script ->
           %{old_script | bytecode: new_script.bytecode, cursor: 0}
       end
-
-    script = script
-      |> Script.refresh_entity_references()
 
     exec_start_time = System.monotonic_time(:microsecond)
     case Scripting.Interpreter.Script.execute(script, input, "<stdin>") do
@@ -78,8 +76,8 @@ defmodule Pythelix.Scripting.REPL.Executor do
 
         output =
           if script.last_raw != nil && script.last_raw != :none do
-            script
-            |> Script.get_value(script.last_raw)
+            script.last_raw
+            |> Store.get_value()
             |> then(& Display.repr(script, &1))
           else
             nil

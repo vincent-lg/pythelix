@@ -10,6 +10,7 @@ defmodule Pythelix.Scripting.Namespace do
   alias Pythelix.Scripting.Interpreter.Script
   alias Pythelix.Scripting.Namespace
   alias Pythelix.Scripting.Object.{Dict, Password}
+  alias Pythelix.Scripting.Store
   alias Pythelix.Scripting.Traceback
 
   defmacro __using__(_opts) do
@@ -23,6 +24,7 @@ defmodule Pythelix.Scripting.Namespace do
 
       import Pythelix.Scripting.Namespace
       alias Pythelix.Scripting.Interpreter.Script
+      alias Pythelix.Scripting.Store
 
       @before_compile Pythelix.Scripting.Namespace
     end
@@ -178,6 +180,7 @@ defmodule Pythelix.Scripting.Namespace do
   @spec locate(term()) :: module()
   def locate(value) do
     case value do
+      {:sub_entity, _sub} -> Namespace.NewSubEntity
       atom when is_boolean(atom) -> Namespace.Bool
       :none -> Namespace.None
       :ellipsis -> Namespace.Ellipsis
@@ -191,6 +194,7 @@ defmodule Pythelix.Scripting.Namespace do
       %Password{} -> Namespace.Password
       %MapSet{} -> Namespace.Set
       %Pythelix.Entity{} -> Namespace.Entity
+      %Pythelix.SubEntity{} -> Namespace.SubEntity
     end
   end
 
@@ -287,7 +291,7 @@ defmodule Pythelix.Scripting.Namespace do
 
   defp enforce_arg_type(script, name, ref, type) do
     type = (type == nil && :any) || type
-    value = Script.get_value(script, ref, recursive: false)
+    value = Store.get_value(ref, recursive: false)
 
     case check_arg_type(value, type) do
       {:error, message} ->
@@ -316,12 +320,8 @@ defmodule Pythelix.Scripting.Namespace do
   defp check_arg_type(%MapSet{} = value, :set), do: value
   defp check_arg_type(%Dict{} = value, :dict), do: value
 
-  defp check_arg_type(entity, :entity) do
-    case entity do
-      %Entity{} -> entity
-      _ -> {:error, "an entity"}
-    end
-  end
+  defp check_arg_type(%Entity{} = entity, :entity), do: entity
+  defp check_arg_type(_, :entity), do: {:error, "an entity"}
 
   defp check_arg_type(entity, {:entity, parent_key}) when is_binary(parent_key) do
     case entity do

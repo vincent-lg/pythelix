@@ -5,21 +5,22 @@ defmodule Pythelix.Scripting.Namespace.Entity do
 
   alias Pythelix.Entity
   alias Pythelix.Record
-  alias Pythelix.Scripting.Interpreter.Script
   alias Pythelix.Scripting.Callable
+  alias Pythelix.Scripting.Interpreter.Script
+  alias Pythelix.Scripting.Object.Reference
+  alias Pythelix.Scripting.Store
 
   @doc """
   Gets an attribute or method from an entity.
   """
-  def getattr(script, self, "id") do
-    entity = Script.get_value(script, self)
+  def getattr(_script, self, "id") do
+    entity = Store.get_value(self)
 
     (entity.id != :virtual && entity.id) || :none
   end
 
-  def getattr(script, self, "parent") do
-    entity = Script.get_value(script, self)
-    id_or_key = Pythelix.Entity.get_id_or_key(entity)
+  def getattr(_script, self, "parent") do
+    entity = Store.get_value(self)
 
     parent =
       if parent_id = entity.parent_id do
@@ -28,21 +29,19 @@ defmodule Pythelix.Scripting.Namespace.Entity do
         :none
       end
 
-    {:getattr, id_or_key, "parent", parent}
+    parent
   end
 
-  def getattr(script, self, "children") do
-    entity = Script.get_value(script, self)
-    id_or_key = Pythelix.Entity.get_id_or_key(entity)
+  def getattr(_script, self, "children") do
+    entity = Store.get_value(self)
 
     children = Pythelix.Record.get_children(entity)
 
-    {:getattr, id_or_key, "children", children}
+    children
   end
 
-  def getattr(script, self, "location") do
-    entity = Script.get_value(script, self)
-    id_or_key = Pythelix.Entity.get_id_or_key(entity)
+  def getattr(_script, self, "location") do
+    entity = Store.get_value(self)
 
     location =
       if location_id = entity.location_id do
@@ -51,20 +50,19 @@ defmodule Pythelix.Scripting.Namespace.Entity do
         :none
       end
 
-    {:getattr, id_or_key, "location", location}
+    location
   end
 
-  def getattr(script, self, "contents") do
-    entity = Script.get_value(script, self)
-    id_or_key = Pythelix.Entity.get_id_or_key(entity)
+  def getattr(_script, self, "contents") do
+    entity = Store.get_value(self)
 
     contents = Pythelix.Record.get_contained(entity)
 
-    {:getattr, id_or_key, "contents", contents}
+    contents
   end
 
-  def getattr(script, self, name) do
-    entity = Script.get_value(script, self)
+  def getattr(_script, self, name) do
+    entity = Store.get_value(self)
 
     entity
     |> get_attribute(name)
@@ -87,20 +85,21 @@ defmodule Pythelix.Scripting.Namespace.Entity do
   end
 
   def setattr(script, self, "parent", to_ref) do
-    to_value = Script.get_value(script, to_ref)
-    entity = Script.get_value(script, self)
-    id_or_key = Entity.get_id_or_key(entity)
+    to_value = Store.get_value(to_ref)
+    entity = Store.get_value(self)
 
     case to_value do
       :none ->
         Record.change_parent(entity, nil)
-        |> then(&Script.update_reference(script, self, &1))
-        |> then(& {&1, {:setattr, id_or_key, "parent", to_ref}})
+        |> then(& Store.update_reference(self, &1))
+
+        {script, to_ref}
 
       %Entity{} = parent ->
         Record.change_parent(entity, parent)
-        |> then(&Script.update_reference(script, self, &1))
-        |> then(& {&1, {:setattr, id_or_key, "parent", to_ref}})
+        |> then(& Store.update_reference(self, &1))
+
+        {script, to_ref}
 
       other ->
         {Script.raise(script, AttributeError, "#{inspect(other)} isn't a valid parent"), :none}
@@ -108,20 +107,21 @@ defmodule Pythelix.Scripting.Namespace.Entity do
   end
 
   def setattr(script, self, "location", to_ref) do
-    to_value = Script.get_value(script, to_ref)
-    entity = Script.get_value(script, self)
-    id_or_key = Entity.get_id_or_key(entity)
+    to_value = Store.get_value(to_ref)
+    entity = Store.get_value(self)
 
     case to_value do
       :none ->
         Record.change_location(entity, nil)
-        |> then(&Script.update_reference(script, self, &1))
-        |> then(& {&1, {:setattr, id_or_key, "location", to_ref}})
+        |> then(& Store.update_reference(self, &1))
+
+        {script, to_ref}
 
       %Entity{} = location ->
         Record.change_location(entity, location)
-        |> then(&Script.update_reference(script, self, &1))
-        |> then(& {&1, {:setattr, id_or_key, "location", to_ref}})
+        |> then(& Store.update_reference(self, &1))
+
+        {script, to_ref}
 
       other ->
         {Script.raise(script, AttributeError, "#{inspect(other)} isn't a valid location"), :none}
@@ -129,27 +129,42 @@ defmodule Pythelix.Scripting.Namespace.Entity do
   end
 
   def setattr(script, self, name, to_ref) do
-    to_value = Script.get_value(script, to_ref)
-    entity = Script.get_value(script, self)
-    id_or_key = Entity.get_id_or_key(entity)
+    to_value = Store.get_value(to_ref)
+    entity = Store.get_value(self)
 
-    entity = Pythelix.Record.set_attribute(id_or_key, name, to_value)
-    script = Script.update_reference(script, self, entity)
+    case to_ref do
+      %Reference{} ->
+        Store.bind_entity_attribute(to_ref, entity, name)
+        Store.update_reference(to_ref, to_value)
 
-    {script, {:setattr, id_or_key, name, to_ref}}
+      _ ->
+        id_or_key = Entity.get_id_or_key(entity)
+        Record.set_attribute(id_or_key, name, to_value)
+    end
+
+    {script, to_ref}
   end
 
   defp get_attribute(entity, name) do
-    attributes = Record.get_attributes(entity)
-
-    case Map.get(attributes, name) do
+    case Store.get_bound_entity_attribute(entity, name) do
       nil ->
-        {:error, :attribute_not_found}
+        attributes = Record.get_attributes(entity)
 
-      value ->
-        id_or_key = Pythelix.Entity.get_id_or_key(entity)
+        case Map.get(attributes, name) do
+          nil ->
+            {:error, :attribute_not_found}
 
-        {:getattr, id_or_key, name, value}
+          {:extended, namespace, name} ->
+            id_or_key = Entity.get_id_or_key(entity)
+            {:extended, id_or_key, namespace, name}
+
+          value ->
+            Store.bind_entity_attribute(value, entity, name)
+            value
+        end
+
+      reference ->
+        reference
     end
   end
 

@@ -8,6 +8,7 @@ defmodule Pythelix.Scripting do
   """
 
   alias Pythelix.Scripting.{Interpreter, Parser, Traceback}
+  alias Pythelix.Scripting.Store
 
   @doc """
   Executes the given instructions and returns a script structure.
@@ -34,7 +35,7 @@ defmodule Pythelix.Scripting do
 
     script =
       if ast == :error do
-        %Interpreter.Script{bytecode: []}
+        %Interpreter.Script{id: "error", bytecode: []}
         |> then(fn script ->
           message = "invalid syntax"
           traceback = %Traceback{exception: SyntaxError, message: message, chain: [{script, nil, nil}]}
@@ -43,7 +44,7 @@ defmodule Pythelix.Scripting do
         end)
       else
         [ast]
-        |> Interpreter.AST.convert()
+        |> Interpreter.AST.convert(id: (former_script && former_script.id) || opts[:id])
       end
 
     script =
@@ -108,11 +109,16 @@ defmodule Pythelix.Scripting do
   def eval(code, opts \\ []) do
     run(code, opts)
     |> then(fn
-      %Interpreter.Script{error: %Traceback{} = traceback} ->
+      %Interpreter.Script{error: %Traceback{} = traceback} = script ->
+        #IO.puts("in-eval-error Destroy #{script.id}")
+        Interpreter.Script.destroy(script)
         {:error, traceback}
 
       script ->
-        {:ok, Interpreter.Script.get_value(script, script.last_raw)}
+        last = Store.get_value(script.last_raw)
+        #IO.puts("in-eval-ok Destroy #{script.id}")
+        Interpreter.Script.destroy(script)
+        {:ok, last}
     end)
   end
 end

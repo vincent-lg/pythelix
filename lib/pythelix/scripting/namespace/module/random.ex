@@ -8,7 +8,7 @@ defmodule Pythelix.Scripting.Namespace.Module.Random do
   defmet choice(script, namespace), [
     {:collection, index: 0}
   ] do
-    collection = Script.get_value(script, namespace.collection) |> IO.inspect()
+    collection = Store.get_value(namespace.collection, recursive: false)
 
     {script, Enum.random(collection)}
   end

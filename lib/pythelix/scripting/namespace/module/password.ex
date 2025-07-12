@@ -3,7 +3,7 @@ defmodule Pythelix.Scripting.Namespace.Module.Password do
   Module defining the password module.
   """
 
-  use Pythelix.Scripting.Namespace
+  use Pythelix.Scripting.Module, name: "password"
 
   alias Pythelix.Scripting.Object.Password
 

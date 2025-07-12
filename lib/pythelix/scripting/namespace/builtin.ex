@@ -17,7 +17,10 @@ defmodule Pythelix.Scripting.Namespace.Builtin do
     {:parent, keyword: "parent", type: :entity, default: nil},
     {:location, keyword: "location", type: :entity, default: nil}
   ] do
-    opts = [key: namespace.key, parent: namespace.parent, location: namespace.location]
+    parent = Store.get_value(namespace.parent)
+    location = Store.get_value(namespace.location)
+
+    opts = [key: namespace.key, parent: parent, location: location]
     {:ok, entity} = Pythelix.Record.create_entity(opts)
 
     {script, entity}
@@ -71,7 +74,7 @@ defmodule Pythelix.Scripting.Namespace.Builtin do
     {:iterable, index: 0, type: :dict, default: nil},
     {:kwargs, kwargs: true},
   ] do
-    iterable = Script.get_value(script, namespace.iterable) |> IO.inspect()
+    iterable = Store.get_value(namespace.iterable)
     kwargs = namespace.kwargs
 
     dict =
@@ -91,7 +94,7 @@ defmodule Pythelix.Scripting.Namespace.Builtin do
   deffun set(script, namespace), [
     {:iterable, index: 0, type: :list, default: nil}
   ] do
-    iterable = Script.get_value(script, namespace.iterable, recursive: false)
+    iterable = Store.get_value(namespace.iterable, recursive: false)
 
     set =
       case iterable do

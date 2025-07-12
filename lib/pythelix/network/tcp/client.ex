@@ -1,5 +1,5 @@
 defmodule Pythelix.Network.TCP.Client do
-  use GenServer
+  use GenServer, restart: :temporary
 
   alias Pythelix.Entity
   alias Pythelix.Record
@@ -54,7 +54,7 @@ defmodule Pythelix.Network.TCP.Client do
     {:noreply, {socket, client_id, :queue.new()}}
   end
 
-  def handle_info(:disconnect, {socket, client_id, messages}) do
+  def handle_cast(:disconnect, {socket, client_id, messages}) do
     text =
       messages
       |> :queue.to_list()
@@ -62,10 +62,10 @@ defmodule Pythelix.Network.TCP.Client do
       |> then(& (!String.ends_with?(&1, "\n") && &1 <> "\n") || &1)
       |> String.replace("\n", "\r\n")
 
-    Logger.debug("Disconnection of #{client_id}")
+    Logger.debug("Asked disconnection of #{client_id}")
     :gen_tcp.send(socket, text)
     :gen_tcp.close(socket)
-    {:stop, :normal, {socket, client_id, :queue.new()}}
+    {:noreply, {socket, client_id, :queue.new()}}
   end
 
   def send(%Entity{} = client, message) do
@@ -77,6 +77,6 @@ defmodule Pythelix.Network.TCP.Client do
 
   def disconnect(%Entity{} = client) do
     pid = Record.get_attribute(client, "pid")
-    Kernel.send(pid, :disconnect)
+    GenServer.cast(pid, :disconnect)
   end
 end

@@ -6,11 +6,13 @@ defmodule Pythelix.ScriptingCase do
       import Pythelix.ScriptingCase
       import Pythelix.Scripting
       alias Pythelix.Scripting.Interpreter.{Debugger, Script}
+      alias Pythelix.Scripting.Store
     end
   end
 
   setup tags do
     Pythelix.DataCase.setup_sandbox(tags)
+    Pythelix.Scripting.Store.init()
     Pythelix.Record.Cache.clear()
     :ok
   end

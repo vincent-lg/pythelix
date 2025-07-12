@@ -36,7 +36,7 @@ defmodule Pythelix.Scripting.Object.Dict do
       [a: 10, c: 30]
   """
 
-  alias Pythelix.Scripting.Object.Dict
+  alias Pythelix.Scripting.Object.{Dict, Reference}
 
   defstruct entries: %{}, key_id: 0
 
@@ -322,6 +322,25 @@ defmodule Pythelix.Scripting.Object.Dict do
         |> fold_doc(fn doc, acc -> concat([doc, ", ", acc]) end)
 
       concat(["{", entries, "}"])
+    end
+  end
+
+  defimpl Pythelix.Scripting.Protocol.ChildReferences do
+    def children(dict) do
+      Dict.items(dict)
+      |> Enum.reduce([], fn
+        {%Reference{} = key, %Reference{} = value}, acc ->
+          [[key, value] | acc]
+
+        {%Reference{} = key, _}, acc ->
+          [key | acc]
+
+        {_, %Reference{} = value}, acc ->
+          [value | acc]
+
+        _, acc ->
+          acc
+      end)
     end
   end
 end

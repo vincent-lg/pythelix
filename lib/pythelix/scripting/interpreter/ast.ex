@@ -4,6 +4,7 @@ defmodule Pythelix.Scripting.Interpreter.AST do
   """
 
   alias Pythelix.Scripting.Interpreter.Script
+  alias Pythelix.Scripting.Store
 
   @eq_op %{"+=": :+, "-=": :-, "*=": :*, "/=": :/}
 
@@ -11,13 +12,13 @@ defmodule Pythelix.Scripting.Interpreter.AST do
   Convert an AST into a script structure with its bytecode.
   """
   @spec convert(list()) :: Script.t()
-  def convert(ast) do
+  def convert(ast, opts \\ []) do
     bytecode =
       ast
       |> Enum.reduce(:queue.new(), &process_ast/2)
       |> :queue.to_list()
 
-    %Script{bytecode: bytecode}
+    %Script{id: (opts[:id] || Store.new_script()), bytecode: bytecode}
   end
 
   defp process_ast(ast, code) do
@@ -41,7 +42,8 @@ defmodule Pythelix.Scripting.Interpreter.AST do
   defp read_ast(code, {:function, name, args, kwargs}) do
     code =
       code
-      |> add({:builtin, name})
+      #|> add({:builtin, name})
+      |> add({:read, name})
       |> add({:dict, :no_reference})
 
     code =

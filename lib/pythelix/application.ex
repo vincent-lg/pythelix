@@ -9,6 +9,8 @@ defmodule Pythelix.Application do
 
   @impl true
   def start(_type, _args) do
+    Pythelix.Scripting.Store.init()
+
     load_password_algorithms()
     |> maybe_start_application()
   end

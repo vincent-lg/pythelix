@@ -4,15 +4,22 @@ defmodule Pythelix.Task.Persistent do
   """
 
   alias Pythelix.Scripting.Interpreter.Script
+  alias Pythelix.Scripting.Object.Reference
+  alias Pythelix.Scripting.Store
   alias Pythelix.Task.Persistent, as: Task
 
   require Logger
 
   @enforce_keys [:id, :expire_at, :name, :code, :script]
-  defstruct [:id, :expire_at, :name, :code, :script]
+  defstruct [:id, :expire_at, :name, :code, :script, references: %{}]
 
   @typedoc "A persistent task"
-  @type t() :: %{id: integer(), expire_at: nil | DateTime.t(), script: Script.t()}
+  @type t() :: %{
+                 id: integer(),
+                 expire_at: nil | DateTime.t(),
+                 script: Script.t(),
+                 references: %{Reference.t() => {term(), Reference.t() | nil}}
+               }
 
   @cache :px_tasks
 
@@ -39,6 +46,7 @@ defmodule Pythelix.Task.Persistent do
     |> Enum.reduce({get_status(), get_ids()}, fn task, {status, ids} ->
       task
       |> tap(& Cachex.put(@cache, &1.id, &1))
+      |> tap(&restore/1)
       |> schedule()
       |> case do
         {:ok, task} -> {Map.put(status, task.id, :scheduled), [task.id | ids]}
@@ -224,6 +232,8 @@ defmodule Pythelix.Task.Persistent do
   end
 
   defp save(task) do
+    references = Store.extract_references()
+    task = %{task | references: references}
     Cachex.put(@cache, task.id, task)
     File.write!(get_task_path(task.id), :erlang.term_to_binary(task), [:write])
     task
@@ -233,4 +243,15 @@ defmodule Pythelix.Task.Persistent do
   defp find_free_id(id, [], ids), do: {id, ids}
   defp find_free_id(id, [first | _], ids) when id < first, do: {id, ids}
   defp find_free_id(id, [_ | rest], ids), do: find_free_id(id + 1, rest, ids)
+
+  def restore(task) do
+    owner = task.script.id
+    Store.new_script(owner)
+
+    task.references
+    |> Enum.map(fn {reference, value, _, parent} ->
+      {reference, value, owner, parent}
+    end)
+    |> Store.insert_references()
+  end
 end

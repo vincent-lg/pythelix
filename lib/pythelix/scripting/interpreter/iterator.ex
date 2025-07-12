@@ -7,8 +7,10 @@ defmodule Pythelix.Scripting.Interpreter.Iterator do
 
   alias Pythelix.Scripting.Interpreter.Iterator
   alias Pythelix.Scripting.Interpreter.Script
+  alias Pythelix.Scripting.Store
 
   def new(_script, enumerable) do
+    enumerable = Store.get_value(enumerable)
     %Iterator{iterator: Enum.with_index(enumerable)}
   end
 
@@ -22,7 +24,8 @@ defmodule Pythelix.Scripting.Interpreter.Iterator do
         script =
           script
           |> Script.write_variable("loop", index + 1)
-          |> Script.update_reference(reference, %Iterator{iterator: Enum.drop(iterator, 1)})
+
+        Store.update_reference(reference, %Iterator{iterator: Enum.drop(iterator, 1)})
 
         {:cont, script, element}
     end

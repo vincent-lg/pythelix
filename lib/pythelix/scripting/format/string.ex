@@ -15,12 +15,7 @@ defmodule Pythelix.Scripting.Format.String do
 
   @spec new(Script.t(), binary()) :: t()
   def new(%Script{} = script, string) do
-    variables =
-      script.variables
-      |> Enum.map(fn {name, _} ->
-        {name, Script.get_variable_value(script, name)}
-      end)
-      |> Map.new()
+    variables = script.variables
 
     %Format.String{string: string, variables: variables}
   end
@@ -36,11 +31,7 @@ defmodule Pythelix.Scripting.Format.String do
   def format(string) when is_binary(string), do: string
 
   def format(%Format.String{} = format_string) do
-    script =
-      format_string.variables
-      |> Enum.reduce(%Script{bytecode: 0}, fn {name, value}, script ->
-        Script.write_variable(script, name, value)
-      end)
+    script = %Script{id: "format", bytecode: [], variables: format_string.variables}
 
     do_split(String.graphemes(format_string.string), [], "", :text)
     |> maybe_format(script)
@@ -87,7 +78,7 @@ defmodule Pythelix.Scripting.Format.String do
     import Inspect.Algebra
 
     def inspect(%Format.String{} = format_string, opts) do
-      to_doc(Format.String.format(format_string), opts)
+      concat(["f", to_doc(format_string.string, opts)])
     end
   end
 end

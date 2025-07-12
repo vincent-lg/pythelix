@@ -3,7 +3,7 @@ defmodule Pythelix.Scripting.Namespace.Module.Search do
   Module defining the search module.
   """
 
-  use Pythelix.Scripting.Namespace
+  use Pythelix.Scripting.Module, name: "search"
 
   import Pythelix.Search, only: [find_many: 1]
 
@@ -20,7 +20,7 @@ defmodule Pythelix.Scripting.Namespace.Module.Search do
         {Script.raise(script, ValueError, message), :none}
 
       filters ->
-        results = compute_many(script, namespace.parent, filters)
+        results = compute_many(namespace.parent, filters)
         {script, results}
     end
   end
@@ -35,7 +35,7 @@ defmodule Pythelix.Scripting.Namespace.Module.Search do
         {Script.raise(script, ValueError, message), :none}
 
       filters ->
-        results = compute_many(script, namespace.parent, filters)
+        results = compute_many(namespace.parent, filters)
 
         case results do
           [] ->
@@ -51,14 +51,14 @@ defmodule Pythelix.Scripting.Namespace.Module.Search do
     end
   end
 
-  defp compute_many(script, nil, filters) do
-    filters = Enum.map(filters, & Script.get_value(script, &1))
+  defp compute_many(nil, filters) do
+    filters = Enum.map(filters, &Store.get_value/1)
     find_many(filters)
   end
 
-  defp compute_many(script, parent, filters) do
-    parent = Script.get_value(script, parent)
-    filters = Enum.map(filters, & Script.get_value(script, &1))
+  defp compute_many(parent, filters) do
+    parent = Store.get_value(parent)
+    filters = Enum.map(filters, &Store.get_value/1)
     find_many(filters)
     |> Enum.filter(fn result ->
       Record.get_ancestors(result)

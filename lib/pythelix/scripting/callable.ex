@@ -6,12 +6,12 @@ defmodule Pythelix.Scripting.Callable do
   @enforce_keys [:module, :object, :name]
   defstruct [:module, :object, :name]
 
-  alias Pythelix.Scripting.Callable
-  alias Pythelix.Scripting.Object.Dict
-  alias Pythelix.Scripting.Namespace
   alias Pythelix.Record
   alias Pythelix.Scripting.Callable
   alias Pythelix.Scripting.Interpreter.Script
+  alias Pythelix.Scripting.Namespace
+  alias Pythelix.Scripting.Object.Dict
+  alias Pythelix.Scripting.Store
   alias Pythelix.Scripting.Traceback
 
   @typedoc "a callable object in script"
@@ -33,9 +33,32 @@ defmodule Pythelix.Scripting.Callable do
     apply(namespace, name, [script, entity, args, kwargs])
   end
 
+  def call(%Script{} = script, {:sub_entity, entity}, args, kwargs) do
+    kwargs = (kwargs == nil && Dict.new()) || kwargs
+    sub_entity = Pythelix.SubEntity.new(entity)
+    ref = Store.new_reference(sub_entity, script.id)
+
+    constructor = Pythelix.Record.get_method(entity, "__init__")
+    method = %Callable.Method{entity: entity.key, name: "__init__", method: constructor}
+    kwargs = Dict.put(kwargs, "self", ref)
+
+    case Callable.Method.call(method, args, kwargs, owner: script.id) do
+      %Script{error: %Traceback{chain: chain} = traceback} = _script ->
+        %{traceback | chain: [{script, nil, nil} | chain]}
+        |> then(& {%{script | error: &1}, :none})
+
+      %Script{pause: :immediately, last_raw: raw} ->
+        {script, raw}
+
+      _inner ->
+        {script, ref}
+    end
+  end
+
   def call(%Script{} = script, %Callable.Method{} = method, args, kwargs) do
     kwargs = (kwargs == nil && Dict.new()) || kwargs
-    case Callable.Method.call(method, args, kwargs) do
+
+    case Callable.Method.call(method, args, kwargs, owner: script.id) do
       %Script{error: %Traceback{chain: chain} = traceback} = _script ->
         %{traceback | chain: [{script, nil, nil} | chain]}
         |> then(& {%{script | error: &1}, :none})
@@ -76,8 +99,8 @@ defmodule Pythelix.Scripting.Callable do
       {%Script{error: traceback}, _} when traceback != nil ->
         {:traceback, traceback}
 
-      {script, value} ->
-        Script.get_value(script, value)
+      {_script, value} ->
+        Store.get_value(value)
     end)
   end
 

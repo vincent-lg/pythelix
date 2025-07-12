@@ -299,7 +299,9 @@ defmodule Pythelix.Command.Hub do
               try do
                 Method.call_entity(menu, "get_prompt", [client])
               rescue
-                _ -> "error"
+                exception ->
+                  Logger.error(Exception.format(:error, exception, __STACKTRACE__))
+                  "error"
               end
           end
 

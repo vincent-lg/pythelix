@@ -7,12 +7,6 @@ defmodule Pythelix.Scripting.Interpreter.VM.Op do
   alias Pythelix.Scripting.Interpreter.{Iterator, Script}
   alias Pythelix.Scripting.Namespace
 
-  @modules %{
-    "password" => Namespace.Module.Password,
-    "random" => Namespace.Module.Random,
-    "search" => Namespace.Module.Search
-  }
-
   def put(script, value) do
     script
     |> Script.put_stack(value)
@@ -30,7 +24,35 @@ defmodule Pythelix.Scripting.Interpreter.VM.Op do
       variables
       |> Map.get(variable, :no_var)
       |> then(fn
-        :no_var -> Map.get(@modules, variable, :no_var)
+        :no_var -> Map.get(Namespace.Builtin.attributes(), variable, :no_var)
+        other -> other
+      end)
+      |> then(fn
+        :no_var ->
+          case Map.get(Namespace.Builtin.functions(), variable, :no_var) do
+            :no_var ->
+              :no_var
+
+            name ->
+              %Callable{module: Namespace.Builtin, object: nil, name: name}
+          end
+
+        other -> other
+      end)
+      |> then(fn
+        :no_var ->
+          if variable =~ ~r/^\p{Lu}/u do
+            sub = Pythelix.Record.get_entity(variable)
+            (sub && {:sub_entity, sub}) || :no_var
+          else
+            :no_var
+          end
+
+        other ->
+          other
+      end)
+      |> then(fn
+        :no_var -> Map.get(Pythello.all(), variable, :no_var)
         other -> other
       end)
 
@@ -38,6 +60,7 @@ defmodule Pythelix.Scripting.Interpreter.VM.Op do
       Script.raise(script, NameError, "name '#{variable}' is not defined")
     else
       script
+      |> Script.debug("Before putting")
       |> Script.put_stack(value)
     end
   end

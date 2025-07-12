@@ -4,15 +4,16 @@ defmodule Pythelix.Scripting.Interpreter.VM.Set do
   """
 
   alias Pythelix.Scripting.Interpreter.Script
+  alias Pythelix.Scripting.Store
 
   def put(script, :last) do
     {script, {value, valueref}} = Script.get_stack(script, :reference)
     {script, {set, ref}} = Script.get_stack(script, :reference)
 
     set = MapSet.put(set, valueref || value)
+    Store.update_reference(ref, set)
 
     script
-    |> Script.update_reference(ref, set)
     |> Script.put_stack(ref)
   end
 

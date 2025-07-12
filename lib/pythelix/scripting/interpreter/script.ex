@@ -6,24 +6,22 @@ defmodule Pythelix.Scripting.Interpreter.Script do
   a list of bytecodes to execute.
   """
 
-  alias Pythelix.Entity
-  alias Pythelix.Record
   alias Pythelix.Scripting.Callable
   alias Pythelix.Scripting.Callable.Method
   alias Pythelix.Scripting.Format
   alias Pythelix.Scripting.Interpreter.{Debugger, Script, VM}
-  alias Pythelix.Scripting.Object.Dict
+  alias Pythelix.Scripting.Object.Reference
+  alias Pythelix.Scripting.Store
   alias Pythelix.Scripting.Traceback
 
-  @enforce_keys [:bytecode]
+  @enforce_keys [:id, :bytecode]
   defstruct [
+    :id,
     :bytecode,
     cursor: 0,
     line: 1,
     stack: [],
-    references: %{},
     variables: %{},
-    bound: %{},
     last_raw: nil,
     pause: nil,
     error: nil,
@@ -32,13 +30,12 @@ defmodule Pythelix.Scripting.Interpreter.Script do
 
   @typedoc "a script with bytecode"
   @type t() :: %Script{
+          id: String.t(),
           bytecode: list(),
           cursor: integer(),
           line: integer(),
           stack: list(),
-          references: map(),
           variables: map(),
-          bound: map(),
           last_raw: any(),
           pause: nil | :immediately | integer() | float(),
           error: nil | Traceback.t(),
@@ -59,88 +56,13 @@ defmodule Pythelix.Scripting.Interpreter.Script do
   end
 
   @doc """
-  Update the reference value for an object.
-  """
-  @spec update_reference(Script.t(), reference(), term()) :: Script.t()
-  def update_reference(%{references: references} = script, reference, value) do
-    references = Map.put(references, reference, value)
-
-    %{script | references: references}
-    |> debug("ref #{inspect(reference)} set to #{inspect(value)}")
-    |> update_bound(reference, value)
-  end
-
-  @doc """
   Gets the value of a variable.
 
   If the variable is a reference, recursively search for a value.
   """
   def get_variable_value(script, name) do
     Map.get(script.variables, name)
-    |> reference_to_value(script, MapSet.new())
-    |> then(fn {value, _} -> value end)
-  end
-
-  @doc """
-  Gets the value from a reference or value.
-  """
-  @spec get_value(Script.t(), term(), Keyword.t()) :: term()
-  def get_value(script, reference, opts \\ [])
-
-  def get_value(script, reference, opts) when is_reference(reference) do
-    Map.get(script.references, reference)
-    |> then(fn value ->
-      if Keyword.get(opts, :recursive, true) do
-        reference_to_value(value, script, MapSet.new([reference]))
-        |> then(fn {value, _} -> value end)
-      else
-        value
-      end
-    end)
-  end
-
-  def get_value(_script, other, _opts), do: other
-
-  @doc """
-  Updates entity references.
-
-  This is used to "refresh" the script if time has passed and the entity references are staled.
-
-  Args:
-
-  * script (Script): the script to refresh.
-
-  """
-  @spec refresh_entity_references(t()) :: t()
-  def refresh_entity_references(%Script{} = script) do
-    script.references
-    |> Enum.map(fn
-      {reference, %Entity{} = entity} ->
-        {reference, Record.get_entity(entity.key || entity.id)}
-
-      {reference, other} ->
-        {reference, other}
-    end)
-    |> Map.new()
-    |> then(& %{script | references: &1})
-  end
-
-  @doc """
-  Add a bound attribute.
-  """
-  @spec bind_attribute(t(), reference(), integer(), String.t()) :: t()
-  def bind_attribute(script, reference, entity_id, attribute_name) do
-    bound =
-      script.bound
-      |> Map.get(reference, MapSet.new())
-      |> MapSet.put({entity_id, attribute_name})
-
-    bound =
-      script.bound
-      |> Map.put(reference, bound)
-      |> Map.put({entity_id, attribute_name}, reference)
-
-    %{script | bound: bound}
+    |> Store.get_value()
   end
 
   @doc """
@@ -162,9 +84,21 @@ defmodule Pythelix.Scripting.Interpreter.Script do
   Execute the given script.
   """
   @spec execute(Script.t()) :: Script.t()
-  def execute(script, code \\ nil, owner \\ nil) do
+  def execute(script, code \\ nil, owner \\ nil, _opts \\ []) do
     script
     |> run(code, owner)
+  end
+
+  @doc """
+  Destroys the script, cleaning up references.
+  Don't call this function for all created scripts: a script started
+  from another will use the parent's ownership. But when the parent
+  restarts, the references should still be around.
+  """
+  @spec destroy(t()) :: :ok
+  def destroy(script) do
+    Store.delete_by_owner(script.id)
+    Store.delete_script(script.id)
   end
 
   defp run(%{bytecode: bytecode} = script, code, owner) do
@@ -215,41 +149,6 @@ defmodule Pythelix.Scripting.Interpreter.Script do
     |> debug("in stack: #{inspect(formatted)}")
   end
 
-  def put_stack(script, {:setattr, entity_id, name, value}) do
-    value = Map.get(script.bound, {entity_id, name}, value)
-    {script, value} = (references?(value) && reference(script, value)) || {script, value}
-
-    if is_reference(value) do
-      bind_attribute(script, value, entity_id, name)
-      |> debug("bind entity[#{entity_id}].#{name} to #{inspect(value)}")
-    else
-      script
-    end
-  end
-
-  def put_stack(%{stack: stack} = script, {:getattr, entity_id, name, value}) do
-    value = Map.get(script.bound, {entity_id, name}, value)
-
-    value =
-      case value do
-        {:extended, module, fun} -> {:extended, entity_id, module, fun}
-        _ -> value
-      end
-
-    {script, value} = (references?(value) && reference(script, value)) || {script, value}
-
-    script =
-      %{script | stack: [value | stack]}
-      |> debug("in stack: #{inspect(value)}")
-
-    if is_reference(value) do
-      bind_attribute(script, value, entity_id, name)
-      |> debug("bind entity[#{entity_id}].#{name} to #{inspect(value)}")
-    else
-      script
-    end
-  end
-
   def put_stack(%{stack: stack} = script, value) do
     {script, value} = (references?(value) && reference(script, value)) || {script, value}
 
@@ -259,14 +158,14 @@ defmodule Pythelix.Scripting.Interpreter.Script do
 
   def get_stack(script, retrieve \\ :value)
 
-  def get_stack(%{stack: [first | next], references: references} = script, retrieve) do
+  def get_stack(%{stack: [first | next]} = script, retrieve) do
     first =
       case retrieve do
         :value ->
-          (is_reference(first) && Map.get(references, first)) || first
+          (match?(%Reference{}, first) && Store.get_value(first, recursive: false)) || first
 
         :reference ->
-          (is_reference(first) && {Map.get(references, first), first}) || {first, first}
+          (match?(%Reference{}, first) && {Store.get_value(first, recursive: false), first}) || {first, first}
       end
 
     script =
@@ -295,72 +194,27 @@ defmodule Pythelix.Scripting.Interpreter.Script do
     %{script | cursor: line}
   end
 
-  def reference(%{references: references} = script, value) do
-    reference = make_ref()
-    references = Map.put(references, reference, value)
+  def reference(script, value) do
+    reference = Store.new_reference(value, script.id)
 
     script =
       script
       |> debug("create ref #{inspect(reference)} = #{inspect(value)}")
 
-    {%{script | references: references}, reference}
+    {script, reference}
   end
 
   def references?(value) when is_atom(value), do: false
   def references?(%Method{}), do: false
   def references?(%Callable{}), do: false
-  def references?(value) when is_reference(value), do: false
+  def references?(%Reference{}), do: false
   def references?(value) when is_number(value), do: false
   def references?(:none), do: false
   def references?(value) when is_boolean(value), do: false
   def references?(value) when is_binary(value), do: false
+  def references?(%Format.String{}), do: false
   def references?(value) when is_tuple(value), do: false
   def references?(_value), do: true
-
-  def reference_to_value(value, script, references) when is_reference(value) do
-    if MapSet.member?(references, value) do
-      {:ellipsis, references}
-    else
-      Map.get(script.references, value)
-      |> reference_to_value(script, MapSet.put(references, value))
-    end
-  end
-
-  def reference_to_value(value, script, references) when is_list(value) do
-    Enum.reduce(value, {[], references}, fn element, {list, references} ->
-      {element, references} = reference_to_value(element, script, references)
-      {[element | list], references}
-    end)
-    |> then(fn {list, references} -> {Enum.reverse(list), references} end)
-  end
-
-  def reference_to_value(%Dict{} = value, script, references) do
-    Dict.items(value)
-    |> Enum.reduce({Dict.new(), references}, fn {key, value}, {dict, references} ->
-      {key, references} = reference_to_value(key, script, references)
-      {value, references} = reference_to_value(value, script, references)
-
-      {Dict.put(dict, key, value), references}
-    end)
-  end
-
-  def reference_to_value(%MapSet{} = value, script, references) do
-    Enum.to_list(value)
-    |> reference_to_value(script, references)
-    |> then(fn {values, references} -> {MapSet.new(values), references} end)
-  end
-
-  def reference_to_value(value, _script, references), do: {value, references}
-
-  def update_bound(script, reference, value) do
-    script.bound
-    |> Map.get(reference, [])
-    |> Enum.reduce(script, fn {entity_id, attribute}, script ->
-      Pythelix.Record.set_attribute(entity_id, attribute, value)
-
-      script
-    end)
-  end
 
   def debug(%{debugger: %Debugger{} = debugger} = script, text) do
     debugger = Debugger.add(debugger, script.cursor - 1, text)

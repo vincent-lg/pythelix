@@ -5,6 +5,7 @@ defmodule Pythelix.Scripting.Interpreter.VM.Dict do
 
   alias Pythelix.Scripting.Interpreter.Script
   alias Pythelix.Scripting.Object
+  alias Pythelix.Scripting.Store
 
   def put(script, :last) do
     {script, {key, keyref}} = Script.get_stack(script, :reference)
@@ -12,9 +13,9 @@ defmodule Pythelix.Scripting.Interpreter.VM.Dict do
     {script, {dict, ref}} = Script.get_stack(script, :reference)
 
     dict = Object.Dict.put(dict, keyref || key, valueref || value)
+    Store.update_reference(ref, dict)
 
     script
-    |> Script.update_reference(ref, dict)
     |> Script.put_stack(ref)
   end
 
