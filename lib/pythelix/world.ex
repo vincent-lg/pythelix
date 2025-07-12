@@ -99,12 +99,24 @@ defmodule Pythelix.World do
   defp maybe_add_base_entities({:ok, entities}) do
     {:ok,
       entities
+      |> add_sub_entity()
       |> add_motd_menu_entity()
       |> add_game_menu_entity()
       |> add_base_menu_entity()
       |> add_base_client_entity()
       |> Command.add_base_command_entity()
     }
+  end
+
+  defp add_sub_entity(entities) do
+    [
+      %{
+        virtual: true,
+        key: "SubEntity",
+        attributes: %{},
+        methods: %{},
+      } | entities
+    ]
   end
 
   defp add_base_client_entity(entities) do
@@ -278,7 +290,16 @@ defmodule Pythelix.World do
   defp maybe_create_entities({:error, _} = error), do: error
 
   defp maybe_create_entities({:ok, entities}) do
-    Enum.map(entities, fn entity -> create_entity(entity) end)
+    {sub_entities, entities} =
+      entities
+      |> Enum.split_with(fn entity ->
+        (entity.key && entity.key =~ ~r/^\p{Lu}/u) || false
+      end)
+
+    Enum.each(sub_entities, & create_entity(&1, sub_entity: true))
+
+    entities
+    |> Enum.map(&create_entity/1)
     |> tap(fn records ->
       locations =
         Enum.map(entities, fn entity ->
@@ -315,7 +336,7 @@ defmodule Pythelix.World do
     |> tap(fn _ -> link_commands() end)
   end
 
-  defp create_entity(entity) do
+  defp create_entity(entity, opts \\ []) do
     {parent, attributes} = Map.pop(entity.attributes, "parent")
     {location, attributes} = Map.pop(attributes, "location")
     parent = (parent && Record.get_entity(parent)) || nil
@@ -328,6 +349,7 @@ defmodule Pythelix.World do
       end
 
     virtual_parent = (parent && parent.id == :virtual) || false
+    virtual_parent = (opts[:sub_entity] && true) || virtual_parent
     opts = [key: entity.key, parent: parent]
 
     opts =

@@ -3,7 +3,7 @@ defmodule Pythelix.Scripting.Namespace.Module.Search do
   Module defining the search module.
   """
 
-  use Pythelix.Scripting.Namespace
+  use Pythelix.Scripting.Module, name: "search"
 
   import Pythelix.Search, only: [find_many: 1]
 

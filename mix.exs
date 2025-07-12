@@ -46,6 +46,7 @@ defmodule Pythelix.MixProject do
   # Type `mix help deps` for examples and options.
   defp deps do
     [
+      {:uuid, "~> 1.1"},
       {:codepagex, "~> 0.1.9"},
       {:nimble_parsec, "~> 1.4"},
       {:unicode_set, "~> 1.5.0"},

@@ -41,7 +41,8 @@ defmodule Pythelix.Scripting.Interpreter.AST do
   defp read_ast(code, {:function, name, args, kwargs}) do
     code =
       code
-      |> add({:builtin, name})
+      #|> add({:builtin, name})
+      |> add({:read, name})
       |> add({:dict, :no_reference})
 
     code =

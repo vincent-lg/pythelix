@@ -49,7 +49,7 @@ defmodule Pythelix.Method do
   def call(method, args, kwargs, name, opts \\ []) do
     with script <- fetch_script(method),
          {%Script{error: nil} = script, namespace} <- check_args(script, method, args, kwargs, name),
-         %Script{error: nil} = script <- maybe_run(script, method, namespace, name) do
+         %Script{error: nil} = script <- maybe_run(script, method, namespace, name, opts) do
       (opts[:return] && script.last_raw) || script
     else
       {%Script{error: %Traceback{}} = script, _} -> script
@@ -108,15 +108,22 @@ defmodule Pythelix.Method do
       constraints ->
         Namespace.validate(script, constraints, args, kwargs)
     end)
+    |> then(fn {script, namespace} ->
+      case Dict.get(kwargs, "self", :unset) do
+        :unset -> {script, namespace}
+        value -> {script, Map.put(namespace, "self", value)}
+      end
+    end)
   end
 
-  defp maybe_run(%Script{error: nil} = script, method, namespace, name) do
+  defp maybe_run(%Script{error: nil} = script, method, namespace, name, opts) do
     %{script | cursor: 0}
+    |> then(& %{&1 | references: Keyword.get(opts, :references, %{})})
     |> write_arguments(Enum.to_list(namespace))
     |> Script.execute(method.code, name)
   end
 
-  defp maybe_run(%Script{} = script, _method, _namespace, _name), do: script
+  defp maybe_run(%Script{} = script, _method, _namespace, _name, _opts), do: script
 
   defp write_arguments(%Script{} = script, []), do: script
 

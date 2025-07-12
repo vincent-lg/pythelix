@@ -178,6 +178,7 @@ defmodule Pythelix.Scripting.Namespace do
   @spec locate(term()) :: module()
   def locate(value) do
     case value do
+      {:sub_entity, _sub} -> Namespace.NewSubEntity
       atom when is_boolean(atom) -> Namespace.Bool
       :none -> Namespace.None
       :ellipsis -> Namespace.Ellipsis
@@ -191,6 +192,7 @@ defmodule Pythelix.Scripting.Namespace do
       %Password{} -> Namespace.Password
       %MapSet{} -> Namespace.Set
       %Pythelix.Entity{} -> Namespace.Entity
+      %Pythelix.SubEntity{} -> Namespace.SubEntity
     end
   end
 
