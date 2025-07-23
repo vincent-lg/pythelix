@@ -116,7 +116,7 @@ exits: {
 
 In this design, exits are just an attribute (a dictionary) of the room entity. You can easily modify this attribute, avoiding proliferation of potentially unnecessary entities.
 
-Admittedly, this approach introduces other challenges. I'm not suggesting modeling exits as entities is wrong, rather, creating entities in every case may not always be best.
+Admittedly, this approach introduces other challenges. I'm not suggesting modeling exits as entities is wrong, rather, creating entities in every case may not always be best. It would be more appropriate to reach for [sub-entities](./sub_entities.md) here to represent exits, but this is a more serious and complicated topic.
 
 To sum up: entities should, in most cases, exist for some time. Creating and destroying entities is not free in terms of system resources. Your database can hold billions of entities, but eventually, it will be too much. Avoid a design where millions of entities are created and destroyed daily. While this likely won't be a problem for years, it should be kept in mind.
 
