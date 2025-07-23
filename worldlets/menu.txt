@@ -52,8 +52,9 @@ Invalid password. Waiting...
 """
 
 {enter(client)}
-client.msg("Before wait")
+log("Before wait")
 wait 3
+log("After wait")
 client.location = !menu/password!
 
 {unknown_input(client, _input)}

@@ -48,3 +48,8 @@ client.msg("The animal calls... don't know what.")
 
 {add(a: int, b: int)}
 return [a, b, 58]
+
+{test()}
+log("That's the one")
+wait 3
+log("That's the second")

@@ -1,0 +1,5 @@
+[StatsHandler]
+parent: "SubEntity"
+
+{__init__(a: int)}
+self.a = a
