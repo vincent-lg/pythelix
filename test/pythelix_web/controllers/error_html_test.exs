@@ -1,5 +1,5 @@
 defmodule PythelixWeb.ErrorHTMLTest do
-  use PythelixWeb.ConnCase, async: true
+  use PythelixWeb.ConnCase
 
   # Bring render_to_string/4 for testing custom views
   import Phoenix.Template

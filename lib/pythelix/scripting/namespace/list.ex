@@ -11,8 +11,7 @@ defmodule Pythelix.Scripting.Namespace.List do
     {:element, index: 0, type: :any}
   ] do
     list = Store.get_value(namespace.self, recursive: false)
-    element = Store.get_value(namespace.element, recursive: false)
-    {script, Enum.member?(list, element)}
+    {script, Enum.member?(list, namespace.element)}
   end
 
   defmet __repr__(script, namespace), [] do

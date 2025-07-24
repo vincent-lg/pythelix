@@ -5,6 +5,28 @@ defmodule Pythelix.Scripting.Namespace.ListTest do
 
   use Pythelix.ScriptingCase
 
+  describe "__contains__" do
+    test "in is True" do
+      value = expr_ok("5 in [3, 4, 5]")
+      assert value == true
+    end
+
+    test "in is False" do
+      value = expr_ok("3 in [4, 5]")
+      assert value == false
+    end
+
+    test "not in is True" do
+      value = expr_ok("3 not in [4, 5]")
+      assert value == true
+    end
+
+    test "not in is False" do
+      value = expr_ok("5 not in [3, 4, 5]")
+      assert value == false
+    end
+  end
+
   describe "creation" do
     test "an empty list" do
       script =

@@ -1,5 +1,5 @@
 defmodule PythelixWeb.ErrorJSONTest do
-  use PythelixWeb.ConnCase, async: true
+  use PythelixWeb.ConnCase
 
   test "renders 404" do
     assert PythelixWeb.ErrorJSON.render("404.json", %{}) == %{errors: %{detail: "Not Found"}}

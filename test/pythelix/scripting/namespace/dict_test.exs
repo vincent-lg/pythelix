@@ -7,6 +7,28 @@ defmodule Pythelix.Scripting.Namespace.DictTest do
 
   alias Pythelix.Scripting.Object.Dict
 
+  describe "__contains__" do
+    test "in is True" do
+      value = expr_ok("5 in {5: 'ok'}")
+      assert value == true
+    end
+
+    test "in is False" do
+      value = expr_ok("3 in {5: 'ok'}")
+      assert value == false
+    end
+
+    test "not in is True" do
+      value = expr_ok("3 not in {5: 'ok'}")
+      assert value == true
+    end
+
+    test "not in is False" do
+      value = expr_ok("5 not in {5: 'ok'}")
+      assert value == false
+    end
+  end
+
   describe "creation" do
     test "an empty dictionary" do
       dict = expr_ok("{}")

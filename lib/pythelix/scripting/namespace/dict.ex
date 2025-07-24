@@ -8,6 +8,13 @@ defmodule Pythelix.Scripting.Namespace.Dict do
   alias Pythelix.Scripting.Display
   alias Pythelix.Scripting.Object.Dict
 
+  defmet __contains__(script, namespace), [
+    {:element, index: 0, type: :any}
+  ] do
+    list = Store.get_value(namespace.self, recursive: false) |> Dict.keys()
+    {script, Enum.member?(list, namespace.element)}
+  end
+
   defmet __repr__(script, namespace), [] do
     repr(script, namespace.self)
   end

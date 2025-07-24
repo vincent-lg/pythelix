@@ -5,6 +5,28 @@ defmodule Pythelix.Scripting.Namespace.StringTest do
 
   use Pythelix.ScriptingCase
 
+  describe "__contains__" do
+    test "in is True" do
+      value = expr_ok("'a' in 'mardi'")
+      assert value == true
+    end
+
+    test "in is False" do
+      value = expr_ok("'b' in 'test'")
+      assert value == false
+    end
+
+    test "not in is True" do
+      value = expr_ok("'y' not in 'boat'")
+      assert value == true
+    end
+
+    test "not in is False" do
+      value = expr_ok("'t' not in 'tart'")
+      assert value == false
+    end
+  end
+
   describe "capitalize" do
     test "capitalize an ASCII string in lowercase" do
       script =

@@ -203,13 +203,13 @@ defmodule Pythelix.Scripting.Namespace do
 
   This method takes a script structure and returns it in any case.
   """
-  def call(module, name, script, self, reference, args \\ nil, kwargs \\ nil) do
+  def call(module, name, script, self, args \\ nil, kwargs \\ nil) do
     args = (args == nil && []) || args
     kwargs = (kwargs == nil && Dict.new()) || kwargs
 
     case Map.get(module.methods(), name) do
       nil -> {Script.raise(script, AttributeError, "unknown method #{name}"), :none}
-      method -> apply(module, method, [script, reference, args, kwargs])
+      method -> apply(module, method, [script, self, args, kwargs])
     end
   end
 

@@ -29,7 +29,7 @@ defmodule Pythelix.Scripting.Interpreter.VM.List do
     {script, {collection, ref}} = Script.get_stack(script, :reference)
     {script, {_, element}} = Script.get_stack(script, :reference)
     namespace = Namespace.locate(collection)
-     {script, value} = Namespace.call(namespace, "__contains__", script, collection, ref, [element])
+    {script, value} = Namespace.call(namespace, "__contains__", script, ref, [element])
 
     script
     |> Script.put_stack(value)
@@ -39,7 +39,7 @@ defmodule Pythelix.Scripting.Interpreter.VM.List do
     {script, {collection, ref}} = Script.get_stack(script, :reference)
     {script, {_, element}} = Script.get_stack(script, :reference)
     namespace = Namespace.locate(collection)
-     {script, value} = Namespace.call(namespace, "__contains__", script, collection, ref, [element])
+    {script, value} = Namespace.call(namespace, "__contains__", script, ref, [element])
 
     script
     |> Script.put_stack(!value)
