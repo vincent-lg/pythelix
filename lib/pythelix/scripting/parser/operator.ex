@@ -112,6 +112,20 @@ defmodule Pythelix.Scripting.Parser.Operator do
     |> isolate(check: false)
   end
 
+  def in_ do
+    string("in")
+    |> replace(:in)
+    |> isolate(space: true)
+  end
+
+  def not_in do
+    string("not")
+    |> times(string(" "), min: 1)
+    |> string("in")
+    |> isolate(space: true)
+    |> replace(:not_in)
+  end
+
   def plus_eq do
     string("+=")
     |> replace(:"+=")

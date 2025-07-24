@@ -4,6 +4,7 @@ defmodule Pythelix.Scripting.Interpreter.VM.List do
   """
 
   alias Pythelix.Scripting.Interpreter.Script
+  alias Pythelix.Scripting.Namespace
 
   def new(script, len) do
     {script, values} =
@@ -22,5 +23,25 @@ defmodule Pythelix.Scripting.Interpreter.VM.List do
 
     script
     |> Script.put_stack(values)
+  end
+
+  def in_(script, nil) do
+    {script, {collection, ref}} = Script.get_stack(script, :reference)
+    {script, {_, element}} = Script.get_stack(script, :reference)
+    namespace = Namespace.locate(collection)
+     {script, value} = Namespace.call(namespace, "__contains__", script, collection, ref, [element])
+
+    script
+    |> Script.put_stack(value)
+  end
+
+  def not_in(script, nil) do
+    {script, {collection, ref}} = Script.get_stack(script, :reference)
+    {script, {_, element}} = Script.get_stack(script, :reference)
+    namespace = Namespace.locate(collection)
+     {script, value} = Namespace.call(namespace, "__contains__", script, collection, ref, [element])
+
+    script
+    |> Script.put_stack(!value)
   end
 end

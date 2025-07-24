@@ -161,6 +161,13 @@ defmodule Pythelix.Scripting.Interpreter.AST do
     |> replace({:unset, ref}, fn code -> {:iffalse, length_code(code)} end)
   end
 
+  defp read_ast(code, {cnt, [left, right]}) when cnt in [:in, :not_in] do
+    code
+    |> read_ast(left)
+    |> read_ast(right)
+    |> add({cnt, nil})
+  end
+
   defp read_ast(code, {:and, [left, right]}) do
     ref = make_ref()
 

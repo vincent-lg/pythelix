@@ -7,6 +7,14 @@ defmodule Pythelix.Scripting.Namespace.List do
 
   alias Pythelix.Scripting.Display
 
+  defmet __contains__(script, namespace), [
+    {:element, index: 0, type: :any}
+  ] do
+    list = Store.get_value(namespace.self, recursive: false)
+    element = Store.get_value(namespace.element, recursive: false)
+    {script, Enum.member?(list, element)}
+  end
+
   defmet __repr__(script, namespace), [] do
     repr(script, namespace.self)
   end

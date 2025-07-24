@@ -137,7 +137,12 @@ defmodule Pythelix.Scripting.Parser.Expression do
     :term_eq,
     parsec(:term_cmp)
     |> repeat(
-      choice([eq(), neq()])
+      choice([
+        eq(),
+        neq(),
+        not_in(),
+        in_()
+      ])
       |> parsec(:term_cmp)
     )
     |> reduce(:fold_infixl)
