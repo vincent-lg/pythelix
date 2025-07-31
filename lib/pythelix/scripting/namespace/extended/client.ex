@@ -20,4 +20,12 @@ defmodule Pythelix.Scripting.Namespace.Extended.Client do
 
     {script, :none}
   end
+
+  def owner(script, self) do
+    2 + 2
+  end
+
+  def owner(script, self, value) do
+    {Script.raise(script, Unset, "this property is unset"), :none}
+  end
 end

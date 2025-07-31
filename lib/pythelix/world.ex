@@ -126,7 +126,8 @@ defmodule Pythelix.World do
         key: @generic_client,
         attributes: %{
           "disconnect" => {:extended, Extended.Client, :m_disconnect},
-          "msg" => {:extended, Extended.Client, :m_msg}
+          "msg" => {:extended, Extended.Client, :m_msg},
+          "owner" => {:extended_property, Extended.Client, :owner}
         },
         methods: %{},
       } | entities

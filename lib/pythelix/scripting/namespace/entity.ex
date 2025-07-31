@@ -61,11 +61,11 @@ defmodule Pythelix.Scripting.Namespace.Entity do
     contents
   end
 
-  def getattr(_script, self, name) do
+  def getattr(script, self, name) do
     entity = Store.get_value(self)
 
     entity
-    |> get_attribute(name)
+    |> get_attribute(name, script)
     |> maybe_get_method(entity, name)
   end
 
@@ -132,20 +132,28 @@ defmodule Pythelix.Scripting.Namespace.Entity do
     to_value = Store.get_value(to_ref)
     entity = Store.get_value(self)
 
-    case to_ref do
-      %Reference{} ->
-        Store.bind_entity_attribute(to_ref, entity, name)
-        Store.update_reference(to_ref, to_value)
+    case Record.get_attribute(entity, name) do
+      {:extended_property, namespace, name} ->
+        apply(namespace, name, [script, self, to_ref])
 
       _ ->
-        id_or_key = Entity.get_id_or_key(entity)
-        Record.set_attribute(id_or_key, name, to_value)
-    end
+        case to_ref do
+          %Reference{} ->
+            Store.bind_entity_attribute(to_ref, entity, name)
+            Store.update_reference(to_ref, to_value)
 
-    {script, to_ref}
+          _ ->
+            id_or_key = Entity.get_id_or_key(entity)
+            Record.set_attribute(id_or_key, name, to_value)
+        end
+
+        {script, to_ref}
+    end
   end
 
-  defp get_attribute(entity, name) do
+  defp get_attribute(entity, name, script) do
+    id_or_key = Entity.get_id_or_key(entity)
+
     case Store.get_bound_entity_attribute(entity, name) do
       nil ->
         attributes = Record.get_attributes(entity)
@@ -155,8 +163,10 @@ defmodule Pythelix.Scripting.Namespace.Entity do
             {:error, :attribute_not_found}
 
           {:extended, namespace, name} ->
-            id_or_key = Entity.get_id_or_key(entity)
             {:extended, id_or_key, namespace, name}
+
+          {:extended_property, namespace, name} ->
+            apply(namespace, name, [script, entity])
 
           value ->
             Store.bind_entity_attribute(value, entity, name)
