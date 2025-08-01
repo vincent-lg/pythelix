@@ -11,6 +11,8 @@ defmodule Pythelix.Scripting.Store do
   alias Pythelix.Record
   alias Pythelix.Scripting.Object.{Attribute, Dict, Reference}
   alias Pythelix.Scripting.Protocol.ChildReferences
+  alias Pythelix.Scripting.Interpreter.Script
+  alias Pythelix.SubEntity
 
   @doc """
   Initializes the ETS table.
@@ -93,13 +95,15 @@ defmodule Pythelix.Scripting.Store do
 
   Returns the new reference UUID.
   """
-  @spec new_reference(term(), String.t()) :: String.t()
-  def new_reference(%Entity{} = entity, owner) do
+  @spec new_reference(term(), String.t(), nil | Reference.t()) :: String.t()
+  def new_reference(value, owner, parent \\ nil)
+
+  def new_reference(%Entity{} = entity, owner, parent) do
     id_or_key = Entity.get_id_or_key(entity)
 
     case :ets.lookup(@entities_table, id_or_key) do
       [{^id_or_key, ref}] ->
-        :ets.insert_new(@reference_table, {ref, entity, owner, nil})
+        :ets.insert_new(@reference_table, {ref, entity, owner, parent})
         ref = %Reference{value: ref}
         update_child_references(ref, entity)
         ref
@@ -108,18 +112,18 @@ defmodule Pythelix.Scripting.Store do
         ref = generate_unique_uuid(@reference_table)
         ref = %Reference{value: ref}
         :ets.insert(@entities_table, {id_or_key, ref.value})
-        :ets.insert(@reference_table, {ref.value, entity, owner, nil})
+        :ets.insert(@reference_table, {ref.value, entity, owner, parent})
         update_child_references(ref, entity)
         ref
     end
   end
 
-  def new_reference(value, owner) do
-    ref = generate_unique_uuid(@reference_table)
-    ref = %Reference{value: ref}
-    :ets.insert(@reference_table, {ref.value, value, owner, nil})
-    update_child_references(ref, value)
-    ref
+  def new_reference(value, owner, parent) do
+    if Script.references?(value) do
+      generate_new_reference(value, owner, parent)
+    else
+      value
+    end
   end
 
   @doc """
@@ -164,30 +168,21 @@ defmodule Pythelix.Scripting.Store do
   """
   @spec update_reference(Reference.t() | term(), term()) :: :ok | :error
   def update_reference(%Reference{} = ref, new_value) do
-    {parent, ancestor} = get_reference_ancestor!(ref)
     value = ref.value
 
     case :ets.lookup(@reference_table, value) do
       [{^value, _old_value, owner, parent}] ->
         :ets.insert(@reference_table, {ref.value, new_value, owner, parent})
         update_child_references(ref, new_value)
-        :ok
+        {:ok, get_reference_ancestor!(ref)}
 
       _ ->
         :error
     end
     |> then(fn
-      :ok when ancestor != nil and ancestor != :loop ->
-        {:ok, get_value(ancestor)}
-
-      other ->
-        other
-    end)
-    |> then(fn
-      {:ok, %Attribute{} = attribute} when parent != nil ->
-        parent_value = get_value(parent)
+      {:ok, {%Attribute{} = attribute, value}} ->
         id_or_key = Entity.get_id_or_key(attribute.entity)
-        Record.set_attribute(id_or_key, attribute.attribute, parent_value)
+        Record.set_attribute(id_or_key, attribute.attribute, value)
 
       :error ->
         :error
@@ -293,7 +288,7 @@ defmodule Pythelix.Scripting.Store do
     end
   end
 
-  defp get_reference_parent!(%Reference{} = ref) do
+  def get_reference_parent!(%Reference{} = ref) do
     value = ref.value
 
     case :ets.lookup(@reference_table, value) do
@@ -302,30 +297,32 @@ defmodule Pythelix.Scripting.Store do
     end
   end
 
-  defp get_reference_parent!(_ref), do: nil
+  def get_reference_parent!(_ref), do: nil
 
-  defp get_reference_ancestor!(ref, seen \\ MapSet.new(), parent \\ nil)
+  def get_reference_ancestor!(ref, seen \\ MapSet.new())
 
-  defp get_reference_ancestor!(%Reference{} = ref, seen, parent) do
+  def get_reference_ancestor!(%Reference{} = ref, seen) do
     if MapSet.member?(seen, ref.value) do
-      {parent, :loop}
+      {:loop, nil}
     else
       seen = MapSet.put(seen, ref.value)
 
-      case get_reference_parent!(ref) do
-        %Reference{} = grand_parent ->
-          get_reference_ancestor!(grand_parent, seen, ref)
+      grand_parent = get_reference_parent!(ref)
 
-        nil
-          {parent, ref}
+      case grand_parent do
+        %Attribute{} = attribute ->
+          {attribute, get_value(ref)}
 
-        other ->
-          {ref, other}
+        %Reference{} ->
+          get_reference_ancestor!(grand_parent, seen)
+
+        nil ->
+          {nil, nil}
       end
     end
   end
 
-  defp get_reference_ancestor!(_ref, _seen, parent), do: {parent, nil}
+  def get_reference_ancestor!(_ref, _seen), do: {nil, nil}
 
   defp get_reference_value!(%Reference{} = ref) do
     value = ref.value
@@ -334,6 +331,11 @@ defmodule Pythelix.Scripting.Store do
       [{^value, value, _owner, _parent}] -> value
       _ -> raise inspect(ref)
     end
+  end
+
+  defp reference_to_value(%SubEntity {} = sub_entity, references) do
+    {data, references} = reference_to_value(sub_entity.data, references)
+    {%{sub_entity | data: data}, references}
   end
 
   defp reference_to_value(%Reference{} = value, references) do
@@ -375,4 +377,79 @@ defmodule Pythelix.Scripting.Store do
     ChildReferences.children(value)
     |> Enum.each(& update_reference_parent(&1, ref))
   end
+
+  defp generate_new_reference(%Reference{} = ref, owner, parent) do
+    ref = ref.value
+
+    case :ets.lookup(@reference_table, ref) do
+      [{^ref, _value, _owner, old_parent}] when parent == old_parent ->
+        :already
+
+      [{^ref, value, _owner, _parent}] ->
+        :ets.insert(@reference_table, {ref, value, owner, parent})
+        :ok
+
+      _ ->
+        :error
+    end
+  end
+
+  defp generate_new_reference(value, owner, parent) do
+    ref = %Reference{value: generate_unique_uuid(@reference_table)}
+    :ets.insert(@reference_table, {ref.value, value, owner, parent})
+
+    case add_inner_references(value, owner, ref) do
+      {:replace, value} ->
+        :ets.insert(@reference_table, {ref.value, value, owner, parent})
+
+      _ ->
+        :ok
+    end
+
+    update_child_references(ref, value)
+    ref
+  end
+
+  defp add_inner_references(%SubEntity{} = sub_entity, owner, parent) do
+    dict = new_reference(sub_entity.data, owner, parent)
+
+    {:replace, %{sub_entity | data: dict}}
+  end
+
+  defp add_inner_references(%Dict{} = dict, owner, ref) do
+    new_dict =
+      Dict.items(dict)
+      |> Enum.reduce(Dict.new(), fn {key, value}, new_dict ->
+        key = new_reference(key, owner, ref)
+        value = new_reference(value, owner, ref)
+        Dict.put(new_dict, key, value)
+      end)
+
+    {:replace, new_dict}
+  end
+
+  defp add_inner_references(%MapSet{} = set, owner, ref) do
+    new_set =
+      MapSet.to_list(set)
+      |> Enum.reduce(MapSet.new(), fn value, new_set ->
+        value = new_reference(value, owner, ref)
+        MapSet.put(new_set, value)
+      end)
+
+    {:replace, new_set}
+  end
+
+  defp add_inner_references(list, owner, ref) when is_list(list) do
+    new_list =
+      list
+      |> Enum.reduce([], fn value, new_list ->
+        value = new_reference(value, owner, ref)
+        [value | new_list]
+      end)
+      |> Enum.reverse()
+
+    {:replace, new_list}
+  end
+
+  defp add_inner_references(_value, _owner, _parent), do: :noneed
 end

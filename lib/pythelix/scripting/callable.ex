@@ -71,6 +71,22 @@ defmodule Pythelix.Scripting.Callable do
     end
   end
 
+  def call(%Script{} = script, %Callable.SubMethod{} = method, args, kwargs) do
+    kwargs = (kwargs == nil && Dict.new()) || kwargs
+
+    case Callable.SubMethod.call(method, args, kwargs, owner: script.id) do
+      %Script{error: %Traceback{chain: chain} = traceback} = _script ->
+        %{traceback | chain: [{script, nil, nil} | chain]}
+        |> then(& {%{script | error: &1}, :none})
+
+      %Script{pause: :immediately, last_raw: raw} ->
+        {script, raw}
+
+      _script ->
+        {script, :none}
+    end
+  end
+
   def call(%Script{} = script, %Callable{} = callable, args, kwargs) do
     kwargs = (kwargs == nil && Dict.new()) || kwargs
     apply(callable.module, callable.name, find_arguments(script, callable, args, kwargs))

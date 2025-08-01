@@ -7,7 +7,7 @@ defmodule Pythelix.Scripting.Interpreter.Script do
   """
 
   alias Pythelix.Scripting.Callable
-  alias Pythelix.Scripting.Callable.Method
+  alias Pythelix.Scripting.Callable.{Method, SubMethod}
   alias Pythelix.Scripting.Format
   alias Pythelix.Scripting.Interpreter.{Debugger, Script, VM}
   alias Pythelix.Scripting.Object.Reference
@@ -206,6 +206,7 @@ defmodule Pythelix.Scripting.Interpreter.Script do
 
   def references?(value) when is_atom(value), do: false
   def references?(%Method{}), do: false
+  def references?(%SubMethod{}), do: false
   def references?(%Callable{}), do: false
   def references?(%Reference{}), do: false
   def references?(value) when is_number(value), do: false

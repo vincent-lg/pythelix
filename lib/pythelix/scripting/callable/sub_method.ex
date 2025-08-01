@@ -1,14 +1,16 @@
-defmodule Pythelix.Scripting.Callable.Method do
+defmodule Pythelix.Scripting.Callable.SubMethod do
   @doc """
-  Small wrapper around an entity and a method.
+  Small wrapper around an sub-entity method.
   """
 
   alias Pythelix.Record
+  alias Pythelix.Scripting.Object.Dict
 
-  defstruct [:entity, :name, :method]
+  defstruct [:entity, :sub, :name, :method]
 
   @type t() :: %{
           entity: binary() | integer(),
+          sub: Pythelix.SubEntity.t(),
           name: String.t(),
           method: Pythelix.Method.t()
         }
@@ -24,6 +26,13 @@ defmodule Pythelix.Scripting.Callable.Method do
 
     name = "#{key}, method #{method.name}"
 
+    kwargs =
+      case kwargs do
+        %Dict{} -> kwargs
+        map when is_map(map) -> Dict.new(map)
+        nil -> Dict.new()
+      end
+      |> then(& Dict.put(&1, "self", method.sub))
     Pythelix.Method.call(method.method, args, kwargs, name, opts)
   end
 end

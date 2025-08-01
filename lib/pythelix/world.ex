@@ -100,6 +100,7 @@ defmodule Pythelix.World do
     {:ok,
       entities
       |> add_sub_entity()
+      |> add_client_controls()
       |> add_motd_menu_entity()
       |> add_game_menu_entity()
       |> add_base_menu_entity()
@@ -115,6 +116,38 @@ defmodule Pythelix.World do
         key: "SubEntity",
         attributes: %{},
         methods: %{},
+      } | entities
+    ]
+  end
+
+  defp add_client_controls(entities) do
+    [
+      %{
+        key: "Controls",
+        parent: "SubEntity",
+        attributes: %{},
+        methods: %{
+          "__init__" => {
+            [
+              {"self", keyword: "self"}
+            ],
+            "self.__controls = set()"
+          },
+          "add" => {
+            [
+              {"self", keyword: "self"},
+              {"entity", index: 0, type: :entity}
+            ],
+            "self.__controls.add(entity.id or entity.key)"
+          },
+          "remove" => {
+            [
+              {"self", keyword: "self"},
+              {"entity", index: 0, type: :entity}
+            ],
+            "self.__controls.discard(entity.id or entity.key)"
+          },
+        },
       } | entities
     ]
   end

@@ -129,7 +129,7 @@ defmodule Pythelix.Scripting.Namespace.Entity do
   end
 
   def setattr(script, self, name, to_ref) do
-    to_value = Store.get_value(to_ref)
+    to_value = Store.get_value(to_ref, recursive: false)
     entity = Store.get_value(self)
 
     case Record.get_attribute(entity, name) do
