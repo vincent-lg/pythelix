@@ -85,10 +85,9 @@ defmodule Pythelix.Scripting.Interpreter.VM.Op do
     {script, {_, to_set}} = Script.get_stack(script, :reference)
 
     namespace = Namespace.locate(value)
-    {script, result} = namespace.setattr(script, self, name, to_set)
+    {script, _result} = namespace.setattr(script, self, name, to_set)
 
     script
-    |> Script.put_stack(result)
   end
 
   def builtin(script, name) do

@@ -7,6 +7,16 @@ defmodule Pythelix.World.File do
 
   def parse_file(path) do
     File.stream!(path)
+    |> parse(path)
+  end
+
+  def parse_string(text) do
+    String.split(text, "\n")
+    |> parse("<string>")
+  end
+
+  defp parse(lines, path) do
+    lines
     |> Enum.map(fn string ->
       string
       |> String.replace_trailing("\r\n", "\n")

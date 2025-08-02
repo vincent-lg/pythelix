@@ -43,16 +43,20 @@ defmodule Pythelix.World do
   end
 
   def apply(worldlet) do
-    if File.exists?(worldlet) do
+    if worldlet == :static or File.exists?(worldlet) do
       case process_worldlets(worldlet) do
         :error ->
           :error
 
         entities ->
           worldlet =
-            case :os.type() do
-              {:win32, _} -> String.replace(worldlet, "/", "\\")
-              _ -> worldlet
+            if worldlet == :static do
+              "static"
+            else
+              case :os.type() do
+                {:win32, _} -> String.replace(worldlet, "/", "\\")
+                _ -> worldlet
+              end
             end
 
           {:ok, worldlet, length(entities)}
@@ -67,6 +71,9 @@ defmodule Pythelix.World do
       cond do
         path == nil ->
           Path.wildcard("#{@worldlet_dir}/**/#{@worldlet_pattern}")
+
+        path == :static ->
+          []
 
         File.dir?(path) ->
           Path.wildcard("#{path}/**/#{@worldlet_pattern}")

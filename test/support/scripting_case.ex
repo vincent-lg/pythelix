@@ -1,6 +1,8 @@
 defmodule Pythelix.ScriptingCase do
   use ExUnit.CaseTemplate
 
+  alias Pythelix.Scripting
+
   using do
     quote do
       import Pythelix.ScriptingCase
@@ -57,6 +59,17 @@ defmodule Pythelix.ScriptingCase do
   @spec exec_fail(binary()) :: term()
   def exec_fail(code) do
     assert {:error, _} = Pythelix.Scripting.Parser.exec(code)
+  end
+
+  @doc """
+  Executes a scriptt that should not fail.
+  """
+  def run_ok(code, opts \\ []) do
+    script = Scripting.run(code, opts)
+    assert script.error == nil
+    assert script.stack == []
+
+    script
   end
 
   @doc """

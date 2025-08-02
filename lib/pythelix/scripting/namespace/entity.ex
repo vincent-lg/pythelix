@@ -65,7 +65,7 @@ defmodule Pythelix.Scripting.Namespace.Entity do
     entity = Store.get_value(self)
 
     entity
-    |> get_attribute(name, script)
+    |> get_attribute(name, script, self)
     |> maybe_get_method(entity, name)
   end
 
@@ -151,7 +151,7 @@ defmodule Pythelix.Scripting.Namespace.Entity do
     end
   end
 
-  defp get_attribute(entity, name, script) do
+  defp get_attribute(entity, name, script, self) do
     id_or_key = Entity.get_id_or_key(entity)
 
     case Store.get_bound_entity_attribute(entity, name) do
@@ -169,8 +169,9 @@ defmodule Pythelix.Scripting.Namespace.Entity do
             apply(namespace, name, [script, entity])
 
           value ->
-            Store.bind_entity_attribute(value, entity, name)
-            value
+            ref = Store.new_reference(value, script.id, self)
+            Store.bind_entity_attribute(ref, entity, name)
+            ref
         end
 
       reference ->
