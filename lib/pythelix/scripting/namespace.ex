@@ -83,27 +83,26 @@ defmodule Pythelix.Scripting.Namespace do
 
       @doc false
       def getattr(script, self, name) do
-        Map.get(attributes(), name)
-        |> case do
-          nil ->
-            method = Map.get(methods(), name)
+        cond do
+          attr = Map.get(attributes(), name) ->
+            apply(__MODULE__, attr, [script, self])
 
-            if method == nil do
-              module_name =
-                to_string(__MODULE__)
-                |> String.split(".")
-                |> Enum.at(-1)
-                |> String.downcase()
+          function = Map.get(functions(), name) ->
+            %Callable{module: __MODULE__, object: nil, name: function}
 
-              message = "'#{module_name}' doesn't have attribute '#{name}'"
+          method = Map.get(methods(), name) ->
+            %Callable{module: __MODULE__, object: self, name: method}
 
-              Script.raise(script, AttributeError, message)
-            else
-              %Callable{module: __MODULE__, object: self, name: method}
-            end
+          true ->
+            module_name =
+              to_string(__MODULE__)
+              |> String.split(".")
+              |> Enum.at(-1)
+              |> String.downcase()
 
-          attribute ->
-            apply(__MODULE__, attribute, [script, self])
+            message = "'#{module_name}' doesn't have attribute '#{name}'"
+
+            Script.raise(script, AttributeError, message)
         end
       end
 
