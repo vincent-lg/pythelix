@@ -6,6 +6,7 @@ defmodule Pythelix.Command.Hub do
   alias Pythelix.Entity
   alias Pythelix.Method
   alias Pythelix.Record
+  alias Pythelix.Scripting
 
   def start_link(_) do
     GenServer.start_link(__MODULE__, nil, name: {:global, __MODULE__})
@@ -77,12 +78,19 @@ defmodule Pythelix.Command.Hub do
 
     Record.set_attribute(key, "client_id", state.client_id)
     Record.set_attribute(key, "pid", from_pid)
+    {:ok, controls} = Scripting.eval("Controls()")
+    Record.set_attribute(key, "controls", controls)
+
     {:ok, state} =
       start_executor(Pythelix.Menu.Connector, state.executor_id, {key}, {:connect, key}, state)
 
-    #send(self(), {:"$gen_cast", {:full, client_id}})
-
     {:reply, client_id, %{state | client_id: state.client_id + 1}}
+  end
+
+  def handle_cast({:disconnect, client_id}, state) do
+    key = "client/#{client_id}"
+    Record.delete_entity(key)
+    {:noreply, state}
   end
 
   def handle_cast({:command, _id, _start, _command} = command, state) do

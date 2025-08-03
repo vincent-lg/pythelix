@@ -3,12 +3,22 @@ defmodule Pythelix.Scripting.Namespace.Entity do
   Defines the namespace specific to an entity stored in the database.
   """
 
+  use Pythelix.Scripting.Namespace
+
   alias Pythelix.Entity
   alias Pythelix.Record
   alias Pythelix.Scripting.Callable
   alias Pythelix.Scripting.Interpreter.Script
   alias Pythelix.Scripting.Object.Reference
   alias Pythelix.Scripting.Store
+
+  defmet __repr__(script, namespace), [] do
+    repr(script, namespace.self)
+  end
+
+  defmet __str__(script, namespace), [] do
+    repr(script, namespace.self)
+  end
 
   @doc """
   Gets an attribute or method from an entity.
@@ -193,4 +203,9 @@ defmodule Pythelix.Scripting.Namespace.Entity do
   end
 
   defp maybe_get_method(other, _entity, _name), do: other
+
+  defp repr(script, self) do
+    Store.get_value(self)
+    |> then(& {script, inspect(&1)})
+  end
 end

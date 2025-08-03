@@ -32,6 +32,7 @@ defmodule Pythelix.Network.TCP.Client do
 
   def handle_info({:tcp_closed, _socket}, {socket_state, client_id, messages}) do
     Logger.debug("Disconnection of #{client_id}")
+    GenServer.cast({:global, Pythelix.Command.Hub}, {:disconnect, client_id})
     {:stop, :normal, {socket_state, client_id, messages}}
   end
 
@@ -62,9 +63,8 @@ defmodule Pythelix.Network.TCP.Client do
       |> then(& (!String.ends_with?(&1, "\n") && &1 <> "\n") || &1)
       |> String.replace("\n", "\r\n")
 
-    Logger.debug("Asked disconnection of #{client_id}")
     :gen_tcp.send(socket, text)
-    :gen_tcp.close(socket)
+    :gen_tcp.shutdown(socket, :write)
     {:noreply, {socket, client_id, :queue.new()}}
   end
 

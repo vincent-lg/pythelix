@@ -17,6 +17,7 @@ defmodule Pythelix.Scripting.Namespace.SubEntity do
   defmet __str__(script, namespace), [] do
     repr(script, namespace.self)
   end
+
   @doc """
   Gets an attribute or method from a sub entity.
   """
