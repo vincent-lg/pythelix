@@ -348,7 +348,7 @@ defmodule Pythelix.Scripting.Interpreter.AST do
     |> replace({:unset, after_ref}, fn _code -> false end)
   end
 
-  defp read_ast(code, {:if, condition, then, nil, {line, _}}) do
+  defp read_ast(code, {:if, condition, then, [], nil, {line, _}}) do
     end_block = make_ref()
 
     code
@@ -359,7 +359,7 @@ defmodule Pythelix.Scripting.Interpreter.AST do
     |> replace({:unset, end_block}, fn code -> {:popiffalse, length_code(code)} end)
   end
 
-  defp read_ast(code, {:if, condition, then, otherwise, {line, _}}) do
+  defp read_ast(code, {:if, condition, then, [], otherwise, {line, _}}) do
     else_block = make_ref()
     end_block = make_ref()
 
@@ -372,6 +372,12 @@ defmodule Pythelix.Scripting.Interpreter.AST do
     |> replace({:unset, else_block}, fn code -> {:popiffalse, length_code(code)} end)
     |> read_asts(otherwise)
     |> replace({:unset, end_block}, fn code -> {:goto, length_code(code)} end)
+  end
+
+  defp read_ast(code, {:if, condition, then, elifs, otherwise, {line, _}}) do
+    code
+    |> add({:line, line})
+    |> compile_if_elif_chain(condition, then, elifs, otherwise)
   end
 
   defp read_ast(code, {:while, condition, block, {line, _}}) do
@@ -513,5 +519,44 @@ defmodule Pythelix.Scripting.Interpreter.AST do
       end,
       code
     )
+  end
+
+  defp compile_if_elif_chain(code, condition, then, elifs, otherwise) do
+    next_block = make_ref()
+    end_block = make_ref()
+
+    code =
+      code
+      |> read_ast(condition)
+      |> add({:unset, next_block})
+      |> read_asts(then)
+      |> add({:unset, end_block})
+      |> replace({:unset, next_block}, fn code -> {:popiffalse, length_code(code)} end)
+
+    code = compile_elifs(code, elifs, end_block)
+
+    code =
+      case otherwise do
+        nil -> code
+        _ -> read_asts(code, otherwise)
+      end
+
+    replace(code, {:unset, end_block}, fn code -> {:goto, length_code(code)} end)
+  end
+
+  defp compile_elifs(code, [], _end_block), do: code
+
+  defp compile_elifs(code, [{condition, then} | rest], end_block) do
+    next_block = make_ref()
+
+    code =
+      code
+      |> read_ast(condition)
+      |> add({:unset, next_block})
+      |> read_asts(then)
+      |> add({:unset, end_block})
+      |> replace({:unset, next_block}, fn code -> {:popiffalse, length_code(code)} end)
+
+    compile_elifs(code, rest, end_block)
   end
 end

@@ -16,6 +16,7 @@ defmodule Pythelix.Scripting.Parser.Statement do
   equal = string("=") |> label("=") |> replace(:=) |> isolate(check: false)
   colon = ascii_char([?:]) |> label(":") |> replace(:":") |> isolate(check: false)
   if_kw = string("if") |> label("if") |> replace(:if) |> isolate(space: true)
+  elif_kw = string("elif") |> label("elif") |> replace(:elif) |> isolate(space: true)
   else_kw = string("else") |> label("else") |> replace(:else) |> isolate()
   while_kw = string("while") |> label("while") |> replace(:while) |> isolate(space: true)
   endif = string("endif") |> label("endif") |> replace(:endif) |> isolate()
@@ -49,6 +50,14 @@ defmodule Pythelix.Scripting.Parser.Statement do
     {opeq, names, value, {line, offset}}
   end
 
+  elif_branch =
+    ignore(elif_kw)
+    |> parsec({Pythelix.Scripting.Parser.Expression, :expr})
+    |> ignore(colon)
+    |> ignore(newline)
+    |> parsec(:statement_list)
+    |> tag(:elif)
+
   if_stmt =
     if_kw
     |> line()
@@ -56,6 +65,7 @@ defmodule Pythelix.Scripting.Parser.Statement do
     |> ignore(colon)
     |> ignore(newline)
     |> parsec(:statement_list)
+    |> repeat(elif_branch)
     |> optional(
       ignore(else_kw)
       |> ignore(colon)
@@ -66,17 +76,32 @@ defmodule Pythelix.Scripting.Parser.Statement do
     |> reduce(:reduce_if)
 
   def reduce_if([{[:if], {line, offset}}, condition, {:stmt_list, then}, :endif]) do
-    {:if, condition, then, nil, {line, offset}}
+    {:if, condition, then, [], nil, {line, offset}}
   end
 
-  def reduce_if([
-        {[:if], {line, offset}},
-        condition,
-        {:stmt_list, then},
-        {:stmt_list, otherwise},
-        :endif
-      ]) do
-    {:if, condition, then, otherwise, {line, offset}}
+  def reduce_if([{[:if], {line, offset}}, condition, {:stmt_list, then}, {:stmt_list, otherwise}, :endif]) do
+    {:if, condition, then, [], otherwise, {line, offset}}
+  end
+
+  def reduce_if([{[:if], {line, offset}}, condition, {:stmt_list, then} | rest]) do
+    {elifs, otherwise} = extract_elifs_and_else(rest)
+    {:if, condition, then, elifs, otherwise, {line, offset}}
+  end
+
+  defp extract_elifs_and_else(ast) do
+    extract_elifs_and_else(ast, [], nil)
+  end
+
+  defp extract_elifs_and_else([:endif], elifs, otherwise) do
+    {Enum.reverse(elifs), otherwise}
+  end
+
+  defp extract_elifs_and_else([{:elif, [condition, {:stmt_list, then}]} | rest], elifs, otherwise) do
+    extract_elifs_and_else(rest, [{condition, then} | elifs], otherwise)
+  end
+
+  defp extract_elifs_and_else([{:stmt_list, otherwise}, :endif], elifs, _) do
+    {Enum.reverse(elifs), otherwise}
   end
 
   while_stmt =
