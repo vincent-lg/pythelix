@@ -3,6 +3,8 @@ defmodule Pythelix.Scripting.Interpreter.AST.Utils do
   Utility functions for AST processing.
   """
 
+  alias Pythelix.Scripting.Interpreter.AST
+
   def length_code(code) do
     :queue.len(code)
   end
@@ -31,7 +33,7 @@ defmodule Pythelix.Scripting.Interpreter.AST.Utils do
 
   def read_asts(code, asts) do
     Enum.reduce(asts, code, fn ast, code ->
-      Pythelix.Scripting.Interpreter.AST.Core.read_ast(code, ast)
+      AST.Core.read_ast(code, ast)
     end)
   end
 
@@ -43,7 +45,7 @@ defmodule Pythelix.Scripting.Interpreter.AST.Utils do
         code
         |> add({:getattr, "__getitem__"})
         |> add({:dict, :no_reference})
-        |> Pythelix.Scripting.Interpreter.AST.Core.read_ast(item)
+        |> AST.Core.read_ast(item)
         |> add({:call, 1})
       end)
     end)
@@ -63,7 +65,7 @@ defmodule Pythelix.Scripting.Interpreter.AST.Utils do
     code =
       Enum.reduce(kwargs, code, fn {key, value}, code ->
         code
-        |> Pythelix.Scripting.Interpreter.AST.Core.read_ast(value)
+        |> AST.Core.read_ast(value)
         |> add({:put_dict, {key, :no_reference}})
       end)
 

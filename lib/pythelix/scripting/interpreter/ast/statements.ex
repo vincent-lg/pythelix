@@ -4,6 +4,7 @@ defmodule Pythelix.Scripting.Interpreter.AST.Statements do
   """
 
   alias Pythelix.Scripting.Interpreter.AST.Utils
+  alias Pythelix.Scripting.Interpreter.AST
   import Utils, only: [add: 2, replace: 3, length_code: 1, read_asts: 2]
 
   def read_ast(code, {:if, condition, then, [], nil, {line, _}}) do
@@ -11,7 +12,7 @@ defmodule Pythelix.Scripting.Interpreter.AST.Statements do
 
     code
     |> add({:line, line})
-    |> Pythelix.Scripting.Interpreter.AST.Core.read_ast(condition)
+    |> AST.Core.read_ast(condition)
     |> add({:unset, end_block})
     |> read_asts(then)
     |> replace({:unset, end_block}, fn code -> {:popiffalse, length_code(code)} end)
@@ -23,7 +24,7 @@ defmodule Pythelix.Scripting.Interpreter.AST.Statements do
 
     code
     |> add({:line, line})
-    |> Pythelix.Scripting.Interpreter.AST.Core.read_ast(condition)
+    |> AST.Core.read_ast(condition)
     |> add({:unset, else_block})
     |> read_asts(then)
     |> add({:unset, end_block})
@@ -44,7 +45,7 @@ defmodule Pythelix.Scripting.Interpreter.AST.Statements do
 
     code
     |> add({:line, line})
-    |> Pythelix.Scripting.Interpreter.AST.Core.read_ast(condition)
+    |> AST.Core.read_ast(condition)
     |> add({:unset, end_block})
     |> read_asts(block)
     |> add({:goto, before})
@@ -55,7 +56,7 @@ defmodule Pythelix.Scripting.Interpreter.AST.Statements do
     code =
       code
       |> add({:line, line})
-      |> Pythelix.Scripting.Interpreter.AST.Core.read_ast(iterate)
+      |> AST.Core.read_ast(iterate)
       |> add({:mkiter, nil})
 
     before = length_code(code)
@@ -74,7 +75,7 @@ defmodule Pythelix.Scripting.Interpreter.AST.Statements do
     |> add({:line, line})
     |> then(fn code ->
       Enum.reduce(values, code, fn value, code ->
-        Pythelix.Scripting.Interpreter.AST.Core.read_ast(code, value)
+        AST.Core.read_ast(code, value)
       end)
     end)
     |> add({:wait, nil})
@@ -84,7 +85,7 @@ defmodule Pythelix.Scripting.Interpreter.AST.Statements do
     code
     |> then(fn code ->
       Enum.reduce(values, code, fn value, code ->
-        Pythelix.Scripting.Interpreter.AST.Core.read_ast(code, value)
+        AST.Core.read_ast(code, value)
       end)
     end)
     |> add({:wait, nil})
@@ -95,7 +96,7 @@ defmodule Pythelix.Scripting.Interpreter.AST.Statements do
     |> add({:line, line})
     |> then(fn code ->
       Enum.reduce(values, code, fn value, code ->
-        Pythelix.Scripting.Interpreter.AST.Core.read_ast(code, value)
+        AST.Core.read_ast(code, value)
       end)
     end)
     |> add({:return, nil})
@@ -105,7 +106,7 @@ defmodule Pythelix.Scripting.Interpreter.AST.Statements do
     code
     |> then(fn code ->
       Enum.reduce(values, code, fn value, code ->
-        Pythelix.Scripting.Interpreter.AST.Core.read_ast(code, value)
+        AST.Core.read_ast(code, value)
       end)
     end)
     |> add({:return, nil})
@@ -114,19 +115,19 @@ defmodule Pythelix.Scripting.Interpreter.AST.Statements do
   def read_ast(code, {:raw, expr, {line, _}}) do
     code
     |> add({:line, line})
-    |> Pythelix.Scripting.Interpreter.AST.Core.read_ast(expr)
+    |> AST.Core.read_ast(expr)
     |> add({:raw, nil})
   end
 
   def read_ast(code, {:raw, expr}) do
     code
-    |> Pythelix.Scripting.Interpreter.AST.Core.read_ast(expr)
+    |> AST.Core.read_ast(expr)
     |> add({:raw, nil})
   end
 
   def read_ast(code, {:stmt_list, statements}) when is_list(statements) do
     Enum.reduce(statements, code, fn statement, code ->
-      Pythelix.Scripting.Interpreter.AST.Core.read_ast(code, statement)
+      AST.Core.read_ast(code, statement)
     end)
   end
 
@@ -136,7 +137,7 @@ defmodule Pythelix.Scripting.Interpreter.AST.Statements do
 
     code =
       code
-      |> Pythelix.Scripting.Interpreter.AST.Core.read_ast(condition)
+      |> AST.Core.read_ast(condition)
       |> add({:unset, next_block})
       |> read_asts(then)
       |> add({:unset, end_block})
@@ -160,7 +161,7 @@ defmodule Pythelix.Scripting.Interpreter.AST.Statements do
 
     code =
       code
-      |> Pythelix.Scripting.Interpreter.AST.Core.read_ast(condition)
+      |> AST.Core.read_ast(condition)
       |> add({:unset, next_block})
       |> read_asts(then)
       |> add({:unset, end_block})
