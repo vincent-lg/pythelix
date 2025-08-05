@@ -45,6 +45,11 @@ defmodule Pythelix.Scripting.VariableTest do
     assert script.variables == %{"calcul" => 5.0}
   end
 
+  test "assign a power to a variable" do
+    script = run("calcul = 5 ** 2")
+    assert script.variables == %{"calcul" => 25}
+  end
+
   test "check operator precedence with * on the right" do
     script = run("calcul = 3 + 4 * 5")
     assert script.variables == %{"calcul" => 23}
@@ -63,6 +68,21 @@ defmodule Pythelix.Scripting.VariableTest do
   test "check that parenthesis have higher priority than mul on the left" do
     script = run("calcul = 3 * (4 + 5)")
     assert script.variables == %{"calcul" => 27}
+  end
+
+  test "check operator precedence with ** on the right" do
+    script = run("calcul = 2 * 3 ** 2")
+    assert script.variables == %{"calcul" => 18}
+  end
+
+  test "check operator precedence with ** on the left" do
+    script = run("calcul = 2 ** 3 * 4")
+    assert script.variables == %{"calcul" => 32}
+  end
+
+  test "check ** right associativity" do
+    script = run("calcul = 5 ** 2 ** 3")
+    assert script.variables == %{"calcul" => 390625}
   end
 
   test "check that operator < returns a bool" do

@@ -10,7 +10,8 @@ defmodule Pythelix.Scripting.Parser.Expression do
     <term2>      ::= <term3> {<ord_op> <term3>}
     <term3>  ::= <term4> {<or> <term4>}
     <term4>   ::= <term5> {<and> <term5>}
-    <term5> ::= <not> <term5> | <nested>
+    <term5> ::= <not> <term5> | <term_pow>
+    <term_pow> ::= <nested> {"**" <term_pow>}
     <ord_op>    ::= > | >= | < | <=
     <eq_op>     ::= != | ==
     <or>     ::= '||'
@@ -34,6 +35,14 @@ defmodule Pythelix.Scripting.Parser.Expression do
       [l], [] -> l
       [r, op], l -> {op, [l, r]}
     end)
+  end
+
+  defp fold_infixr([first | rest]) do
+    case rest do
+      [] -> first
+      [op, right | remaining] ->
+        {op, [first, fold_infixr([right | remaining])]}
+    end
   end
 
   value_list =
@@ -170,12 +179,22 @@ defmodule Pythelix.Scripting.Parser.Expression do
 
   defcombinatorp(
     :term_mul,
-    parsec(:nested)
+    parsec(:term_pow)
     |> repeat(
       choice([mul(), div()])
-      |> parsec(:nested)
+      |> parsec(:term_pow)
     )
     |> reduce(:fold_infixl)
+  )
+
+  defcombinatorp(
+    :term_pow,
+    parsec(:nested)
+    |> repeat(
+      pow()
+      |> parsec(:term_pow)
+    )
+    |> reduce(:fold_infixr)
   )
 
   defparsecp(

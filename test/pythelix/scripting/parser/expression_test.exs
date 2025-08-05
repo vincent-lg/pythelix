@@ -25,6 +25,11 @@ defmodule Pythelix.Scripting.Parser.ExpressionTest do
     assert ast == {:/, [10, 2]}
   end
 
+  test "test power numbers" do
+    ast = eval_ok("5 ** 2")
+    assert ast == {:**, [5, 2]}
+  end
+
   test "test add numbers and variables" do
     ast = eval_ok("5 + variable")
     assert ast == {:+, [5, {:var, "variable"}]}
@@ -45,6 +50,11 @@ defmodule Pythelix.Scripting.Parser.ExpressionTest do
     assert ast == {:/, [{:var, "a_bc"}, 2]}
   end
 
+  test "test power numbers and variables" do
+    ast = eval_ok("variable ** 3")
+    assert ast == {:**, [{:var, "variable"}, 3]}
+  end
+
   test "* has more precedence than +, left" do
     ast = eval_ok("1 + 2 * 3")
     assert ast == {:+, [1, {:*, [2, 3]}]}
@@ -53,6 +63,21 @@ defmodule Pythelix.Scripting.Parser.ExpressionTest do
   test "* has more precedence than +, right" do
     ast = eval_ok("1 * 2 + 3")
     assert ast == {:+, [{:*, [1, 2]}, 3]}
+  end
+
+  test "** has more precedence than *, left" do
+    ast = eval_ok("2 * 3 ** 2")
+    assert ast == {:*, [2, {:**, [3, 2]}]}
+  end
+
+  test "** has more precedence than *, right" do
+    ast = eval_ok("2 ** 3 * 4")
+    assert ast == {:*, [{:**, [2, 3]}, 4]}
+  end
+
+  test "** is right associative" do
+    ast = eval_ok("2 ** 3 ** 2")
+    assert ast == {:**, [2, {:**, [3, 2]}]}
   end
 
   test "compare lower than a number with addition" do

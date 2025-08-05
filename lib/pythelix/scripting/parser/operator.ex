@@ -34,6 +34,13 @@ defmodule Pythelix.Scripting.Parser.Operator do
     |> isolate(check: false)
   end
 
+  def pow do
+    string("**")
+    |> replace(:**)
+    |> label("**")
+    |> isolate(check: false)
+  end
+
   def lparen do
     ascii_char([?(])
     |> label("(")

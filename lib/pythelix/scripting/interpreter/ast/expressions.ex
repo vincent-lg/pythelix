@@ -7,7 +7,7 @@ defmodule Pythelix.Scripting.Interpreter.AST.Expressions do
   alias Pythelix.Scripting.Interpreter.AST
   import Utils, only: [add: 2, replace: 3, length_code: 1]
 
-  def read_ast(code, {op, [left, right]}) when op in [:+, :-, :*, :/] do
+  def read_ast(code, {op, [left, right]}) when op in [:+, :-, :*, :/, :**] do
     code
     |> AST.Core.read_ast(left)
     |> AST.Core.read_ast(right)
