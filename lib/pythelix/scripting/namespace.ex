@@ -319,6 +319,8 @@ defmodule Pythelix.Scripting.Namespace do
   defp check_arg_type(value, :str) when is_binary(value), do: value
   defp check_arg_type( value, :int) when is_integer(value), do: value
   defp check_arg_type(value, :float) when is_float(value), do: value
+  defp check_arg_type(true, :bool), do: true
+  defp check_arg_type(false, :bool), do: false
   defp check_arg_type(value, :list) when is_list(value), do: value
   defp check_arg_type(%MapSet{} = value, :set), do: value
   defp check_arg_type(%Dict{} = value, :dict), do: value
