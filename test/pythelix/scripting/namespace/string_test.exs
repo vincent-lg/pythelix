@@ -137,6 +137,24 @@ defmodule Pythelix.Scripting.Namespace.StringTest do
 
       assert Script.get_variable_value(script, "s") == "éééhééé"
     end
+
+    test "center returns original string when longer than width" do
+      script =
+        run("""
+        s = "hello world".center(5)
+        """)
+
+      assert Script.get_variable_value(script, "s") == "hello world"
+    end
+
+    test "center returns original string when equal to width" do
+      script =
+        run("""
+        s = "hello".center(5)
+        """)
+
+      assert Script.get_variable_value(script, "s") == "hello"
+    end
   end
 
   describe "ljust" do

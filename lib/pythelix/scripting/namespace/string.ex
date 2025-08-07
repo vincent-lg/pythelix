@@ -94,7 +94,7 @@ defmodule Pythelix.Scripting.Namespace.String do
     adjust(string, width, fill_char, dir, String.length(string))
   end
 
-  defp adjust(string, width, _fill, :left, cur) when cur >= width, do: string
+  defp adjust(string, width, _fill, _dir, cur) when cur >= width, do: string
 
   defp adjust(string, width, fill, :right, cur) do
     String.duplicate(fill, width - cur) <> string
