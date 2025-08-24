@@ -1,0 +1,102 @@
+defmodule Pythelix.Game.Hub do
+  @moduledoc """
+  The game HUB, responsible for queueing tasks (all inputs)
+  and exeucing them one at a time.
+  """
+  @behaviour :gen_statem
+  def callback_mode, do: [:state_functions, :state_enter]
+
+  # Public API
+  def start_link(opts \\ []) do
+    name = Keyword.get(opts, :name, __MODULE__)
+    :gen_statem.start_link({:local, name}, __MODULE__, opts, [])
+  end
+
+  def child_spec(opts) do
+    %{
+      id: __MODULE__,
+      start: {__MODULE__, :start_link, [opts]},
+      type: :worker,
+      restart: :permanent,
+      shutdown: 500
+    }
+  end
+
+  @doc """
+  Submit a job in the task queue.
+
+  The job can either be:
+    A 0-arity function
+    A module (its `:execute` function will be called).
+    A tuple ({M, F, A}).
+  """
+  def run(job, server \\ __MODULE__), do: :gen_statem.cast(server, {:run, job})
+
+  # Init
+  def init(opts) do
+    {:ok, :idle, %{
+      job_pid: nil,
+      mon_ref: nil,
+      ticket: nil,
+      max_ms: Keyword.get(opts, :max_ms, 2_000)
+    }}
+  end
+
+  # IDLE state
+  def idle(:cast, {:run, job}, data) do
+    ticket = make_ref()
+    server = self()
+
+    {:ok, pid} =
+      Task.Supervisor.start_child(Pythelix.Game.TaskSupervisor, fn ->
+        result = run_job(job)            # your MFA/fun wrapper
+        send(server, {:job_ok, ticket, result})
+      end)
+
+    mon = Process.monitor(pid)
+
+    actions =
+      case data.max_ms do
+        :infinity -> []
+        ms when is_integer(ms) -> [{:state_timeout, ms, :job_timed_out}]
+      end
+
+    {:next_state, :busy, %{data | job_pid: pid, mon_ref: mon, ticket: ticket}, actions}
+  end
+
+  def idle(_type, _event, data), do: {:keep_state, data}
+
+  # BUSY state
+  def busy(:cast, {:run, _job}, _data), do: {:keep_state_and_data, [:postpone]}
+
+  def busy(:info, {:job_ok, ticket, _result}, %{ticket: ticket, mon_ref: mon} = data) do
+    Process.demonitor(mon, [:flush])
+    {:next_state, :idle, %{data | job_pid: nil, mon_ref: nil, ticket: nil}}
+  end
+
+  # Anything else (crash, kill, or "no ok sent"): rely on :DOWN to recover
+  def busy(:info, {:DOWN, mon, :process, _pid, _reason}, %{mon_ref: mon} = data) do
+    {:next_state, :idle, %{data | job_pid: nil, mon_ref: nil, ticket: nil}}
+  end
+
+  def busy(:state_timeout, :job_timed_out, %{job_pid: pid}) do
+    if is_pid(pid) and Process.alive?(pid), do: Process.exit(pid, :kill)
+    {:keep_state_and_data, []}
+  end
+
+  def busy(_type, _event, data), do: {:keep_state, data}
+
+  defp run_job(fun) when is_function(fun, 0), do: fun.()
+
+  defp run_job(m) when is_atom(m) do
+    apply(m, :execute, [])
+  end
+
+  defp run_job({m, f, a}) when is_atom(m) and is_atom(f) and is_list(a) do
+    apply(m, f, a)
+  end
+
+  defp run_job(arg) do
+    raise "invalid task: #{inspect(arg)}"
+  end
+end

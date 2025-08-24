@@ -17,7 +17,7 @@ defmodule Pythelix.Scripting do
   Abstract Syntax Tree (AST), turn the AST into bytecode and
   execute this bytecode, returning the executed script.
   """
-  @spec run(binary()) :: {:ok, Interpreter.Script.t()} | {:error, term()}
+  @spec run(binary(), List.t()) :: {:ok, Interpreter.Script.t()} | {:error, term()}
   def run(code, opts \\ []) do
     debug = Keyword.get(opts, :debug, false)
     call = Keyword.get(opts, :call, true)

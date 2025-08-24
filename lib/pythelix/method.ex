@@ -99,7 +99,7 @@ defmodule Pythelix.Method do
     end
   end
 
-  def fetch_script(%Pythelix.Method{bytecode: bytecode}, opts) do
+  def fetch_script(%Pythelix.Method{bytecode: bytecode}, opts \\ []) do
     %Script{id: (opts[:owner] || Store.new_script), bytecode: bytecode}
   end
 

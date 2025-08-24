@@ -60,6 +60,8 @@ defmodule Pythelix.Application do
       {DynamicSupervisor, strategy: :one_for_one, name: Pythelix.Network.TCP.ClientSupervisor},
       Pythelix.Network.TCP.Server,
       Pythelix.Command.Hub,
+      Pythelix.Game.Hub,
+      {Task.Supervisor, name: Pythelix.Game.TaskSupervisor},
       PythelixWeb.Telemetry,
       {Ecto.Migrator,
        repos: Application.fetch_env!(:pythelix, :ecto_repos), skip: skip_migrations?()},
