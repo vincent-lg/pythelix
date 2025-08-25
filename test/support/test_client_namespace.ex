@@ -1,11 +1,11 @@
-defmodule Pythelix.Scripting.Namespace.Extended.Client do
+defmodule Pythelix.Test.TestClientNamespace do
   @moduledoc """
-  Module containing the eextended methods for the client entity.
+  Test namespace for client that sends messages directly to test process
+  without going through the Command Hub system.
   """
 
   use Pythelix.Scripting.Namespace
 
-  alias Pythelix.Entity
   alias Pythelix.Record
   alias Pythelix.Scripting.Format
 
@@ -13,26 +13,25 @@ defmodule Pythelix.Scripting.Namespace.Extended.Client do
     {:text, index: 0, keyword: "text", type: :str}
   ] do
     client = Store.get_value(namespace.self)
-    client_id = Record.get_attribute(client, "client_id")
-    pid = Record.get_attribute(client, "pid")
 
-    # Notify game hub and send message directly to client
+    # Get the test process PID and send message directly
     text = Format.String.format(namespace.text)
-    Pythelix.Game.Hub.mark_client_with_message(client_id, text, pid)
+    test_pid = Record.get_attribute(client, "pid")
+    send(test_pid, {:message, text})
 
     {script, :none}
   end
 
   defmet disconnect(script, namespace), [] do
     client = Store.get_value(namespace.self)
-    Pythelix.Network.TCP.Client.disconnect(client)
+    test_pid = Record.get_attribute(client, "pid")
+    send(test_pid, :disconnect)
 
     {script, :none}
   end
 
   def owner(_script, self) do
     entity = Store.get_value(self)
-
     Record.get_attribute(entity, "__owner", :none)
   end
 
@@ -45,12 +44,12 @@ defmodule Pythelix.Scripting.Namespace.Extended.Client do
         Record.set_attribute(entity, "owner", nil)
         {script, :none}
 
-      %Entity{} ->
-        Record.set_attribute(Entity.get_id_or_key(entity), "__owner", owner)
+      %Pythelix.Entity{} ->
+        Record.set_attribute(Pythelix.Entity.get_id_or_key(entity), "__owner", owner)
         {script, :none}
 
       _ ->
-        {Script.raise(script, TypeError, "owner should be an entity"), :none}
+        {Pythelix.Scripting.Interpreter.Script.raise(script, TypeError, "owner should be an entity"), :none}
     end
   end
 end

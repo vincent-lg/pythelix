@@ -1,10 +1,14 @@
 defmodule Pythelix.Game.HubFastTest do
   use ExUnit.Case, async: true   # safe now: each test uses its own Hub instance
+
   @moduletag capture_log: true
 
   alias Pythelix.Game.Hub
 
-  setup do
+  setup tags do
+    Pythelix.DataCase.setup_sandbox(tags)
+    Pythelix.Scripting.Store.init()
+    Pythelix.Record.Cache.clear()
     srv = :"hub_test_#{System.unique_integer([:positive])}"
     {:ok, _pid} = start_supervised({Hub, name: srv, max_ms: 60})
     [srv: srv]

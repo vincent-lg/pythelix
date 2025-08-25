@@ -146,6 +146,7 @@ defmodule Pythelix.Scripting.Store do
 
   def get_value(other, _opts), do: other
 
+
   @doc """
   Return the list of script IDs.
   """
@@ -244,7 +245,13 @@ defmodule Pythelix.Scripting.Store do
   """
   @spec delete_script(String.t()) :: :ok
   def delete_script(ref) do
-    :ets.delete(@script_table, ref)
+    try do
+      :ets.delete(@script_table, ref)
+    catch
+      :error, :badarg ->
+        # Table doesn't exist, which is fine during cleanup
+        :ok
+    end
     :ok
   end
 
@@ -262,10 +269,15 @@ defmodule Pythelix.Scripting.Store do
   """
   @spec delete_by_owner(String.t()) :: {:ok, integer()}
   def delete_by_owner(owner) do
-    match_spec = [{{:"$1", :"$2", owner, :"$4"}, [], [true]}]
-    count = :ets.select_delete(@reference_table, match_spec)
-
-    {:ok, count}
+    try do
+      match_spec = [{{:"$1", :"$2", owner, :"$4"}, [], [true]}]
+      count = :ets.select_delete(@reference_table, match_spec)
+      {:ok, count}
+    catch
+      :error, :badarg ->
+        # Table doesn't exist, which is fine during cleanup
+        {:ok, 0}
+    end
   end
 
   @doc """

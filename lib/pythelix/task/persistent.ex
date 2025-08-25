@@ -210,8 +210,8 @@ defmodule Pythelix.Task.Persistent do
     try do
       :erlang.binary_to_term(content)
     rescue
-      ArgumentError ->
-        Logger.error("Cannot load the persistent task in #{path}")
+      exception ->
+        Logger.error("Loading task from #{path}:\n" <> Exception.format(:error, exception, __STACKTRACE__))
         nil
     end
   end
@@ -224,8 +224,8 @@ defmodule Pythelix.Task.Persistent do
         |> DateTime.diff(now, :millisecond)
         |> then(& (&1 > 0 && &1) || 0)
 
-      hub = :global.whereis_name(Pythelix.Command.Hub)
-      Process.send_after(hub, {:"$gen_cast", {:unpause, task.id}}, time)
+      continuation_job = {Pythelix.Scripting.Runner, :resume_task, [task.id]}
+      Process.send_after(Pythelix.Game.Hub, {:"$gen_cast", {:run, continuation_job}}, time)
     end
 
     {:ok, task}

@@ -83,7 +83,7 @@ text: """
 Great! Enter your new password.
 """
 
-{input(client, input)}
+{input(client, input=2)}
 client.account.password = password.hash(input)
 client.msg("Awesome!")
 client.location = !menu/username!

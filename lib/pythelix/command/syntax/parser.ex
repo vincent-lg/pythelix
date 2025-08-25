@@ -6,6 +6,7 @@ defmodule Pythelix.Command.Syntax.Parser do
   import NimbleParsec
   import Pythelix.Scripting.Parser.Operator, only: [lparen: 0, rparen: 0]
 
+  def handle_arg(<<?#, _::binary>>, %{escape: false} = context, _, _), do: {:halt, context}
   def handle_arg(<<?>, _::binary>>, %{escape: false} = context, _, _), do: {:halt, context}
 
   def handle_arg(<<?\\, _::binary>>, context, _, _),
@@ -14,7 +15,7 @@ defmodule Pythelix.Command.Syntax.Parser do
   def handle_arg(_, context, _, _), do: {:cont, Map.put(context, :escape, false)}
 
   defparsec(
-    :arg,
+    :str_arg,
     ignore(ascii_char([?<]))
     |> repeat_while(
       utf8_char([{:not, ?\n}]),
@@ -27,6 +28,20 @@ defmodule Pythelix.Command.Syntax.Parser do
     |> tag(:arg)
   )
 
+  defparsec(
+    :num_arg,
+    ignore(ascii_char([?#]))
+    |> repeat_while(
+      utf8_char([{:not, ?\n}]),
+      {__MODULE__, :handle_arg, []}
+    )
+    |> ignore(ascii_char([?#]))
+    |> reduce({List, :to_string, []})
+    |> label("number")
+    |> unwrap_and_tag(:int)
+    |> tag(:arg)
+  )
+
   defcombinatorp(
     :keyword_or_symbol,
     utf8_string([not: ?\s, not: ?(, not: ?)], min: 1)
@@ -36,7 +51,8 @@ defmodule Pythelix.Command.Syntax.Parser do
   defcombinatorp(
     :unit,
     choice([
-      parsec(:arg),
+      parsec(:str_arg),
+      parsec(:num_arg),
       parsec(:keyword_or_symbol)
     ])
   )

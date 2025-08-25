@@ -16,6 +16,18 @@ defmodule Pythelix.MixProject do
         ]
       ],
       compilers: Mix.compilers() ++ [:pythello],
+      test_coverage: [
+        #tool: :cover,
+        ignore_modules: [
+          ~r/^Mix\./,
+          ~r/^Pumpkin\./,
+          ~r/^Pythelix\.Scripting\.Parser/,
+          ~r/^PythelixWeb/
+        ],
+        preferred_cli_env: [
+          test: :test
+        ]
+      ]
     ]
   end
 
@@ -77,7 +89,8 @@ defmodule Pythelix.MixProject do
       {:jason, "~> 1.2"},
       {:dns_cluster, "~> 0.1.1"},
       {:bandit, "~> 1.5"},
-      {:gherkin, "~> 2.0"}
+      {:gherkin, "~> 2.0"},
+      {:meck, "~> 0.9", only: :test}
     ]
     |> then(fn deps ->
       impl = (match?({:win32, _}, :os.type) && "windows") || "linux"

@@ -46,7 +46,7 @@ defmodule Pythelix.Command.Signature.Parser do
     )
     |> optional(
       ignore(
-        string("=") |> isolate()
+        string("=") |> isolate(check: false)
       )
       |> parsec({Pythelix.Scripting.Parser.Expression, :expr})
       |> unwrap_and_tag(:default)

@@ -12,6 +12,8 @@ defmodule Pythelix.Method do
   alias Pythelix.Scripting.Store
   alias Pythelix.Scripting.Traceback
 
+  require Logger
+
   @enforce_keys [:args, :code, :bytecode]
   defstruct [:args, :code, :bytecode]
 
@@ -93,17 +95,34 @@ defmodule Pythelix.Method do
         :nomethod
 
       %Script{error: %Traceback{} = traceback} = script ->
-        IO.puts(Traceback.format(traceback))
+        Logger.error("\n" <> Traceback.format(traceback))
         Script.destroy(script)
         :traceback
     end
   end
 
   def fetch_script(%Pythelix.Method{bytecode: bytecode}, opts \\ []) do
-    %Script{id: (opts[:owner] || Store.new_script), bytecode: bytecode}
+    script = %Script{id: (opts[:owner] || Store.new_script), bytecode: bytecode}
+
+    script =
+      case opts[:parent] do
+        %Script{} = parent -> Script.set_parent(script, parent)
+        _ -> script
+      end
+
+    script =
+      case opts[:step] do
+        {module, function, args} when is_atom(module) and is_atom(function) and is_list(args) ->
+          Script.set_step(script, module, function, args)
+        {module, function} when is_atom(module) and is_atom(function) ->
+          Script.set_step(script, module, function, [])
+        _ -> script
+      end
+
+    script
   end
 
-  defp check_args(%Script{} = script, %Method{} = method, args, kwargs, _name) do
+  def check_args(%Script{} = script, %Method{} = method, args, kwargs, _name) do
     method.args
     |> then(fn
       :free ->
@@ -128,9 +147,9 @@ defmodule Pythelix.Method do
 
   defp maybe_run(%Script{} = script, _method, _namespace, _name, _opts), do: script
 
-  defp write_arguments(%Script{} = script, []), do: script
+  def write_arguments(%Script{} = script, []), do: script
 
-  defp write_arguments(%Script{} = script, [{name, value} | rest]) do
+  def write_arguments(%Script{} = script, [{name, value} | rest]) do
     script
     |> Script.write_variable(name, value)
     |> write_arguments(rest)

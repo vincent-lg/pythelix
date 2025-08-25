@@ -6,12 +6,12 @@ defmodule Pythelix.Scripting.Callable do
   @enforce_keys [:module, :object, :name]
   defstruct [:module, :object, :name]
 
-  alias Pythelix.Record
+  alias Pythelix.{Method, Record}
   alias Pythelix.Scripting.Callable
   alias Pythelix.Scripting.Interpreter.Script
   alias Pythelix.Scripting.Namespace
   alias Pythelix.Scripting.Object.Dict
-  alias Pythelix.Scripting.Store
+  alias Pythelix.Scripting.{Runner, Store}
   alias Pythelix.Scripting.Traceback
 
   @typedoc "a callable object in script"
@@ -57,24 +57,35 @@ defmodule Pythelix.Scripting.Callable do
 
   def call(%Script{} = script, %Callable.Method{} = method, args, kwargs) do
     kwargs = (kwargs == nil && Dict.new()) || kwargs
+    name = "#{method.entity}m hetod #{method.name}"
+    inner_script = Method.fetch_script(method.method)
+    |> Method.check_args(method.method, args, kwargs, name)
+    |> then(fn {method_script, namespace} ->
+      Method.write_arguments(method_script, Enum.to_list(namespace))
+    end)
+    |> Script.set_parent(script)
+    |> then(& %{&1 | id: script.id})
 
-    case Callable.Method.call(method, args, kwargs, owner: script.id) do
-      %Script{error: %Traceback{chain: chain} = traceback} = _script ->
-        %{traceback | chain: [{script, nil, nil} | chain]}
-        |> then(& {%{script | error: &1}, :none})
+    Runner.run(inner_script, method.method.code, name, sync: true)
 
-      %Script{pause: :immediately, last_raw: raw} ->
-        {script, raw}
+    #case Callable.Method.call(method, args, kwargs, owner: script.id, parent: script) do
+    #  %Script{error: %Traceback{chain: chain} = traceback} = _script ->
+    #    %{traceback | chain: [{script, nil, nil} | chain]}
+    #    |> then(& {%{script | error: &1}, :none})
 
-      _script ->
-        {script, :none}
-    end
+    #  %Script{pause: :immediately, last_raw: raw} ->
+    #    {script, raw}
+
+    #  _script ->
+    #    {script, :none}
+    #end
+    {%{script | pause: :wait_child}, :none}
   end
 
   def call(%Script{} = script, %Callable.SubMethod{} = method, args, kwargs) do
     kwargs = (kwargs == nil && Dict.new()) || kwargs
 
-    case Callable.SubMethod.call(method, args, kwargs, owner: script.id) do
+    case Callable.SubMethod.call(method, args, kwargs, owner: script.id, parent: script) do
       %Script{error: %Traceback{chain: chain} = traceback} = _script ->
         %{traceback | chain: [{script, nil, nil} | chain]}
         |> then(& {%{script | error: &1}, :none})

@@ -25,7 +25,11 @@ defmodule Pythelix.Scripting.Interpreter.Script do
     last_raw: nil,
     pause: nil,
     error: nil,
-    debugger: nil
+    debugger: nil,
+    parent: nil,
+    step: nil,
+    code: "",
+    name: "unknown"
   ]
 
   @typedoc "a script with bytecode"
@@ -39,7 +43,11 @@ defmodule Pythelix.Scripting.Interpreter.Script do
           last_raw: any(),
           pause: nil | :immediately | integer() | float(),
           error: nil | Traceback.t(),
-          debugger: nil | %Debugger{}
+          debugger: nil | %Debugger{},
+          parent: nil | t(),
+          step: nil | {atom(), atom(), list()},
+          code: String.t(),
+          name: String.t()
         }
 
   @doc """
@@ -70,9 +78,9 @@ defmodule Pythelix.Scripting.Interpreter.Script do
 
   Args:
 
-  * script (Script) tghe script.
-  exception (atom): the exception.
-  message (string): the message.
+  * script (Script) the script.
+  * exception (atom): the exception.
+  * message (string): the message.
   """
   @spec raise(t(), atom(), String.t()) :: t()
   def raise(script, exception, message) do
@@ -224,4 +232,57 @@ defmodule Pythelix.Scripting.Interpreter.Script do
   end
 
   def debug(script, _text), do: script
+
+  @doc """
+  Set the parent script for this script.
+  """
+  @spec set_parent(t(), t()) :: t()
+  def set_parent(script, parent_script) do
+    %{script | parent: parent_script}
+  end
+
+  @doc """
+  Set the next step to be executed when this script completes.
+
+  Args:
+  * script: the current script
+  * module: the module containing the function to call
+  * function: the function name (atom) to call
+  * args: additional arguments to pass to the function
+  """
+  @spec set_step(t(), atom(), atom(), list()) :: t()
+  def set_step(script, module, function, args \\ []) when is_atom(module) and is_atom(function) and is_list(args) do
+    %{script | step: {module, function, args}}
+  end
+
+  @doc """
+  Get the parent script, if any.
+  """
+  @spec get_parent(t()) :: t() | nil
+  def get_parent(%{parent: parent}), do: parent
+
+  @doc """
+  Get the next step, if any.
+  """
+  @spec get_step(t()) :: {atom(), atom(), list()} | nil
+  def get_step(%{step: step}), do: step
+
+  @doc """
+  Execute the next step if defined, passing the script status and structure.
+
+  Args:
+  * script: the completed script
+  * status: :ok | :error
+  """
+  @spec execute_step(t(), :ok | :error) :: any()
+  def execute_step(%{step: {module, function, args}} = script, status) do
+    apply(module, function, [status, script | args])
+  rescue
+    error ->
+      require Logger
+      Logger.error("Failed to execute step #{inspect(module)}.#{function}: #{inspect(error)}")
+      {:error, error}
+  end
+
+  def execute_step(_script, _status), do: :no_step
 end

@@ -32,13 +32,21 @@ defmodule Pythelix.Game.Hub do
   """
   def run(job, server \\ __MODULE__), do: :gen_statem.cast(server, {:run, job})
 
+  @doc """
+  Mark a client as having unsent messages and forward the message immediately.
+  """
+  def mark_client_with_message(client_id, message, pid, server \\ __MODULE__) do
+    :gen_statem.cast(server, {:message, client_id, message, pid})
+  end
+
   # Init
   def init(opts) do
     {:ok, :idle, %{
       job_pid: nil,
       mon_ref: nil,
       ticket: nil,
-      max_ms: Keyword.get(opts, :max_ms, 2_000)
+      max_ms: Keyword.get(opts, :max_ms, 2_000),
+      clients_with_messages: MapSet.new()
     }}
   end
 
@@ -64,6 +72,10 @@ defmodule Pythelix.Game.Hub do
     {:next_state, :busy, %{data | job_pid: pid, mon_ref: mon, ticket: ticket}, actions}
   end
 
+  def idle(:cast, {:message, client_id, message, pid}, data) do
+    {:keep_state, handle_message(client_id, message, pid, data)}
+  end
+
   def idle(_type, _event, data), do: {:keep_state, data}
 
   # BUSY state
@@ -71,17 +83,23 @@ defmodule Pythelix.Game.Hub do
 
   def busy(:info, {:job_ok, ticket, _result}, %{ticket: ticket, mon_ref: mon} = data) do
     Process.demonitor(mon, [:flush])
+    data = send_prompts_to_clients_with_messages(data)
     {:next_state, :idle, %{data | job_pid: nil, mon_ref: nil, ticket: nil}}
   end
 
   # Anything else (crash, kill, or "no ok sent"): rely on :DOWN to recover
   def busy(:info, {:DOWN, mon, :process, _pid, _reason}, %{mon_ref: mon} = data) do
+    data = send_prompts_to_clients_with_messages(data)
     {:next_state, :idle, %{data | job_pid: nil, mon_ref: nil, ticket: nil}}
   end
 
   def busy(:state_timeout, :job_timed_out, %{job_pid: pid}) do
     if is_pid(pid) and Process.alive?(pid), do: Process.exit(pid, :kill)
     {:keep_state_and_data, []}
+  end
+
+  def busy(:cast, {:message, client_id, message, pid}, data) do
+    {:keep_state, handle_message(client_id, message, pid, data)}
   end
 
   def busy(_type, _event, data), do: {:keep_state, data}
@@ -98,5 +116,55 @@ defmodule Pythelix.Game.Hub do
 
   defp run_job(arg) do
     raise "invalid task: #{inspect(arg)}"
+  end
+
+  defp handle_message(client_id, message, pid, data) do
+    # Forward message immediately and mark client as having messages
+    send(pid, {:message, message})
+    clients_with_messages = MapSet.put(data.clients_with_messages, client_id)
+    %{data | clients_with_messages: clients_with_messages}
+  end
+
+  defp send_prompts_to_clients_with_messages(data) do
+    Enum.reduce(data.clients_with_messages, data, fn client_id, acc ->
+      send_prompt_to_client(client_id, acc)
+    end)
+  end
+
+  defp send_prompt_to_client(client_id, data) do
+    alias Pythelix.Record
+    alias Pythelix.Method
+
+    key = "client/#{client_id}"
+
+    case Record.get_entity(key) do
+      nil ->
+        # Client no longer exists, remove from set
+        clients_with_messages = MapSet.delete(data.clients_with_messages, client_id)
+        %{data | clients_with_messages: clients_with_messages}
+
+      client ->
+        menu = Record.get_location_entity(client)
+
+        prompt =
+          case menu do
+            nil ->
+              ""
+            menu ->
+              try do
+                Method.call_entity(menu, "get_prompt", [client])
+              rescue
+                _exception ->
+                  ""
+              end
+          end
+
+        pid = Record.get_attribute(client, "pid")
+        send(pid, {:full, prompt})
+
+        # Remove client from set after sending prompt
+        clients_with_messages = MapSet.delete(data.clients_with_messages, client_id)
+        %{data | clients_with_messages: clients_with_messages}
+    end
   end
 end
