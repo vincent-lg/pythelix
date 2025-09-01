@@ -5,13 +5,12 @@ defmodule Pythelix.Record do
 
   import Ecto.Query, warn: false
   alias Pythelix.Repo
-  alias Pythelix.Entity
-  alias Pythelix.Method
+  alias Pythelix.{Entity, Method}
   alias Pythelix.Network.TCP.Client
   alias Pythelix.Record
   alias Pythelix.Record.Cache
   alias Pythelix.Record.Diff
-  alias Pythelix.Scripting.Executor
+  alias Pythelix.Scripting.Runner
 
   def warmup() do
     warmup_database()
@@ -459,7 +458,7 @@ defmodule Pythelix.Record do
     if location != old_location do
       if has_parent?(entity, "generic/client") && has_parent?(old_location, "generic/menu") do
         try do
-          Executor.run_method(old_location, "leave", [entity])
+          Runner.run_method({old_location, "leave"}, [entity], nil, sync: true)
         rescue
           _ -> nil
         end
@@ -482,7 +481,7 @@ defmodule Pythelix.Record do
       end
 
       #try do
-        Executor.run_method(location, "enter", [entity])
+        Runner.run_method({location, "enter"}, [entity], nil, sync: true)
       #rescue
       #  _ -> nil
       #end

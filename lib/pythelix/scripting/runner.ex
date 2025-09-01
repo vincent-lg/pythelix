@@ -7,8 +7,10 @@ defmodule Pythelix.Scripting.Runner do
   with the game hub's fire-and-forget model.
   """
 
+  alias Pythelix.{Entity, Method, Record}
   alias Pythelix.Game.Hub
   alias Pythelix.Scripting.Interpreter.Script
+  alias Pythelix.Scripting.Object.Dict
   alias Pythelix.Scripting.Traceback
   alias Pythelix.Task.Persistent, as: Task
 
@@ -37,6 +39,38 @@ defmodule Pythelix.Scripting.Runner do
       execute(script, code, name)
     else
       Hub.run({__MODULE__, :execute, [script, code, name]})
+    end
+  end
+
+  @doc """
+  Run the method with the specified arguments.
+  The method can be a method object (`Pythelix.Method`) or a tuple containing an entity (`{Pythelix.Entity`} and the method name (as a string). You have to specify the positional arguments (as a list) and the keyword arguments (as a map or dict), both being optional.
+  """
+  @spec run_method(Method.t() | {Entity.t(), String.t()}, list(), map() | Dict.t(), list()) :: :nomethod | :ok
+  def run_method(method, args \\ [], kwargs \\ %{}, opts \\ [])
+
+  def run_method(%Method{} = method, args, kwargs, opts) do
+    kwargs = (kwargs == nil && Dict.new()) || Dict.new(kwargs)
+    {name, opts} = Keyword.pop(opts, :name, "unset")
+
+    script =
+      Method.fetch_script(method)
+      |> Method.check_args(method, args, kwargs, name)
+      |> then(fn {method_script, namespace} ->
+        Method.write_arguments(method_script, Enum.to_list(namespace))
+      end)
+
+    run(script, method.code, name, opts)
+  end
+
+  def run_method({%Entity{} = entity, name}, args, kwargs, opts) when is_binary(name) do
+    case Record.get_method(entity, name) do
+      :nomethod ->
+        :nomethod
+
+      method ->
+        opts = Keyword.put(opts, :name, name)
+        run_method(method, args, kwargs, opts)
     end
   end
 

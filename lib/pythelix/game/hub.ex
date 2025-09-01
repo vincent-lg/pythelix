@@ -3,7 +3,11 @@ defmodule Pythelix.Game.Hub do
   The game HUB, responsible for queueing tasks (all inputs)
   and exeucing them one at a time.
   """
+  alias Pythelix.{Method, Record, World}
+  alias Pythelix.Task.Persistent
+
   @behaviour :gen_statem
+
   def callback_mode, do: [:state_functions, :state_enter]
 
   # Public API
@@ -41,13 +45,24 @@ defmodule Pythelix.Game.Hub do
 
   # Init
   def init(opts) do
-    {:ok, :idle, %{
+    {:ok, :init, %{
       job_pid: nil,
       mon_ref: nil,
       ticket: nil,
       max_ms: Keyword.get(opts, :max_ms, 2_000),
       clients_with_messages: MapSet.new()
     }}
+  end
+
+  # INIT state
+  def init(:enter, _old_state, data) do
+    init_world()
+    #{:next_state, :idle, data}
+    {:keep_state, data, [{:state_timeout, 0, :go_idle}]}
+  end
+
+  def init(:state_timeout, :go_idle, data) do
+    {:next_state, :idle, data}
   end
 
   # IDLE state
@@ -132,9 +147,6 @@ defmodule Pythelix.Game.Hub do
   end
 
   defp send_prompt_to_client(client_id, data) do
-    alias Pythelix.Record
-    alias Pythelix.Method
-
     key = "client/#{client_id}"
 
     case Record.get_entity(key) do
@@ -166,5 +178,30 @@ defmodule Pythelix.Game.Hub do
         clients_with_messages = MapSet.delete(data.clients_with_messages, client_id)
         %{data | clients_with_messages: clients_with_messages}
     end
+  end
+
+  defp init_world() do
+    Record.Diff.init()
+    Record.cache_relationships()
+    init_start_time = System.monotonic_time(:microsecond)
+
+    if Application.get_env(:pythelix, :worldlets) do
+      World.init()
+      init_elapsed = System.monotonic_time(:microsecond) - init_start_time
+      if Application.get_env(:pythelix, :show_stats) do
+        IO.puts("⏱️ World initialized in #{init_elapsed} µs")
+      end
+
+      :ok
+    end
+    |> tap(fn _ ->
+      tasks_start_time = System.monotonic_time(:microsecond)
+      Persistent.init()
+      number = Persistent.load()
+      tasks_elapsed = System.monotonic_time(:microsecond) - tasks_start_time
+      if Application.get_env(:pythelix, :show_stats) do
+        IO.puts("⏱️ #{number} tasks were loaded in #{tasks_elapsed} µs")
+      end
+    end)
   end
 end

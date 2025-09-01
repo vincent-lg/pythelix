@@ -1,12 +1,21 @@
 defmodule Pythelix.Game.HubFastTest do
-  use ExUnit.Case, async: true   # safe now: each test uses its own Hub instance
+  use Pythelix.DataCase, async: false  # Hub spawns processes that need DB access
 
   @moduletag capture_log: true
 
   alias Pythelix.Game.Hub
 
-  setup tags do
-    Pythelix.DataCase.setup_sandbox(tags)
+  setup_all do
+    # Start the Game Hub
+    case GenServer.start_link(Hub, [], name: Hub) do
+      {:ok, _pid} -> :ok
+      {:error, {:already_started, _pid}} -> :ok
+    end
+
+    :ok
+  end
+
+  setup _tags do
     Pythelix.Scripting.Store.init()
     Pythelix.Record.Cache.clear()
     srv = :"hub_test_#{System.unique_integer([:positive])}"

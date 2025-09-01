@@ -6,12 +6,6 @@ defmodule Pythelix.Command.DebugTest do
   alias Pythelix.Record
 
   setup_all do
-    # Command Hub needs to be global for TCP client send to work
-    case GenServer.start_link(Pythelix.Command.Hub, [], name: {:global, Pythelix.Command.Hub}) do
-      {:ok, _pid} -> :ok
-      {:error, {:already_started, _pid}} -> :ok
-    end
-
     # Game hub might already be started (local)
     case GenServer.start_link(Hub, [], name: Hub) do
       {:ok, _pid} -> :ok
