@@ -23,7 +23,7 @@ defmodule Pythelix.Scripting.Parser.Value do
 
   import NimbleParsec
 
-  import Pythelix.Scripting.Parser.Constants, only: [id: 0, isolate: 1]
+  import Pythelix.Scripting.Parser.Constants, only: [id: 0, isolate: 1, isolate: 2]
   import Pythelix.Scripting.Parser.Operator
 
   alias Pythelix.Scripting.Parser
@@ -34,7 +34,7 @@ defmodule Pythelix.Scripting.Parser.Value do
       string("False") |> replace(false),
       string("None") |> replace(:none)
     ])
-    |> isolate()
+    |> isolate(allow_newline: true)
     |> label("global name")
 
   digits =
@@ -44,7 +44,7 @@ defmodule Pythelix.Scripting.Parser.Value do
   int =
     optional(string("-"))
     |> concat(digits)
-    |> isolate()
+    |> isolate(allow_newline: true)
     |> reduce(:to_integer)
     |> label("integer")
 
@@ -55,7 +55,7 @@ defmodule Pythelix.Scripting.Parser.Value do
     |> concat(digits)
     |> ascii_string([?.], 1)
     |> concat(digits)
-    |> isolate()
+    |> isolate(allow_newline: true)
     |> reduce(:to_float)
     |> label("float")
 
@@ -136,7 +136,7 @@ defmodule Pythelix.Scripting.Parser.Value do
     ignore(string("f"))
     |> parsec(:string)
     |> unwrap_and_tag(:formatted)
-    |> isolate()
+    |> isolate(allow_newline: true)
   )
 
   defcombinator :getitem,
@@ -160,7 +160,7 @@ defmodule Pythelix.Scripting.Parser.Value do
       globals,
       number,
       parsec(:formatted_string),
-      parsec(:string) |> isolate(),
+      parsec(:string) |> isolate(allow_newline: true),
       ignore(string("-")) |> concat(parsec(:function)) |> tag(:neg),
       ignore(string("-")) |> concat(id()) |> tag(:neg),
       parsec(:function),

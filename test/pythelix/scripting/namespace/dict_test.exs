@@ -44,6 +44,21 @@ defmodule Pythelix.Scripting.Namespace.DictTest do
       dict = expr_ok("{'key': -2, 4 + 4: 'ok'}")
       assert Dict.items(dict) == [{"key", -2}, {8, "ok"}]
     end
+
+    test "a dictionary on two lines" do
+      dict = expr_ok("{'key': -2,\n4 + 4: 'ok'}")
+      assert Dict.items(dict) == [{"key", -2}, {8, "ok"}]
+    end
+
+    test "a dictionary on multiple indented lines" do
+      dict = expr_ok("""
+      {
+        "key": -2,
+        8: "ok",
+      }
+      """)
+      assert Dict.items(dict) == [{"key", -2}, {8, "ok"}]
+    end
   end
 
   describe "__getitem__" do

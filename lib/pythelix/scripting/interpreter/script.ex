@@ -83,8 +83,8 @@ defmodule Pythelix.Scripting.Interpreter.Script do
   * message (string): the message.
   """
   @spec raise(t(), atom(), String.t()) :: t()
-  def raise(script, exception, message) do
-    Traceback.raise(script, exception, message)
+  def raise(script, exception, message, code \\ nil, owner \\ nil) do
+    Traceback.raise(script, exception, message, code, owner)
     |> then(& %{script | error: &1})
   end
 

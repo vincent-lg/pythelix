@@ -19,15 +19,19 @@ defmodule Pythelix.Scripting.Parser.Whitespace do
   import NimbleParsec
 
   @whitespace "[[:space:]-[\n]]"
+  @whitespace_nl "[[:space:]]"
   @end_symbol "[[:space:][+*/\(\)=<>!:,.\\[\\]\\{\\}][\\-]]"
 
   @whitespace_range Unicode.Set.to_utf8_char(@whitespace) |> elem(1)
+  @whitespace_nl_range Unicode.Set.to_utf8_char(@whitespace_nl) |> elem(1)
   @end_symbol_range Unicode.Set.to_utf8_char(@end_symbol) |> elem(1)
 
-  def clear_whitespace(space) do
+  def clear_whitespace(space, allow_newline \\ false) do
+    range = (allow_newline && @whitespace_nl_range) || @whitespace_range
+
     ignore(
       choice([
-        utf8_char(@whitespace_range) |> times(min: (space && 1) || 0) |> label("whitespace"),
+        utf8_char(range) |> times(min: (space && 1) || 0) |> label("whitespace"),
         empty()
       ])
     )

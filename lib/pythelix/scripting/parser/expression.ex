@@ -20,12 +20,12 @@ defmodule Pythelix.Scripting.Parser.Expression do
   """
 
   import NimbleParsec
-  import Pythelix.Scripting.Parser.Constants, only: [isolate: 1, isolate: 2]
+  import Pythelix.Scripting.Parser.Constants, only: [isolate: 2]
   import Pythelix.Scripting.Parser.Operator
 
-  not_ = string("not") |> isolate()
-  and_ = string("and") |> replace(:and) |> isolate(space: true)
-  or_ = string("or") |> replace(:or) |> isolate(space: true)
+  not_ = string("not") |> isolate(allow_newline: true)
+  and_ = string("and") |> replace(:and) |> isolate(space: true, allow_newline: true)
+  or_ = string("or") |> replace(:or) |> isolate(space: true, allow_newline: true)
 
   defp fold_infixl(acc) do
     acc
@@ -66,7 +66,7 @@ defmodule Pythelix.Scripting.Parser.Expression do
 
   dict_pair =
     parsec(:expr)
-    |> ignore(string(":") |> isolate())
+    |> ignore(string(":") |> isolate(allow_newline: true))
     |> parsec(:expr)
     |> tag(:element)
 

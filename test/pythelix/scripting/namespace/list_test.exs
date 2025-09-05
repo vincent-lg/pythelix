@@ -99,6 +99,31 @@ defmodule Pythelix.Scripting.Namespace.ListTest do
 
       assert Script.get_variable_value(script, "values") == [true, 4, -3.2, "ok"]
     end
+
+    test "a list defined on two lines" do
+      script =
+        run("""
+        values = [1,
+        2]
+        """)
+
+      assert Script.get_variable_value(script, "values") == [1, 2]
+    end
+
+    test "a list defined on indented lines" do
+      script =
+        run("""
+        values = [
+          1,
+          2.5,
+          4 - 1,
+          False,
+          'ok',
+        ]
+        """)
+
+      assert Script.get_variable_value(script, "values") == [1, 2.5, 3, false, "ok"]
+    end
   end
 
   describe "append" do

@@ -7,7 +7,7 @@ defmodule Pythelix.Scripting.Parser.Constants do
   """
 
   import NimbleParsec
-  import Pythelix.Scripting.Parser.Whitespace, only: [clear_whitespace: 1, check_end_symbol: 0]
+  import Pythelix.Scripting.Parser.Whitespace, only: [clear_whitespace: 2, check_end_symbol: 0]
 
   @reserved_sym ["True", "False", "None", "not", "and", "or", "endif", "done", "return"]
   @id_start "[[:L:][:Nl:][:Other_ID_Start:]-[:Pattern_Syntax:]-[:Pattern_White_Space:][_]]"
@@ -29,9 +29,10 @@ defmodule Pythelix.Scripting.Parser.Constants do
   def isolate(parser, opts \\ []) do
     space = Keyword.get(opts, :space, false)
     check = Keyword.get(opts, :check, true)
+    allow_newline = Keyword.get(opts, :allow_newline, false)
 
     parser =
-      clear_whitespace(space)
+      clear_whitespace(space, allow_newline)
       |> concat(parser)
 
     if check do
@@ -48,11 +49,11 @@ defmodule Pythelix.Scripting.Parser.Constants do
         @reserved_sym
         |> Enum.map(&string/1)
       )
-      |> isolate()
+      |> isolate(allow_newline: true)
     )
     |> utf8_char(@id_start_range)
     |> utf8_string(@id_continue_range, min: 0)
-    |> isolate()
+    |> isolate(allow_newline: true)
     |> post_traverse({__MODULE__, :to_varname, []})
     |> unwrap_and_tag(:var)
     |> label("variable")

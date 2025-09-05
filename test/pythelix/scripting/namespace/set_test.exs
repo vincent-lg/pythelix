@@ -42,6 +42,21 @@ defmodule Pythelix.Scripting.Namespace.SetTest do
       set = expr_ok("{-2, 'ok'}")
       assert set == MapSet.new([-2, "ok"])
     end
+
+    test "a set defined on two lines" do
+      set = expr_ok("{-2,\n'ok'}")
+      assert set == MapSet.new([-2, "ok"])
+    end
+
+    test "a set defined on indented lines" do
+      set = expr_ok("""
+      {
+        -2,
+        'ok',
+      }
+      """)
+      assert set == MapSet.new([-2, "ok"])
+    end
   end
 
   describe "__getitem__" do

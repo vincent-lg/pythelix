@@ -37,10 +37,9 @@ defmodule Pythelix.Scripting do
       if ast == :error do
         %Interpreter.Script{id: "error", bytecode: []}
         |> then(fn script ->
-          message = "invalid syntax"
-          traceback = %Traceback{exception: SyntaxError, message: message, chain: [{script, nil, nil}]}
-          traceback = Traceback.associate(traceback, code, "<strdin>")
-          %{script | error: traceback}
+          script
+          |> then(& %{&1 | code: code, name: "<stdin>"})
+          |> Interpreter.Script.raise(SyntaxError, "invalid syntax", code, "<stdin>")
         end)
       else
         [ast]
@@ -68,10 +67,10 @@ defmodule Pythelix.Scripting do
           other -> other
         end)
 
-        %{script | bytecode: bytecode, line: line}
-      else
-        script
-      end
+      %{script | bytecode: bytecode, line: line}
+    else
+      script
+    end
     |> then(fn
       %Interpreter.Script{error: nil} = script ->
         if call do
@@ -110,13 +109,11 @@ defmodule Pythelix.Scripting do
     run(code, opts)
     |> then(fn
       %Interpreter.Script{error: %Traceback{} = traceback} = script ->
-        #IO.puts("in-eval-error Destroy #{script.id}")
         Interpreter.Script.destroy(script)
         {:error, traceback}
 
       script ->
         last = Store.get_value(script.last_raw)
-        #IO.puts("in-eval-ok Destroy #{script.id}")
         Interpreter.Script.destroy(script)
         {:ok, last}
     end)
