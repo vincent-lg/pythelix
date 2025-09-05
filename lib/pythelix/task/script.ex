@@ -1,5 +1,9 @@
 defmodule Pythelix.Task.Script do
-  alias Pythelix.Task
+  alias Pythelix.Scripting.Display
+  alias Pythelix.Scripting.Interpreter.Script
+  alias Pythelix.Scripting
+  alias Pythelix.Scripting.{Runner, Store, Traceback}
+  alias Pythelix.Task, as: PyTask
 
   def run() do
     id = :crypto.strong_rand_bytes(4) |> Base.encode16()
@@ -20,19 +24,19 @@ defmodule Pythelix.Task.Script do
       strategy: :one_for_one
     )
 
-    pid = Task.wait_for_global(Pythelix.Command.Hub)
+    pid = PyTask.wait_for_global(Pythelix.Game.Ext)
 
     if pid == nil do
       IO.puts("There's no running server to connect to, cannot continue.")
     else
       IO.puts("Starting interactive script. Press CTRL+C twice to exit.")
 
-      GenServer.cast({:global, Pythelix.Command.Hub}, {:start, id, %{script: nil, pid: self()}, Pythelix.Scripting.REPL.Executor})
-      loop(id)
+      repl(id, pid)
     end
   end
 
-  defp loop(id, buffer \\ nil) do
+  defp repl(id, pid, variables \\ nil, buffer \\ nil) do
+    variables = variables || %{}
     input =
       case IO.gets((buffer && "... ") || ">>> ") do
         nil ->
@@ -53,7 +57,7 @@ defmodule Pythelix.Task.Script do
     {input, need_wait} =
       case Pythelix.Scripting.REPL.parse(input) do
         :complete ->
-          GenServer.cast({:global, Pythelix.Command.Hub}, {:send_task, id, {:input, input}})
+          GenServer.cast(pid, {:run, {__MODULE__, :execute, [self(), input, variables]}})
           {nil, true}
 
         {:need_more, _} ->
@@ -66,18 +70,57 @@ defmodule Pythelix.Task.Script do
 
     if need_wait do
       receive do
-        {:text, output} ->
-          IO.puts(output)
-
-        {:text, output, eval_elapsed, exec_elapsed, apply_elapsed} ->
-          IO.puts("⏱️ Parsed in #{eval_elapsed} µs, execution in #{exec_elapsed} µs, applied in #{apply_elapsed} µs")
-
-          if output != nil do
-            IO.puts(output)
+        {:result, result, variables} ->
+          if result do
+            IO.puts(result)
           end
-      end
-    end
+          repl(id, pid, variables)
 
-    loop(id, input)
+        {:error, traceback, variables} ->
+          IO.puts(traceback)
+          repl(id, pid, variables)
+      end
+    else
+      repl(id, pid, variables, input)
+    end
+  end
+
+  def execute(process, input, variables) do
+    script =
+      Scripting.run(input, call: false)
+      |> then(& %{&1 | variables: variables})
+
+    step = {__MODULE__, :handle_result, [process]}
+    Runner.run(script, input, "<stdin>", step: step, sync: true)
+  end
+
+  def handle_result(:ok, script, process) do
+    result =
+      Store.get_value(script.last_raw)
+      |> then(fn
+        nil ->
+          nil
+
+        result ->
+          Display.repr(script, result)
+      end)
+
+    variables = extract_variables(script)
+
+    send(process, {:result, result, variables})
+  end
+
+  def handle_result(:error, script, process) do
+    variables = extract_variables(script)
+
+    send(process, {:error, Traceback.format(script.error), variables})
+  end
+
+  defp extract_variables(script) do
+    script.variables
+    |> Enum.map(fn {key, _} ->
+      {key, Script.get_variable_value(script, key)}
+    end)
+    |> Map.new()
   end
 end
