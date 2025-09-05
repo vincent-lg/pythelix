@@ -39,7 +39,10 @@ Enter the password for this account.
 {input(client, input)}
 account = client.account
 if account.password.verify(input):
+    character = account.character
     client.msg("Good.")
+    client.owner = account.character
+    client.controls.add(account.character)
     client.location = !menu/game!
 else:
     client.location = !menu/invalid/password!
@@ -86,7 +89,10 @@ Great! Enter your new password.
 {input(client, input=2)}
 client.account.password = password.hash(input)
 client.msg("Awesome!")
+character = Entity(parent=!generic/character!)
 client.location = !menu/username!
+character.game_modes.add("menu/game", character.id)
+client.account.character = character
 
 [menu/game]
 parent: "generic/menu"

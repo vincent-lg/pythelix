@@ -3,3 +3,9 @@ parent: "SubEntity"
 
 {__init__(a: int)}
 self.a = a
+
+[generic/character]
+{msg(self, text)}
+for client in clients.controlling(self):
+    client.msg(text)
+done

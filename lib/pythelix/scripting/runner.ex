@@ -105,8 +105,14 @@ defmodule Pythelix.Scripting.Runner do
 
       completed_script ->
         # Script completed successfully - execute step and clean up
-        execute_next_step(completed_script, :ok)
-        Script.destroy(completed_script)
+        if parent = completed_script.parent do
+          %{parent | pause: nil}
+          |> Script.put_stack(:none)
+          |> run(parent.code, parent.name, sync: true)
+        else
+          execute_next_step(completed_script, :ok)
+          Script.destroy(completed_script)
+        end
     end
   rescue
     exception ->
@@ -131,6 +137,7 @@ defmodule Pythelix.Scripting.Runner do
         case Script.execute(resumed_script, task.code, task.name) do
           %Script{parent: %Script{} = parent, pause: :immediately, error: nil} = script_with_parent ->
             parent = Script.put_stack(parent, script_with_parent.last_raw)
+            |> then(& %{&1 | pause: nil})
 
             run(parent, parent.code, parent.name, sync: true)
             cleanup_task(task.id)
@@ -151,9 +158,15 @@ defmodule Pythelix.Scripting.Runner do
 
           completed_script ->
             # Script completed - execute step and clean up
-            execute_next_step(completed_script, :ok)
             cleanup_task(task.id)
-            Script.destroy(completed_script)
+            if parent = completed_script.parent do
+              %{parent | pause: nil}
+              |> Script.put_stack(:none)
+              |> run(parent.code, parent.name, sync: true)
+            else
+              execute_next_step(completed_script, :ok)
+              Script.destroy(completed_script)
+            end
         end
     end
   rescue

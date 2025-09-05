@@ -58,11 +58,13 @@ defmodule Pythelix.Scripting.Callable do
   def call(%Script{} = script, %Callable.Method{} = method, args, kwargs) do
     kwargs = (kwargs == nil && Dict.new()) || kwargs
     name = "#{method.entity}m hetod #{method.name}"
-    inner_script = Method.fetch_script(method.method)
+    entity = Record.get_entity(method.entity)
+    inner_script = Method.fetch_script(method.method, owner: script.id)
     |> Method.check_args(method.method, args, kwargs, name)
     |> then(fn {method_script, namespace} ->
       Method.write_arguments(method_script, Enum.to_list(namespace))
     end)
+    |> Script.write_variable("self", entity)
     |> Script.set_parent(script)
     |> then(& %{&1 | id: script.id})
 

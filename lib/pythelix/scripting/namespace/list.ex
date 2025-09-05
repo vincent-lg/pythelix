@@ -14,6 +14,39 @@ defmodule Pythelix.Scripting.Namespace.List do
     {script, Enum.member?(list, namespace.element)}
   end
 
+  defmet __getitem__(script, namespace), [
+    {:item, index: 0, type: :int}
+  ] do
+    list = Store.get_value(namespace.self, recursive: false)
+
+    case Enum.at(list, namespace.item, :out) do
+      :out ->
+        message = "list index out of range"
+        {Script.raise(script, IndexError, message), :none}
+
+      value ->
+        {script, value}
+    end
+  end
+
+  defmet __setitem__(script, namespace), [
+    {:item, index: 0, type: :int},
+    {:value, index: 1, type: :any}
+  ] do
+    list = Store.get_value(namespace.self, recursive: false)
+
+    case Enum.at(list, namespace.item, :out) do
+      :out ->
+        message = "list index out of range"
+        {Script.raise(script, IndexError, message), :none}
+
+      _ ->
+        list = List.replace_at(list, namespace.item, namespace.value)
+        Store.update_reference(namespace.self, list)
+        {script, :none}
+      end
+  end
+
   defmet __repr__(script, namespace), [] do
     repr(script, namespace.self)
   end

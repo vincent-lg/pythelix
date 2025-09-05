@@ -19,14 +19,7 @@ defmodule Pythelix.Scripting.Namespace.Module.Clients do
   ] do
     entity = Store.get_value(namespace.entity)
     id_or_key = Entity.get_id_or_key(entity)
-
-    active()
-    |> Enum.filter(fn client ->
-      controls = Record.get_attribute(client, "controls")
-      controls = Dict.get(controls.data, "__controls", MapSet.new())
-      MapSet.member?(controls, id_or_key)
-    end)
-    |> then(& {script, &1})
+    {script, controlling(id_or_key)}
   end
 
   deffun owning(script, namespace), [
@@ -43,8 +36,17 @@ defmodule Pythelix.Scripting.Namespace.Module.Clients do
     |> then(& {script, &1})
   end
 
-  defp active do
+  def active do
     client = Record.get_entity("generic/client")
     Record.get_children(client)
+  end
+
+  def controlling(id_or_key) do
+    active()
+    |> Enum.filter(fn client ->
+      controls = Record.get_attribute(client, "controls")
+      controls = Dict.get(controls.data, "__controls", MapSet.new())
+      MapSet.member?(controls, id_or_key)
+    end)
   end
 end

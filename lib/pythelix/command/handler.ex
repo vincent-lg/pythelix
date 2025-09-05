@@ -34,31 +34,34 @@ defmodule Pythelix.Command.Handler do
 
   @doc """
   Start the command execution pipeline.
+
+  The owner_entity parameter allows specifying a different entity context
+  for the command execution, used by game modes.
   """
-  @spec start_command_execution(String.t(), String.t(), map(), integer()) :: :ok
-  def start_command_execution(command_key, args_string, client, start_time) do
+  @spec start_command_execution(String.t(), String.t(), map(), integer(), Entity.t() | nil) :: :ok
+  def start_command_execution(command_key, args_string, client, start_time, owner_entity \\ nil) do
     case Record.get_entity(command_key) do
       nil ->
         send_error(client, "Unknown command")
 
       %Entity{} = command ->
-        case parse_and_prepare_command(command, args_string, client) do
+        case parse_and_prepare_command(command, args_string, client, owner_entity) do
           {:ok, _args, script, _method_name} ->
             # Start with refine step if refine method exists
             case Record.get_method(command, "refine") do
               :nomethod ->
-                execute_method(command, "run", script, client, start_time)
+                execute_method(command, "run", script, client, start_time, owner_entity)
 
               refine_method ->
                 # Execute refine method first
                 refine_script = Method.fetch_script(refine_method, owner: script.id)
                 script = %{refine_script | variables: script.variables}
-                step = {__MODULE__, :handle_refine_completion, [command, client, start_time]}
+                step = {__MODULE__, :handle_refine_completion, [command, client, start_time, owner_entity]}
                 Runner.run(script, refine_method.code, "#{command_key}, method refine", step: step, sync: true)
             end
 
           {:error, reason} ->
-            handle_command_error(command, args_string, client, reason)
+            handle_command_error(command, args_string, client, reason, owner_entity)
         end
     end
   end
@@ -66,24 +69,24 @@ defmodule Pythelix.Command.Handler do
   @doc """
   Handle completion of the refine step.
   """
-  def handle_refine_completion(:ok, script, command, client, start_time) do
+  def handle_refine_completion(:ok, script, command, client, start_time, owner_entity) do
     # Refine completed successfully, now execute run method with updated variables
-    execute_method(command, "run", script, client, start_time)
+    execute_method(command, "run", script, client, start_time, owner_entity)
   end
 
-  def handle_refine_completion(:error, _script, command, client, _start_time) do
+  def handle_refine_completion(:error, _script, command, client, _start_time, owner_entity) do
     # Refine failed, handle error
-    handle_refine_error(command, "", client)
+    handle_refine_error(command, "", client, owner_entity)
   end
 
   @doc """
   Execute a method (refine or run) for a command.
   """
-  def execute_method(command, method_name, script, client, start_time) do
+  def execute_method(command, method_name, script, client, start_time, owner_entity) do
     case Record.get_method(command, method_name) do
       :nomethod ->
         if method_name == "run" do
-          handle_run_error(command, "", client)
+          handle_run_error(command, "", client, owner_entity)
         end
 
       method ->
@@ -98,6 +101,7 @@ defmodule Pythelix.Command.Handler do
           |> then(fn {method_script, namespace} ->
             Method.write_arguments(method_script, Enum.to_list(namespace))
           end)
+          |> Script.write_variable("self", command)
 
         Runner.run(script, method.code, "#{command.key}, method #{method_name}", step: step, sync: true)
     end
@@ -128,10 +132,10 @@ defmodule Pythelix.Command.Handler do
     Map.get(commands, command_name)
   end
 
-  defp parse_and_prepare_command(command, args_string, client) do
+  defp parse_and_prepare_command(command, args_string, client, owner_entity) do
     with {:ok, pattern} <- get_command_syntax(command),
          {:ok, parsed_args} <- parse_command_arguments(pattern, args_string),
-         {:ok, script} <- create_command_script(command, parsed_args, client) do
+         {:ok, script} <- create_command_script(command, parsed_args, client, owner_entity) do
       method_name = "#{command.key}, command execution"
       {:ok, parsed_args, script, method_name}
     else
@@ -154,9 +158,10 @@ defmodule Pythelix.Command.Handler do
     end
   end
 
-  defp create_command_script(_command, args, client) do
+  defp create_command_script(_command, args, client, owner_entity) do
     script = %Script{id: Store.new_script, bytecode: []}
-    final_args = Map.put(args, "client", client)
+    entity_for_script = owner_entity || client
+    final_args = Map.put(args, "client", entity_for_script)
 
     # Write arguments to script
     script = write_arguments_to_script(script, final_args)
@@ -171,11 +176,11 @@ defmodule Pythelix.Command.Handler do
 
   defp write_arguments_to_script(script, _args), do: script
 
-  defp handle_command_error(command, args_string, client, :parse_error) do
-    handle_parse_error(command, args_string, client)
+  defp handle_command_error(command, args_string, client, :parse_error, owner_entity) do
+    handle_parse_error(command, args_string, client, owner_entity)
   end
 
-  defp handle_command_error(_command, _args_string, client, reason) do
+  defp handle_command_error(_command, _args_string, client, reason, _owner_entity) do
     send_error(client, "Command failed: #{inspect(reason)}")
   end
 
@@ -184,7 +189,8 @@ defmodule Pythelix.Command.Handler do
     send(pid, {:message, "Unknown command: #{command_name}"})
   end
 
-  defp handle_parse_error(command, args, client) do
+  defp handle_parse_error(command, args, client, owner_entity) do
+    entity_for_script = owner_entity || client
     case Record.get_method(command, "parse_error") do
       :nomethod ->
         pid = Record.get_attribute(client, "pid")
@@ -193,13 +199,14 @@ defmodule Pythelix.Command.Handler do
       method ->
         # Execute parse_error method asynchronously
         %Script{id: Store.new_script, bytecode: method.bytecode}
-        |> Script.write_variable("client", client)
+        |> Script.write_variable("client", entity_for_script)
         |> Script.write_variable("args", args)
         |> Runner.run(method.code, "parse_error", sync: true)
     end
   end
 
-  defp handle_refine_error(command, args, client) do
+  defp handle_refine_error(command, args, client, owner_entity) do
+    entity_for_script = owner_entity || client
     case Record.get_method(command, "refine_error") do
       :nomethod ->
         pid = Record.get_attribute(client, "pid")
@@ -208,13 +215,14 @@ defmodule Pythelix.Command.Handler do
       method ->
         # Execute refine_error method asynchronously
         %Script{id: Store.new_script, bytecode: method.bytecode}
-        |> Script.write_variable("client", client)
+        |> Script.write_variable("client", entity_for_script)
         |> Script.write_variable("args", args)
         |> Runner.run(method.code, "refine_error", sync: true)
     end
   end
 
-  defp handle_run_error(command, args, client) do
+  defp handle_run_error(command, args, client, owner_entity) do
+    entity_for_script = owner_entity || client
     case Record.get_method(command, "run") do
       :nomethod ->
         pid = Record.get_attribute(client, "pid")
@@ -229,7 +237,7 @@ defmodule Pythelix.Command.Handler do
           error_method ->
             # Execute run_error method asynchronously
             %Script{id: Store.new_script, bytecode: error_method.bytecode}
-            |> Script.write_variable("client", client)
+            |> Script.write_variable("client", entity_for_script)
             |> Script.write_variable("args", args)
             |> Runner.run(error_method.code, "run_error", sync: true)
         end

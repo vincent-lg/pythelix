@@ -457,8 +457,10 @@ defmodule Pythelix.Record do
 
     if location != old_location do
       if has_parent?(entity, "generic/client") && has_parent?(old_location, "generic/menu") do
+        owner = get_attribute(entity, "owner", nil)
+        owner = owner || entity
         try do
-          Runner.run_method({old_location, "leave"}, [entity], nil, sync: true)
+          Runner.run_method({old_location, "leave"}, [owner], nil, sync: true)
         rescue
           _ -> nil
         end
@@ -480,8 +482,10 @@ defmodule Pythelix.Record do
         _ -> nil
       end
 
+      owner = get_attribute(entity, "owner", nil)
+      owner = owner || entity
       #try do
-        Runner.run_method({location, "enter"}, [entity], nil, sync: true)
+        Runner.run_method({location, "enter"}, [owner], nil, sync: true)
       #rescue
       #  _ -> nil
       #end

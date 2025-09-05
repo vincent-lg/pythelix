@@ -223,6 +223,7 @@ defmodule Pythelix.Scripting.Interpreter.Script do
   def references?(value) when is_binary(value), do: false
   def references?(%Format.String{}), do: false
   def references?(value) when is_tuple(value), do: false
+  # Game modes structures should not be referenced
   def references?(_value), do: true
 
   def debug(%{debugger: %Debugger{} = debugger} = script, text) do

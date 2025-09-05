@@ -7,6 +7,7 @@ defmodule Pythelix.World do
   """
 
   @generic_client "generic/client"
+  @generic_character "generic/character"
   @generic_menu "generic/menu"
   @motd_menu "menu/motd"
   @game_menu "menu/game"
@@ -112,6 +113,7 @@ defmodule Pythelix.World do
       |> add_game_menu_entity()
       |> add_base_menu_entity()
       |> add_base_client_entity()
+      |> add_base_character_entity()
       |> Command.add_base_command_entity()
     }
   end
@@ -167,7 +169,19 @@ defmodule Pythelix.World do
         attributes: %{
           "disconnect" => {:extended, Extended.Client, :m_disconnect},
           "msg" => {:extended, Extended.Client, :m_msg},
-          "owner" => {:extended_property, Extended.Client, :owner}
+          "controls" => "Controls()",
+        },
+        methods: %{},
+      } | entities
+    ]
+  end
+
+  defp add_base_character_entity(entities) do
+    [
+      %{
+        key: @generic_character,
+        attributes: %{
+          "game_modes" => %{active: 0, game_modes: []}
         },
         methods: %{},
       } | entities
@@ -255,10 +269,34 @@ defmodule Pythelix.World do
     |> then(&{:ok, &1})
   end
 
+  defp merge_entities([entity]), do: entity
+
+  defp merge_entities([first_entity | rest_entities]) do
+    Enum.reduce(rest_entities, first_entity, fn entity, acc ->
+      Map.merge(acc, entity, fn _key, acc_value, entity_value ->
+        case {acc_value, entity_value} do
+          # Merge nested maps (like attributes and methods)
+          {acc_map, entity_map} when is_map(acc_map) and is_map(entity_map) ->
+            Map.merge(acc_map, entity_map)
+          # For non-maps, the newer entity value takes precedence
+          _ -> entity_value
+        end
+      end)
+    end)
+  end
+
   defp maybe_sort_entities({:error, error}), do: error
 
   defp maybe_sort_entities({:ok, entities}) do
-    entity_map = Map.new(entities, &{&1.key, &1})
+    # Group entities by key and merge duplicates
+    entity_map =
+      entities
+      |> Enum.group_by(& &1.key)
+      |> Enum.map(fn {key, entity_list} ->
+        merged_entity = merge_entities(entity_list)
+        {key, merged_entity}
+      end)
+      |> Map.new()
 
     graph = for entity <- entities, into: %{} do
       parent_key = entity.attributes["parent"]
@@ -428,6 +466,13 @@ defmodule Pythelix.World do
     end
 
     for {name, {args, code}} <- entity.methods do
+      args =
+        if args == :free do
+          :free
+        else
+          Enum.filter(args, fn {set, _} -> set != "self" end)
+        end
+
       Record.set_method(entity.key, name, args, code)
     end
 

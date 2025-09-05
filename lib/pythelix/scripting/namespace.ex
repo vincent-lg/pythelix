@@ -188,6 +188,7 @@ defmodule Pythelix.Scripting.Namespace do
       float when is_float(float) -> Namespace.Float
       list when is_list(list) -> Namespace.List
       str when is_binary(str) -> Namespace.String
+      %{active: _active, game_modes: _modes} -> Namespace.GameModes
       %Format.String{} -> Namespace.String
       %Dict{} -> Namespace.Dict
       %Password{} -> Namespace.Password
@@ -216,6 +217,10 @@ defmodule Pythelix.Scripting.Namespace do
   Validate constraints and fills out an argument map if valid.
   """
   def validate(script, constraints, args, kwargs) do
+    constraints =
+      constraints
+      |> Enum.filter(fn {set, _} -> set != "self" end)
+
     args =
       args
       |> Stream.with_index()
@@ -286,7 +291,7 @@ defmodule Pythelix.Scripting.Namespace do
 
       true ->
         type = opts[:type]
-        {script, value} = enforce_arg_type(script, set, from_pos || from_keyword, type)
+        {script, value} = enforce_arg_type(script, set, (from_pos == nil && from_keyword) || from_pos, type)
 
         {script, args, kwargs, value}
     end
@@ -355,7 +360,7 @@ defmodule Pythelix.Scripting.Namespace do
     all_args = Enum.any?(constraints, fn {_set, opts} -> opts[:args] end)
     map_constraints =
       constraints
-      |> Stream.filter(fn {_set, opts} -> opts[:index] && !opts[:args] end)
+      |> Stream.filter(fn {set, opts} -> opts[:index] && !opts[:args] && set != "self" end)
       |> Map.new()
 
     received =
@@ -372,7 +377,7 @@ defmodule Pythelix.Scripting.Namespace do
 
     constraints =
       constraints
-      |> Enum.filter(fn {_set, opts} -> opts[:index] end)
+      |> Enum.filter(fn {set, opts} -> set != "self" && opts[:index] end)
 
     needed = length(constraints)
 

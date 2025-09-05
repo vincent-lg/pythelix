@@ -32,6 +32,7 @@ defmodule Pythelix.Command.Signature do
   defp extract_args(args) do
     args
     |> Stream.filter(fn
+      {:arg, [var: "self"]} -> false
       {:arg, _} -> true
       _ -> false
     end)

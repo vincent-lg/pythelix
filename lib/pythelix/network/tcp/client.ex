@@ -5,7 +5,7 @@ defmodule Pythelix.Network.TCP.Client do
   alias Pythelix.Record
   alias Pythelix.Scripting.Format
   alias Pythelix.Game.Hub
-  alias Pythelix.Menu.Handler
+  alias Pythelix.Menu.Mode.Handler, as: ModeHandler
 
   require Logger
 
@@ -149,7 +149,8 @@ defmodule Pythelix.Network.TCP.Client do
         menu = Record.get_location_entity(client)
 
         if menu do
-          Handler.handle(menu, client, input, start_time)
+          # Use the mode handler which will delegate to menu handler if no game modes
+          ModeHandler.handle(menu, client, input, start_time)
         else
           # No menu context - send error message
           pid = Record.get_attribute(client, "pid")

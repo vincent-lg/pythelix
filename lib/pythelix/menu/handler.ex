@@ -16,18 +16,49 @@ defmodule Pythelix.Menu.Handler do
   This function first tries to call the menu's input method, then
   falls back to command processing if the input method returns false
   or doesn't exist.
+
+  The owner_entity parameter allows specifying a different entity context
+  for the menu processing, used by game modes.
   """
-  @spec handle(Entity.t(), map(), String.t(), integer()) :: :ok
-  def handle(menu, client, input, start_time) do
+  @spec handle(Entity.t(), map(), String.t(), integer(), Entity.t() | nil) :: :ok
+  def handle(menu, client, input, start_time, owner_entity \\ nil) do
+    # Handle empty input by sending prompt
+    case String.trim(input) do
+      "" ->
+        send_menu_prompt(menu, client, owner_entity)
+
+      _ ->
+        process_menu_input(menu, client, input, start_time, owner_entity)
+    end
+  end
+
+  @doc """
+  Send the menu prompt to the client.
+  """
+  def send_menu_prompt(menu, client, owner_entity) do
+    case Record.get_method(menu, "prompt") do
+      :nomethod ->
+        # No prompt method, send default prompt or nothing
+        :ok
+
+      prompt_method ->
+        # Execute prompt method
+        script = create_input_script(client, "", prompt_method, owner_entity)
+        method_name = "#{inspect(menu)}, method prompt"
+        Runner.run(script, prompt_method.code, method_name, sync: true)
+    end
+  end
+
+  defp process_menu_input(menu, client, input, start_time, owner_entity) do
     case Record.get_method(menu, "input") do
       :nomethod ->
         # No input method, try commands directly
-        try_command_processing(menu, client, input, start_time)
+        try_command_processing(menu, client, input, start_time, owner_entity)
 
       input_method ->
         # Execute input method with step to handle its result
-        script = create_input_script(client, input, input_method)
-        step = {__MODULE__, :handle_input_completion, [menu, client, input, start_time]}
+        script = create_input_script(client, input, input_method, owner_entity)
+        step = {__MODULE__, :handle_input_completion, [menu, client, input, start_time, owner_entity]}
         method_name = "#{inspect(menu)}, method input"
         Runner.run(script, input_method.code, method_name, step: step, sync: true)
     end
@@ -36,13 +67,13 @@ defmodule Pythelix.Menu.Handler do
   @doc """
   Handle completion of the input method.
   """
-  def handle_input_completion(:ok, script, menu, client, input, start_time) do
+  def handle_input_completion(:ok, script, menu, client, input, start_time, owner_entity) do
     result = script.last_raw
 
     case result do
       # Input method returned false - try command processing
       false ->
-        try_command_processing(menu, client, input, start_time)
+        try_command_processing(menu, client, input, start_time, owner_entity)
 
       # Input method returned true or anything else - input was handled
       _ ->
@@ -50,36 +81,36 @@ defmodule Pythelix.Menu.Handler do
     end
   end
 
-  def handle_input_completion(:error, _script, menu, client, input, start_time) do
+  def handle_input_completion(:error, _script, menu, client, input, start_time, owner_entity) do
     # Input method failed, try unknown_input method
-    handle_unknown_input(menu, client, input, start_time)
+    handle_unknown_input(menu, client, input, start_time, owner_entity)
   end
 
   @doc """
   Try processing input as a command.
   """
-  def try_command_processing(menu, client, input, start_time) do
+  def try_command_processing(menu, client, input, start_time, owner_entity) do
     case parse_command_from_input(input, menu) do
       {:command, command_key, args} ->
-        CommandHandler.start_command_execution(command_key, args, client, start_time)
+        CommandHandler.start_command_execution(command_key, args, client, start_time, owner_entity)
 
       :no_command ->
-        handle_unknown_input(menu, client, input, start_time)
+        handle_unknown_input(menu, client, input, start_time, owner_entity)
     end
   end
 
   @doc """
   Handle unknown input (no matching command).
   """
-  def handle_unknown_input(menu, client, input, start_time) do
+  def handle_unknown_input(menu, client, input, start_time, owner_entity) do
     case Record.get_method(menu, "unknown_input") do
       :nomethod ->
         # Try invalid_input as fallback
-        handle_invalid_input(menu, client, input, start_time)
+        handle_invalid_input(menu, client, input, start_time, owner_entity)
 
       unknown_input_method ->
         # Execute unknown_input method asynchronously
-        script = create_input_script(client, input, unknown_input_method)
+        script = create_input_script(client, input, unknown_input_method, owner_entity)
         step = {__MODULE__, :handle_unknown_input_completion, [start_time]}
         method_name = "#{inspect(menu)}, method unknown_input"
         Runner.run(script, unknown_input_method.code, method_name, step: step, sync: true)
@@ -100,7 +131,7 @@ defmodule Pythelix.Menu.Handler do
   @doc """
   Handle invalid input (final fallback).
   """
-  def handle_invalid_input(menu, client, input, start_time) do
+  def handle_invalid_input(menu, client, input, start_time, owner_entity) do
     case Record.get_method(menu, "invalid_input") do
       :nomethod ->
         # Send generic error message
@@ -110,7 +141,7 @@ defmodule Pythelix.Menu.Handler do
 
       invalid_input_method ->
         # Execute invalid_input method asynchronously
-        script = create_input_script(client, input, invalid_input_method)
+        script = create_input_script(client, input, invalid_input_method, owner_entity)
         step = {__MODULE__, :handle_invalid_input_completion, [start_time]}
         method_name = "#{inspect(menu)}, method invalid_input"
         Runner.run(script, invalid_input_method.code, method_name, step: step, sync: true)
@@ -128,9 +159,10 @@ defmodule Pythelix.Menu.Handler do
     log_performance(start_time)
   end
 
-  defp create_input_script(client, input, method) do
+  defp create_input_script(client, input, method, owner_entity) do
+    entity_for_script = owner_entity || client
     Method.fetch_script(method)
-    |> Script.write_variable("client", client)
+    |> Script.write_variable("client", entity_for_script)
     |> Script.write_variable("input", input)
   end
 
