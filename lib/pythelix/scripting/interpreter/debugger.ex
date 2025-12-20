@@ -18,7 +18,7 @@ defmodule Pythelix.Scripting.Interpreter.Debugger do
   end
 
   @doc """
-  Add a new line of dbugging.
+  Add a new line of debugging.
   """
   def add(%{lines: lines} = debugger, bytecode, text) do
     %{debugger | lines: [{bytecode, text} | lines]}
