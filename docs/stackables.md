@@ -132,7 +132,7 @@ done
 
 In practice, you rarely want to transfer an entire stack at once. A player picking up "10 gold coins" from a room that has 200 shouldn't empty the room—they should take only what they asked for.
 
-Use `search.match` to find items inside a container by a text attribute. It works on containers holding regular entities, stackables, or a mix of both:
+Use `search.match` to find items inside a container by a text attribute. It works on containers holding regular entities, stackables, or a mix of both. The examples below cover the most common options; for the full reference—including per-viewer visibility, per-viewer naming, game-wide text normalisation, and result indexing—see the [search module documentation](./pythello/module/search.md).
 
 ```
 results = search.match(!treasure_room!, "gold")

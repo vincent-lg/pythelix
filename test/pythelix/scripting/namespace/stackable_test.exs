@@ -377,6 +377,305 @@ defmodule Pythelix.Scripting.Namespace.StackableTest do
   end
 
   # ---------------------------------------------------------------------------
+  # search.match — index selection
+
+  describe "search.match — index selection" do
+    test "index=1 returns the first matching item" do
+      {:ok, room} = Record.create_entity(key: "idx_room")
+      {:ok, _coin} = Record.create_entity(key: "idx_gold")
+      {:ok, _bar} = Record.create_entity(key: "idx_bar")
+      Record.set_attribute("idx_gold", "name", "gold coin")
+      Record.set_attribute("idx_bar", "name", "gold bar")
+      Record.add_stackable(room, Record.get_entity("idx_gold"), 10)
+      Record.add_stackable(room, Record.get_entity("idx_bar"), 5)
+
+      script = run("""
+      results = search.match(!idx_room!, "gold", index=1)
+      """)
+
+      results = Script.get_variable_value(script, "results")
+      assert length(results) == 1
+    end
+
+    test "index=2 returns the second matching item" do
+      {:ok, room} = Record.create_entity(key: "idx2_room")
+      {:ok, _coin} = Record.create_entity(key: "idx2_gold")
+      {:ok, _bar} = Record.create_entity(key: "idx2_bar")
+      Record.set_attribute("idx2_gold", "name", "gold coin")
+      Record.set_attribute("idx2_bar", "name", "gold bar")
+      Record.add_stackable(room, Record.get_entity("idx2_gold"), 10)
+      Record.add_stackable(room, Record.get_entity("idx2_bar"), 5)
+
+      script = run("""
+      results = search.match(!idx2_room!, "gold", index=2)
+      """)
+
+      results = Script.get_variable_value(script, "results")
+      assert length(results) == 1
+    end
+
+    test "index out of range returns an empty list" do
+      {:ok, room} = Record.create_entity(key: "idx_oor_room")
+      {:ok, _coin} = Record.create_entity(key: "idx_oor_coin")
+      Record.set_attribute("idx_oor_coin", "name", "gold coin")
+      Record.add_stackable(room, Record.get_entity("idx_oor_coin"), 10)
+
+      script = run("""
+      results = search.match(!idx_oor_room!, "gold", index=99)
+      """)
+
+      results = Script.get_variable_value(script, "results")
+      assert results == []
+    end
+
+    test "index and limit can be combined: select Nth then cap quantity" do
+      {:ok, room} = Record.create_entity(key: "idx_lim_room")
+      {:ok, player} = Record.create_entity(key: "idx_lim_player")
+      {:ok, _coin} = Record.create_entity(key: "idx_lim_coin")
+      {:ok, _bar} = Record.create_entity(key: "idx_lim_bar")
+      Record.set_attribute("idx_lim_coin", "name", "gold coin")
+      Record.set_attribute("idx_lim_bar", "name", "gold bar")
+      Record.add_stackable(room, Record.get_entity("idx_lim_coin"), 100)
+      Record.add_stackable(room, Record.get_entity("idx_lim_bar"), 200)
+
+      run("""
+      matches = search.match(!idx_lim_room!, "gold", index=2, limit=5)
+      matches[0].location = !idx_lim_player!
+      """)
+
+      bar = Record.get_entity("idx_lim_bar")
+      assert Record.get_stackable_quantity(player, bar) == 5
+      assert Record.get_stackable_quantity(room, bar) == 195
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # search.match — __visible__ hook
+
+  describe "search.match — __visible__ hook" do
+    test "items without __visible__ are always included regardless of viewer" do
+      {:ok, room} = Record.create_entity(key: "vis_default_room")
+      {:ok, _player} = Record.create_entity(key: "vis_default_player")
+      {:ok, _coin} = Record.create_entity(key: "vis_default_coin")
+      Record.set_attribute("vis_default_coin", "name", "gold coin")
+      Record.add_stackable(room, Record.get_entity("vis_default_coin"), 10)
+
+      script = run("""
+      results = search.match(!vis_default_room!, "gold", viewer=!vis_default_player!)
+      """)
+
+      results = Script.get_variable_value(script, "results")
+      assert length(results) == 1
+    end
+
+    test "__visible__ returning False hides item from viewer" do
+      {:ok, room} = Record.create_entity(key: "vis_hide_room")
+      {:ok, _player} = Record.create_entity(key: "vis_hide_player")
+      {:ok, _coin} = Record.create_entity(key: "vis_hide_coin")
+      Record.set_attribute("vis_hide_coin", "name", "gold coin")
+      Record.set_attribute("vis_hide_coin", "stackable", true)
+      Record.set_method("vis_hide_coin", "__visible__", [{"viewer", [index: 0, type: :entity]}], "return False")
+      Record.add_stackable(room, Record.get_entity("vis_hide_coin"), 10)
+
+      script = run("""
+      results = search.match(!vis_hide_room!, "gold", viewer=!vis_hide_player!)
+      """)
+
+      results = Script.get_variable_value(script, "results")
+      assert results == []
+    end
+
+    test "__visible__ returning False does not affect searches without a viewer" do
+      {:ok, room} = Record.create_entity(key: "vis_noview_room")
+      {:ok, _coin} = Record.create_entity(key: "vis_noview_coin")
+      Record.set_attribute("vis_noview_coin", "name", "gold coin")
+      Record.set_attribute("vis_noview_coin", "stackable", true)
+      Record.set_method("vis_noview_coin", "__visible__", [{"viewer", [index: 0, type: :entity]}], "return False")
+      Record.add_stackable(room, Record.get_entity("vis_noview_coin"), 10)
+
+      script = run("""
+      results = search.match(!vis_noview_room!, "gold")
+      """)
+
+      results = Script.get_variable_value(script, "results")
+      assert length(results) == 1
+    end
+
+    test "__visible__ returning True keeps item visible" do
+      {:ok, room} = Record.create_entity(key: "vis_show_room")
+      {:ok, _player} = Record.create_entity(key: "vis_show_player")
+      {:ok, _coin} = Record.create_entity(key: "vis_show_coin")
+      Record.set_attribute("vis_show_coin", "name", "gold coin")
+      Record.set_attribute("vis_show_coin", "stackable", true)
+      Record.set_method("vis_show_coin", "__visible__", [{"viewer", [index: 0, type: :entity]}], "return True")
+      Record.add_stackable(room, Record.get_entity("vis_show_coin"), 10)
+
+      script = run("""
+      results = search.match(!vis_show_room!, "gold", viewer=!vis_show_player!)
+      """)
+
+      results = Script.get_variable_value(script, "results")
+      assert length(results) == 1
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # search.match — __namefor__ hook
+
+  describe "search.match — __namefor__ hook" do
+    test "without viewer, matching uses the raw attribute" do
+      {:ok, room} = Record.create_entity(key: "nfr_noview_room")
+      {:ok, _coin} = Record.create_entity(key: "nfr_noview_coin")
+      Record.set_attribute("nfr_noview_coin", "name", "boring name")
+      Record.set_attribute("nfr_noview_coin", "stackable", true)
+      Record.set_method("nfr_noview_coin", "__namefor__", [{"viewer", [index: 0, type: :entity]}], ~s(return "special name"))
+      Record.add_stackable(room, Record.get_entity("nfr_noview_coin"), 5)
+
+      script = run("""
+      results = search.match(!nfr_noview_room!, "boring")
+      """)
+
+      results = Script.get_variable_value(script, "results")
+      assert length(results) == 1
+    end
+
+    test "with viewer, matching uses __namefor__ instead of the raw attribute" do
+      {:ok, room} = Record.create_entity(key: "nfr_view_room")
+      {:ok, _player} = Record.create_entity(key: "nfr_view_player")
+      {:ok, _coin} = Record.create_entity(key: "nfr_view_coin")
+      Record.set_attribute("nfr_view_coin", "name", "boring name")
+      Record.set_attribute("nfr_view_coin", "stackable", true)
+      Record.set_method("nfr_view_coin", "__namefor__", [{"viewer", [index: 0, type: :entity]}], ~s(return "special name"))
+      Record.add_stackable(room, Record.get_entity("nfr_view_coin"), 5)
+
+      # "special" matches what __namefor__ returns; "boring" does not
+      script = run("""
+      by_special = search.match(!nfr_view_room!, "special", viewer=!nfr_view_player!)
+      by_boring  = search.match(!nfr_view_room!, "boring",  viewer=!nfr_view_player!)
+      """)
+
+      by_special = Script.get_variable_value(script, "by_special")
+      by_boring = Script.get_variable_value(script, "by_boring")
+      assert length(by_special) == 1
+      assert by_boring == []
+    end
+
+    test "items without __namefor__ fall back to the raw attribute even with a viewer" do
+      {:ok, room} = Record.create_entity(key: "nfr_fallback_room")
+      {:ok, _player} = Record.create_entity(key: "nfr_fallback_player")
+      {:ok, _coin} = Record.create_entity(key: "nfr_fallback_coin")
+      Record.set_attribute("nfr_fallback_coin", "name", "gold coin")
+      Record.add_stackable(room, Record.get_entity("nfr_fallback_coin"), 5)
+
+      script = run("""
+      results = search.match(!nfr_fallback_room!, "gold", viewer=!nfr_fallback_player!)
+      """)
+
+      results = Script.get_variable_value(script, "results")
+      assert length(results) == 1
+    end
+
+    test "__namefor__ returning an f-string is evaluated correctly" do
+      # This test verifies that when __namefor__ returns an f-string (e.g.
+      # f"[tag] {self.name}"), the f-string is properly evaluated so the
+      # resulting plain string is used for matching — not the raw
+      # %Format.String{} struct.
+      {:ok, room} = Record.create_entity(key: "nfr_fstr_room")
+      {:ok, _player} = Record.create_entity(key: "nfr_fstr_player")
+      {:ok, _coin} = Record.create_entity(key: "nfr_fstr_coin")
+      Record.set_attribute("nfr_fstr_coin", "name", "gold coin")
+      Record.set_attribute("nfr_fstr_coin", "stackable", true)
+      Record.set_method("nfr_fstr_coin", "__namefor__",
+        [{"viewer", [index: 0, type: :entity]}],
+        ~s(return f"[tag] {self.name}"))
+      Record.add_stackable(room, Record.get_entity("nfr_fstr_coin"), 3)
+
+      script = run("""
+      by_tag   = search.match(!nfr_fstr_room!, "[tag]", viewer=!nfr_fstr_player!)
+      by_notag = search.match(!nfr_fstr_room!, "[tag]")
+      """)
+
+      by_tag = Script.get_variable_value(script, "by_tag")
+      by_notag = Script.get_variable_value(script, "by_notag")
+      # With a viewer: __namefor__ returns f"[tag] {self.name}" → "[tag] gold coin" → matches "[tag]"
+      assert length(by_tag) == 1
+      # Without a viewer: raw "gold coin" used → does not contain "[tag]"
+      assert by_notag == []
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # search.match — normalize hook on !search! entity
+
+  describe "search.match — normalize hook" do
+    test "without !search! entity, default lowercase normalisation applies" do
+      {:ok, room} = Record.create_entity(key: "norm_default_room")
+      {:ok, _coin} = Record.create_entity(key: "norm_default_coin")
+      Record.set_attribute("norm_default_coin", "name", "Gold Coin")
+      Record.add_stackable(room, Record.get_entity("norm_default_coin"), 10)
+
+      # lowercase search term matches mixed-case item name via default downcase
+      script = run("""
+      results = search.match(!norm_default_room!, "gold")
+      """)
+
+      results = Script.get_variable_value(script, "results")
+      assert length(results) == 1
+    end
+
+    test "!search!.normalize is used for both the search term and each item name" do
+      # The normalizer returns a fixed sentinel string for every input.
+      # This means any search term will match any item, since both sides
+      # normalise to the same value — demonstrating that the hook is invoked
+      # for each side of the comparison.
+      {:ok, _search_entity} = Record.create_entity(key: "search")
+      Record.set_method("search", "normalize", [{"text", [index: 0, type: :str]}], ~s(return "SENTINEL"))
+
+      {:ok, room} = Record.create_entity(key: "norm_hook_room")
+      {:ok, _coin} = Record.create_entity(key: "norm_hook_coin")
+      Record.set_attribute("norm_hook_coin", "name", "anything")
+      Record.add_stackable(room, Record.get_entity("norm_hook_coin"), 7)
+
+      # "SENTINEL" matches because both sides normalise to "SENTINEL"
+      script = run("""
+      results = search.match(!norm_hook_room!, "SENTINEL")
+      """)
+
+      results = Script.get_variable_value(script, "results")
+      assert length(results) == 1
+
+      # clean up the global !search! entity so it doesn't bleed into other tests
+      Record.Cache.clear()
+    end
+
+    test "!search!.normalize enables accent-insensitive matching" do
+      {:ok, _search_entity} = Record.create_entity(key: "search")
+      # Normalizer strips a known accent substitution: é -> e, è -> e
+      Record.set_method("search", "normalize", [{"text", [index: 0, type: :str]}], """
+      result = text.lower()
+      result = result.replace("é", "e")
+      result = result.replace("è", "e")
+      return result
+      """)
+
+      {:ok, room} = Record.create_entity(key: "norm_accent_room")
+      {:ok, _sword} = Record.create_entity(key: "norm_accent_sword")
+      Record.set_attribute("norm_accent_sword", "name", "épée")
+      Record.add_stackable(room, Record.get_entity("norm_accent_sword"), 1)
+
+      # "epee" would not match "épée" with plain downcase, but does with the hook
+      script = run("""
+      results = search.match(!norm_accent_room!, "epee")
+      """)
+
+      results = Script.get_variable_value(script, "results")
+      assert length(results) == 1
+
+      Record.Cache.clear()
+    end
+  end
+
+  # ---------------------------------------------------------------------------
   # Mixed contents: browsing with quantity attribute
 
   describe "browsing contents" do

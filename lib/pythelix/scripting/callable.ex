@@ -27,8 +27,6 @@ defmodule Pythelix.Scripting.Callable do
   def call(script, method_or_callable, args \\ [], kwargs \\ nil)
 
   def call(%Script{} = script, :none, _args, _kwargs) do
-    IO.puts("Should be a major error here")
-    IO.inspect(script.bytecode, label: "bytecode", limit: :infinity)
     {Traceback.raise(script, NoCallable, "no valid callable"), :none}
   end
 

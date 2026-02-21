@@ -6,6 +6,7 @@ defmodule Pythelix.Method do
   alias Pythelix.Method
   alias Pythelix.Record
   alias Pythelix.Scripting
+  alias Pythelix.Scripting.Format
   alias Pythelix.Scripting.Interpreter.Script
   alias Pythelix.Scripting.Namespace
   alias Pythelix.Scripting.Object.Dict
@@ -87,7 +88,11 @@ defmodule Pythelix.Method do
 
     with %Method{} = method <- Record.get_method(entity, name),
          %Script{error: nil} = script <- Method.call(method, args, kwargs, method_name) do
-      result = (script.last_raw == nil && :noresult) || script.last_raw
+      result =
+        case (script.last_raw == nil && :noresult) || script.last_raw do
+          %Format.String{} = fstr -> Format.String.format(fstr)
+          other -> other
+        end
       Script.destroy(script)
       result
     else
