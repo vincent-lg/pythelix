@@ -44,8 +44,8 @@ defmodule Pythelix.Scripting.Interpreter.AST.Assignments do
             |> add({:call, 1})
         end)
 
-      {[{:getitem, [_expr | items]}], _}, code ->
-        Enum.reduce(items, code, fn item, code ->
+      {[{:getitem, [expr | items]}], _}, code ->
+        Enum.reduce(items, AST.Core.read_ast(code, expr), fn item, code ->
           code
           |> add({:getattr, "__getitem__"})
           |> add({:dict, :no_reference})
@@ -132,8 +132,8 @@ defmodule Pythelix.Scripting.Interpreter.AST.Assignments do
             |> add({:call, 1})
         end)
 
-      {[{:getitem, [_expr | items]}], _}, code ->
-        Enum.reduce(items, code, fn item, code ->
+      {[{:getitem, [expr | items]}], _}, code ->
+        Enum.reduce(items, AST.Core.read_ast(code, expr), fn item, code ->
           code
           |> add({:getattr, "__getitem__"})
           |> add({:dict, :no_reference})

@@ -7,7 +7,7 @@ defmodule Pythelix.Scripting.Callable do
   defstruct [:module, :object, :name]
 
   alias Pythelix.{Method, Record}
-  alias Pythelix.Scripting.Callable
+  alias Pythelix.Scripting.{Callable, Traceback}
   alias Pythelix.Scripting.Interpreter.Script
   alias Pythelix.Scripting.Namespace
   alias Pythelix.Scripting.Object.Dict
@@ -25,6 +25,12 @@ defmodule Pythelix.Scripting.Callable do
   Call the namespace.
   """
   def call(script, method_or_callable, args \\ [], kwargs \\ nil)
+
+  def call(%Script{} = script, :none, _args, _kwargs) do
+    IO.puts("Should be a major error here")
+    IO.inspect(script.bytecode, label: "bytecode", limit: :infinity)
+    {Traceback.raise(script, NoCallable, "no valid callable"), :none}
+  end
 
   def call(%Script{} = script, {:extended, id_or_key, namespace, name}, args, kwargs) do
     kwargs = (kwargs == nil && Dict.new()) || kwargs
@@ -120,7 +126,8 @@ defmodule Pythelix.Scripting.Callable do
   def call!(%Script{} = script, object, name, args \\ [], kwargs \\ nil) do
     name = (is_binary(name) && String.to_existing_atom("m_#{name}")) || name
 
-    module = Namespace.locate(object)
+    resolved = Store.get_value(object, recursive: false)
+    module = Namespace.locate(resolved)
     callable = %Callable{module: module, object: object, name: name}
 
     call(script, callable, args, kwargs)

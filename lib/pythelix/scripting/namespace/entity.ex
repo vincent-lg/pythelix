@@ -63,6 +63,10 @@ defmodule Pythelix.Scripting.Namespace.Entity do
     location
   end
 
+  def getattr(_script, _self, "quantity") do
+    1
+  end
+
   def getattr(_script, self, "contents") do
     entity = Store.get_value(self)
 

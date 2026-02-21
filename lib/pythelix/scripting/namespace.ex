@@ -195,6 +195,7 @@ defmodule Pythelix.Scripting.Namespace do
       %MapSet{} -> Namespace.Set
       %Pythelix.Entity{} -> Namespace.Entity
       %Pythelix.SubEntity{} -> Namespace.SubEntity
+      %Pythelix.Stackable{} -> Namespace.Stackable
     end
   end
 

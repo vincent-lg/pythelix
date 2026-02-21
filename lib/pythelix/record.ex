@@ -5,7 +5,7 @@ defmodule Pythelix.Record do
 
   import Ecto.Query, warn: false
   alias Pythelix.Repo
-  alias Pythelix.{Entity, Method}
+  alias Pythelix.{Entity, Method, Stackable}
   alias Pythelix.Network.TCP.Client
   alias Pythelix.Record
   alias Pythelix.Record.Cache
@@ -83,6 +83,7 @@ defmodule Pythelix.Record do
     |> pull_parent_attributes()
     |> pull_parent_methods()
     |> Cache.cache_entity()
+    |> tap(&load_stackables/1)
   end
 
   @doc """
@@ -228,12 +229,18 @@ defmodule Pythelix.Record do
     * entity (entity): the child entity.
 
   """
-  @spec get_contained(Entity.t()) :: [Entity.t()]
+  @spec get_contained(Entity.t()) :: [Entity.t() | Stackable.t()]
   def get_contained(%Entity{} = entity) do
     entity
     |> Entity.get_id_or_key()
     |> Cache.get_contained_id_or_key()
-    |> Enum.map(&get_entity/1)
+    |> Enum.map(fn
+      {:stackable, id_or_key, qty} ->
+        %Stackable{entity: get_entity(id_or_key), quantity: qty, location: entity}
+
+      id_or_key ->
+        get_entity(id_or_key)
+    end)
   end
 
   @doc """
@@ -900,6 +907,75 @@ defmodule Pythelix.Record do
     |> Enum.map(fn {name, _} -> Cache.uncache_entity_method(entity, name) end)
 
     entity
+  end
+
+  @doc """
+  Add a stackable entry to a container.
+  Updates cache and persists via __stackables__ attribute.
+  """
+  def add_stackable(%Entity{} = container, %Entity{} = entity, quantity) do
+    container_id_or_key = Entity.get_id_or_key(container)
+    entity_id_or_key = Entity.get_id_or_key(entity)
+
+    Cache.add_stackable_to(container_id_or_key, entity_id_or_key, quantity)
+    persist_stackables(container)
+  end
+
+  @doc """
+  Remove a stackable entry from a container.
+  Updates cache and persists via __stackables__ attribute.
+  """
+  def remove_stackable(%Entity{} = container, %Entity{} = entity, quantity) do
+    container_id_or_key = Entity.get_id_or_key(container)
+    entity_id_or_key = Entity.get_id_or_key(entity)
+
+    Cache.remove_stackable_from(container_id_or_key, entity_id_or_key, quantity)
+    persist_stackables(container)
+  end
+
+  @doc """
+  Get the stackable quantity for an entity in a container.
+  """
+  def get_stackable_quantity(%Entity{} = container, %Entity{} = entity) do
+    container_id_or_key = Entity.get_id_or_key(container)
+    entity_id_or_key = Entity.get_id_or_key(entity)
+
+    Cache.get_stackable_quantity(container_id_or_key, entity_id_or_key)
+  end
+
+  defp persist_stackables(%Entity{} = container) do
+    container_id_or_key = Entity.get_id_or_key(container)
+    contents = Cache.get_contained_id_or_key(container_id_or_key)
+
+    stackables =
+      contents
+      |> Enum.filter(fn
+        {:stackable, _, _} -> true
+        _ -> false
+      end)
+      |> Enum.map(fn {:stackable, id_or_key, qty} -> {id_or_key, qty} end)
+
+    set_attribute(container_id_or_key, "__stackables__", stackables)
+  end
+
+  @doc """
+  Reconstruct stackable cache entries from a container's __stackables__ attribute.
+  """
+  def load_stackables(%Entity{} = container) do
+    container_id_or_key = Entity.get_id_or_key(container)
+
+    case get_attribute(container, "__stackables__") do
+      nil ->
+        :ok
+
+      stackables when is_list(stackables) ->
+        Enum.each(stackables, fn {entity_id_or_key, qty} ->
+          Cache.add_stackable_to(container_id_or_key, entity_id_or_key, qty)
+        end)
+
+      _ ->
+        :ok
+    end
   end
 
   defp warmup_database() do

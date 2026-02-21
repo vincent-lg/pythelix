@@ -368,6 +368,8 @@ defmodule Pythelix.Record.Cache do
     end
   end
 
+  defp get_recursive_contents({:stackable, _, _}), do: []
+
   defp get_recursive_contents(id_or_key) do
     case Cachex.get(:px_cache, {:contents, id_or_key}) do
       {:ok, nil} ->
@@ -601,6 +603,80 @@ defmodule Pythelix.Record.Cache do
       Cachex.put(:px_cache, {:location, entity_id_or_key}, location_id_or_key)
     else
       Cachex.del(:px_cache, {:location, entity_id_or_key})
+    end
+  end
+
+  @doc """
+  Add a stackable entry to a container's contents list.
+  If the entity already has a stackable entry, increment the quantity.
+  """
+  def add_stackable_to(container_id_or_key, entity_id_or_key, quantity) do
+    Cachex.get_and_update(:px_cache, {:contents, container_id_or_key}, fn
+      nil ->
+        {:commit, [{:stackable, entity_id_or_key, quantity}]}
+
+      contents ->
+        case Enum.find_index(contents, fn
+          {:stackable, ^entity_id_or_key, _} -> true
+          _ -> false
+        end) do
+          nil ->
+            {:commit, contents ++ [{:stackable, entity_id_or_key, quantity}]}
+
+          index ->
+            {:stackable, ^entity_id_or_key, old_qty} = Enum.at(contents, index)
+            {:commit, List.replace_at(contents, index, {:stackable, entity_id_or_key, old_qty + quantity})}
+        end
+    end)
+  end
+
+  @doc """
+  Remove a stackable entry from a container's contents list.
+  If the quantity reaches 0, remove the entry entirely.
+  """
+  def remove_stackable_from(container_id_or_key, entity_id_or_key, quantity) do
+    Cachex.get_and_update(:px_cache, {:contents, container_id_or_key}, fn
+      nil ->
+        {:commit, []}
+
+      contents ->
+        case Enum.find_index(contents, fn
+          {:stackable, ^entity_id_or_key, _} -> true
+          _ -> false
+        end) do
+          nil ->
+            {:commit, contents}
+
+          index ->
+            {:stackable, ^entity_id_or_key, old_qty} = Enum.at(contents, index)
+            new_qty = old_qty - quantity
+
+            if new_qty <= 0 do
+              {:commit, List.delete_at(contents, index)}
+            else
+              {:commit, List.replace_at(contents, index, {:stackable, entity_id_or_key, new_qty})}
+            end
+        end
+    end)
+  end
+
+  @doc """
+  Get the stackable quantity for an entity in a container.
+  Returns 0 if no stackable entry exists.
+  """
+  def get_stackable_quantity(container_id_or_key, entity_id_or_key) do
+    case Cachex.get(:px_cache, {:contents, container_id_or_key}) do
+      {:ok, nil} ->
+        0
+
+      {:ok, contents} ->
+        case Enum.find(contents, fn
+          {:stackable, ^entity_id_or_key, _} -> true
+          _ -> false
+        end) do
+          {:stackable, ^entity_id_or_key, qty} -> qty
+          nil -> 0
+        end
     end
   end
 end

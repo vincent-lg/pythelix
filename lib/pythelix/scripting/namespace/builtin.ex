@@ -10,6 +10,7 @@ defmodule Pythelix.Scripting.Namespace.Builtin do
   alias Pythelix.Scripting.Display
   alias Pythelix.Scripting.Format
   alias Pythelix.Scripting.Object.Dict
+  alias Pythelix.Stackable
   alias Pythelix.World
 
   deffun function_Entity(script, namespace), [
@@ -106,6 +107,22 @@ defmodule Pythelix.Scripting.Namespace.Builtin do
       end
 
     {script, set}
+  end
+
+  deffun stackable(script, namespace), [
+    {:entity, index: 0, type: :entity},
+    {:quantity, index: 1, type: :int}
+  ] do
+    entity = Store.get_value(namespace.entity)
+    quantity = namespace.quantity
+
+    if Pythelix.Record.get_attribute(entity, "stackable") != true do
+      id_or_key = entity.key || entity.id
+      {Script.raise(script, TypeError, "entity '#{id_or_key}' is not stackable"), :none}
+    else
+      stackable = %Stackable{entity: entity, quantity: quantity, location: nil}
+      {script, stackable}
+    end
   end
 
   deffun repr(script, namespace), [
