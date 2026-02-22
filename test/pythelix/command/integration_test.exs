@@ -281,6 +281,113 @@ defmodule Pythelix.Command.IntegrationTest do
     end
   end
 
+  # ---------------------------------------------------------------------------
+  # Get command with search.match, location assignment, and names.group
+  # Uses owner_entity pattern: a character entity owns the client and is
+  # placed in the room. The character (not the client) is used as the
+  # script's "client" variable when owner_entity is provided.
+
+  describe "get command with search and display" do
+    defp setup_get_command do
+      {:ok, syntax_pattern, "", _, _, _} = Parser.syntax("(#number#) <object>")
+      {:ok, _command} = Record.create_entity(key: "command/get", virtual: true)
+      Record.set_attribute("command/get", "syntax_pattern", syntax_pattern)
+
+      {_, refine_args} = Signature.constraints("refine(client, object, number=1)")
+      Record.set_method("command/get", "refine", refine_args,
+        """
+        to_pick = search.match(client.location, object, limit=number)
+        """)
+
+      {_, run_args} = Signature.constraints("run(client, to_pick)")
+      Record.set_method("command/get", "run", run_args,
+        """
+        for item in to_pick:
+            item.location = client
+        done
+        for name in names.group(to_pick):
+            client.msg(f"You pick up {name}.")
+        done
+        """)
+    end
+
+    defp setup_character_in_room(room_key, char_key) do
+      {:ok, room} = Record.create_entity(key: room_key, virtual: true)
+      test_generic_client = Record.get_entity("test_generic/client")
+      {:ok, character} = Record.create_entity(
+        key: char_key, virtual: true, parent: test_generic_client, location: room)
+      Record.set_attribute(char_key, "pid", self())
+      {room, character}
+    end
+
+    test "get command with syntax (#number#) <object> searches and moves stackables",
+         %{client: client, menu: _menu} do
+      {room, character} = setup_character_in_room("get_test_room", "get_test_char")
+
+      {:ok, _coin} = Record.create_entity(key: "get_test_coin", virtual: true)
+      Record.set_attribute("get_test_coin", "stackable", true)
+      Record.set_attribute("get_test_coin", "name", "gold coin")
+      Record.add_stackable(room, Record.get_entity("get_test_coin"), 100)
+
+      setup_get_command()
+
+      # Execute via handler with owner_entity (character)
+      Handler.start_command_execution(
+        "command/get", "10 gold coin", client,
+        System.monotonic_time(:microsecond), character)
+
+      assert_receive {:message, msg}, 2000
+      assert String.contains?(msg, "You pick up")
+      assert String.contains?(msg, "gold coin")
+
+      coin = Record.get_entity("get_test_coin")
+      assert Record.get_stackable_quantity(room, coin) == 90
+      assert Record.get_stackable_quantity(character, coin) == 10
+    end
+
+    test "get command with no match produces no output (empty to_pick)",
+         %{client: client, menu: _menu} do
+      {_room, character} = setup_character_in_room("get_nf_room", "get_nf_char")
+
+      setup_get_command()
+
+      # Execute: "get sword" in an empty room — to_pick will be []
+      # The run method's for loop over to_pick produces no iterations, so no messages.
+      Handler.start_command_execution(
+        "command/get", "sword", client,
+        System.monotonic_time(:microsecond), character)
+
+      refute_receive {:message, _}, 500
+    end
+
+    test "get command with optional number defaults to 1 (regular entity)",
+         %{client: client, menu: _menu} do
+      {room, character} = setup_character_in_room("get_def_room", "get_def_char")
+
+      # A regular (non-stackable) apple placed in the room.
+      # limit has no practical effect here since there is only one entity, but the
+      # refine method signature default number=1 must be applied correctly.
+      {:ok, apple} = Record.create_entity(
+        key: "get_def_apple", virtual: true, location: room)
+      Record.set_attribute("get_def_apple", "name", "apple")
+
+      setup_get_command()
+
+      # Execute: "get apple" (no number, defaults to 1 via method signature)
+      Handler.start_command_execution(
+        "command/get", "apple", client,
+        System.monotonic_time(:microsecond), character)
+
+      assert_receive {:message, msg}, 2000
+      assert String.contains?(msg, "You pick up")
+      assert String.contains?(msg, "apple")
+
+      # The apple moved to character's inventory (room still contains the character entity)
+      assert Record.get_location(apple) == character
+      refute apple in Record.get_contained(room)
+    end
+  end
+
   describe "error handling" do
     test "handles missing run method", %{client: client, menu: menu} do
       # Create command without run method

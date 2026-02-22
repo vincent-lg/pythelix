@@ -53,9 +53,13 @@ defmodule Pythelix.Command.Handler do
                 execute_method(command, "run", script, client, start_time, owner_entity)
 
               refine_method ->
-                # Execute refine method first
+                # Execute refine method, copying parsed variables and filling any
+                # missing parameters from the method signature's default values.
                 refine_script = Method.fetch_script(refine_method, owner: script.id)
-                script = %{refine_script | variables: script.variables}
+                script =
+                  %{refine_script | variables: script.variables}
+                  |> apply_method_defaults(refine_method)
+
                 step = {__MODULE__, :handle_refine_completion, [command, client, start_time, owner_entity]}
                 Runner.run(script, refine_method.code, "#{command_key}, method refine", step: step, sync: true)
             end
@@ -95,9 +99,11 @@ defmodule Pythelix.Command.Handler do
           _ -> nil
         end
 
+        relevant_vars = relevant_method_vars(script.variables, method)
+
         script =
           Method.fetch_script(method, owner: script.id)
-          |> Method.check_args(method, [], Dict.new(script.variables), "#{command.key}, method #{method_name}")
+          |> Method.check_args(method, [], Dict.new(relevant_vars), "#{command.key}, method #{method_name}")
           |> then(fn {method_script, namespace} ->
             Method.write_arguments(method_script, Enum.to_list(namespace))
           end)
@@ -247,6 +253,28 @@ defmodule Pythelix.Command.Handler do
   defp send_error(client, message) do
     pid = Record.get_attribute(client, "pid")
     send(pid, {:message, message})
+  end
+
+  # Filter script variables to only those that are named parameters of the method.
+  # This prevents extra variables (e.g., from refine) from causing "unexpected keyword
+  # argument" errors when check_args validates the run method's signature.
+  defp relevant_method_vars(variables, %Method{args: :free}), do: variables
+  defp relevant_method_vars(variables, %Method{args: constraints}) do
+    Map.take(variables, Enum.map(constraints, fn {name, _} -> name end))
+  end
+
+  # Write default values for any method parameters that are missing from the script.
+  # This ensures optional parameters (e.g., `number=1`) are available as variables
+  # when the refine code accesses them, even if the user omitted them from input.
+  defp apply_method_defaults(script, %Method{args: :free}), do: script
+  defp apply_method_defaults(script, %Method{args: constraints}) do
+    Enum.reduce(constraints, script, fn {name, opts}, acc ->
+      if !Map.has_key?(acc.variables, name) && Keyword.has_key?(opts, :default) do
+        Script.write_variable(acc, name, Keyword.get(opts, :default))
+      else
+        acc
+      end
+    end)
   end
 
   defp log_performance(start_time) do

@@ -84,7 +84,7 @@ defmodule Pythelix.Scripting.Namespace.Module.Search do
         attr_value != nil && matches_normalized?(normalizer.(attr_value), normalized_text)
       end)
       |> maybe_select_index(match_index)
-      |> Enum.map(fn item -> maybe_limit_stackable(item, limit, container) end)
+      |> apply_limit(limit, container)
 
     {script, results}
   end
@@ -151,11 +151,61 @@ defmodule Pythelix.Scripting.Namespace.Module.Search do
   defp get_item_name(item, filter, viewer) do
     entity = get_item_entity(item)
 
-    case Method.call_entity(entity, "__namefor__", [viewer]) do
-      :nomethod -> get_item_attribute(item, filter)
-      :noresult -> get_item_attribute(item, filter)
-      :traceback -> get_item_attribute(item, filter)
+    case call_namefor(entity, viewer) do
+      nil -> get_item_attribute(item, filter)
       result -> result
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # __namefor__ calling (supports optional quantity argument)
+
+  @doc false
+  # Call __namefor__ on an entity with just a viewer (no quantity).
+  # Returns the hook result, or nil if the hook is absent / errored.
+  def call_namefor(entity, viewer) do
+    case Method.call_entity(entity, "__namefor__", [viewer]) do
+      :nomethod -> nil
+      :noresult -> nil
+      :traceback -> nil
+      result -> result
+    end
+  end
+
+  # Call __namefor__ on an entity with a viewer and quantity.
+  # Inspects the method signature to decide whether to pass quantity:
+  #   - 2+ positional args (excl. self) → call with [viewer, quantity]
+  #   - 1 positional arg → call with [viewer] (quantity ignored)
+  #   - :free args → call with [viewer, quantity]
+  #   - no method → nil
+  # Returns the hook result, or nil if the hook is absent / errored.
+  def call_namefor(entity, viewer, quantity) do
+    case Record.get_method(entity, "__namefor__") do
+      %Method{args: :free} ->
+        case Method.call_entity(entity, "__namefor__", [viewer, quantity]) do
+          :nomethod -> nil
+          :noresult -> nil
+          :traceback -> nil
+          result -> result
+        end
+
+      %Method{args: constraints} when is_list(constraints) ->
+        positional_count =
+          constraints
+          |> Enum.reject(fn {name, _opts} -> name == "self" end)
+          |> Enum.count(fn {_name, opts} -> opts[:index] != nil end)
+
+        args = if positional_count >= 2, do: [viewer, quantity], else: [viewer]
+
+        case Method.call_entity(entity, "__namefor__", args) do
+          :nomethod -> nil
+          :noresult -> nil
+          :traceback -> nil
+          result -> result
+        end
+
+      _ ->
+        nil
     end
   end
 
@@ -192,12 +242,30 @@ defmodule Pythelix.Scripting.Namespace.Module.Search do
 
   defp maybe_select_index(results, _), do: results
 
-  defp maybe_limit_stackable(%Stackable{} = stackable, limit, container) when is_integer(limit) and limit > 0 do
-    qty = min(stackable.quantity, limit)
-    %Stackable{entity: stackable.entity, quantity: qty, location: container}
+  # Apply a global item budget across all results in order.
+  # Non-stackable entities count as 1; stackable entries consume min(qty, remaining) from the budget.
+  # Items beyond the budget are dropped; stackables that would be partially taken are trimmed.
+  defp apply_limit(items, nil, _container), do: items
+
+  defp apply_limit(items, limit, container) when is_integer(limit) and limit > 0 do
+    {result, _remaining} =
+      Enum.reduce(items, {[], limit}, fn
+        _item, {acc, 0} ->
+          {acc, 0}
+
+        %Stackable{} = stackable, {acc, remaining} ->
+          qty = min(stackable.quantity, remaining)
+          limited = %Stackable{entity: stackable.entity, quantity: qty, location: container}
+          {[limited | acc], remaining - qty}
+
+        item, {acc, remaining} ->
+          {[item | acc], remaining - 1}
+      end)
+
+    Enum.reverse(result)
   end
 
-  defp maybe_limit_stackable(item, _limit, _container), do: item
+  defp apply_limit(items, _limit, _container), do: items
 
   defp compute_many(nil, filters) do
     filters = Enum.map(filters, &Store.get_value/1)

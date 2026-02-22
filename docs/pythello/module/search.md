@@ -23,7 +23,7 @@ search.match(
 | `container` | entity | yes | The entity whose contents are searched. |
 | `text` | string | yes | The search query (case-insensitive by default). |
 | `viewer` | entity | no | The entity performing the search (usually a player). Enables the `__visible__` and `__namefor__` hooks. |
-| `limit` | int | no | Cap the quantity returned for each matching [stackable](../../stackables.md). Has no effect on regular entities. |
+| `limit` | int | no | Global budget for the total number of items returned. Regular entities count as 1 each; [stackable](../../stackables.md) stacks consume `min(quantity, remaining_budget)`. Items are consumed in container order until the budget is exhausted. |
 | `index` | int | no | Return only the Nth matching item (1-based). Returns an empty list when the index is out of range. |
 | `filter` | string | no | The attribute name to match against. Defaults to `"name"`. |
 
@@ -50,6 +50,17 @@ Partial transfer — pick up 10 coins from a pile of 400:
 
 ```
 matches = search.match(!room!, "gold coin", limit=10)
+for item in matches:
+    item.location = !player!
+done
+```
+
+Global budget across multiple stacks — pick up a total of 3 apples, drawing from whichever stacks come first:
+
+```
+matches = search.match(!room!, "apple", limit=3)
+# If the room has 2 red apples then 5 green apples (in that order),
+# the result is 2 red apples + 1 green apple = 3 total.
 for item in matches:
     item.location = !player!
 done
@@ -231,6 +242,14 @@ When `search.match` is called with a `viewer=` argument, it calls `__namefor__(v
 {__namefor__(viewer: Entity) -> str}
 ```
 
+The method can also accept an optional second argument, `quantity`. When called by [`names.group`](./names.md), the total group quantity is passed as the second argument, enabling pluralised display names:
+
+```
+{__namefor__(viewer: Entity, quantity: int = 1) -> str}
+```
+
+Both signatures are supported. The engine inspects the method's argument count before calling: if the method accepts two positional arguments, `quantity` is passed; if it only accepts one, only `viewer` is passed. Existing one-argument `__namefor__` methods continue to work without changes.
+
 If the method is absent (`:nomethod`), produces no return value (`:noresult`), or raises an error, `search.match` falls back to the raw attribute value (the one named by `filter`, defaulting to `"name"`).
 
 This hook enables:
@@ -238,6 +257,7 @@ This hook enables:
 - Administrators seeing items with their entity ID appended
 - Items identified differently depending on a player's language or skill
 - Partially identified items (e.g. `"a strange potion"` becoming `"potion of healing"` once examined)
+- Pluralised names when grouping items for display (e.g. `"3 apples"` instead of `"apple"`)
 
 **Example — administrators see entity IDs:**
 
@@ -266,6 +286,19 @@ if viewer.has_identified(self):
 return self.name
 ```
 
+**Example — pluralised display names:**
+
+```
+[object]
+
+{__namefor__(viewer: Entity, quantity: int = 1) -> str}
+if quantity == 1:
+    return self.name
+return f"{quantity} {self.name}s"
+```
+
+With this method, `names.group` will produce `"3 apples"` when three apple entities are grouped together, and `"apple"` for a single one.
+
 > Searching without a `viewer=` argument always uses the raw attribute, regardless of whether `__namefor__` is defined. This is intentional: viewer-less searches (used by scripts, automation, or admin tooling) should not depend on per-player state.
 
 ## Interaction between hooks
@@ -286,5 +319,5 @@ for each item in container.contents:
         query = search.normalize("gold")        (computed once, reused)
         if name contains query:                 include in candidates
         apply index=2 → take second candidate
-        apply limit=5 → cap stackable quantity to 5
+        apply limit=5 → consume items in order until global budget of 5 is exhausted
 ```
