@@ -7,6 +7,10 @@ defmodule Pythelix.Scripting.Namespace.List do
 
   alias Pythelix.Scripting.Display
 
+  defmet __bool__(script, namespace), [] do
+    {script, Store.get_value(namespace.self, recursive: false) != []}
+  end
+
   defmet __contains__(script, namespace), [
     {:element, index: 0, type: :any}
   ] do

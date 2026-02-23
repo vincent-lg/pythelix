@@ -19,6 +19,26 @@ defmodule Pythelix.Scripting.Display do
   end
 
   @doc """
+  Return the result of calling __bool__ on an object.
+
+  Args:
+  * script: the script.
+  * object: the object on which to call __bool__.
+  """
+  @spec to_bool(Script.t(), term()) :: boolean()
+  def to_bool(script, object) do
+    case Callable.call!(script, object, "__bool__", []) do
+      {:traceback, _} ->
+        # Fallback: if __bool__ is not defined, use the old behavior
+        resolved = Pythelix.Scripting.Store.get_value(object)
+        resolved != :none && resolved != false && resolved != nil
+
+      value ->
+        value
+    end
+  end
+
+  @doc """
   Return the result of calling str on an object.
 
   Args:

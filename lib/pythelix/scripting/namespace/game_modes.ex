@@ -11,6 +11,10 @@ defmodule Pythelix.Scripting.Namespace.GameModes do
   alias Pythelix.Game.Modes
   alias Pythelix.Scripting.Interpreter.Script
 
+  defmet __bool__(script, _namespace), [] do
+    {script, true}
+  end
+
   defmet add(script, namespace), [
     {:menu, index: 0, keyword: "menu", type: {:entity, "generic/menu"}},
     {:owner, index: 1, keyword: "owner", type: :entity, default: nil},

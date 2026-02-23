@@ -125,6 +125,12 @@ defmodule Pythelix.Scripting.Namespace.Builtin do
     end
   end
 
+  deffun bool(script, namespace), [
+    {:object, index: 0, type: :any}
+  ] do
+    {script, Display.to_bool(script, namespace.object)}
+  end
+
   deffun repr(script, namespace), [
     {:object, index: 0, type: :any}
   ] do

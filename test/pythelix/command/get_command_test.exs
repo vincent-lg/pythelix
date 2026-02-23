@@ -754,11 +754,9 @@ defmodule Pythelix.Command.GetCommandTest do
       assert to_pick == []
     end
 
-    test "empty list truthiness: not [] is false in Pythello (Elixir semantics)" do
-      # In Pythello, empty lists follow Elixir truthiness rules:
-      # [] is truthy, so `not []` is false.
-      # The documented `if not to_pick:` pattern needs adjustment
-      # to work as intended (e.g., checking length or using == []).
+    test "empty list truthiness: not [] is true (Python semantics)" do
+      # With __bool__ support, empty lists are falsy (like Python),
+      # so `not []` is true.
       # Create the room first
       {:ok, _room} = Record.create_entity(key: "gc_truth_room")
 
@@ -768,8 +766,8 @@ defmodule Pythelix.Command.GetCommandTest do
       """)
 
       result = Script.get_variable_value(script, "result")
-      # In Pythello (Elixir semantics): not [] == false ([] is truthy)
-      assert result == false
+      # With Python semantics: not [] == true ([] is falsy)
+      assert result == true
     end
   end
 

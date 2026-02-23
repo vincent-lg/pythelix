@@ -3,7 +3,7 @@ defmodule Pythelix.Scripting.Interpreter.VM.Op do
   Grouping of frequent operations.
   """
 
-  alias Pythelix.Scripting.{Callable, Namespace}
+  alias Pythelix.Scripting.{Callable, Display, Namespace}
   alias Pythelix.Scripting.Interpreter.{Iterator, Script}
   alias Pythelix.Scripting.Namespace
 
@@ -14,9 +14,10 @@ defmodule Pythelix.Scripting.Interpreter.VM.Op do
 
   def op_not(script, nil) do
     {script, value} = Script.get_stack(script)
+    bool_value = Display.to_bool(script, value)
 
     script
-    |> Script.put_stack(!value)
+    |> Script.put_stack(!bool_value)
   end
 
   def read(%{variables: variables} = script, variable) do

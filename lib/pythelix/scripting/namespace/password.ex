@@ -5,6 +5,10 @@ defmodule Pythelix.Scripting.Namespace.Password do
 
   use Pythelix.Scripting.Namespace
 
+  defmet __bool__(script, _namespace), [] do
+    {script, true}
+  end
+
   defmet __repr__(script, namespace), [] do
     {script, inspect(namespace.self)}
   end

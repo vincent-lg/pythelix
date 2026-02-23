@@ -7,6 +7,11 @@ defmodule Pythelix.Scripting.Namespace.Set do
 
   alias Pythelix.Scripting.Display
 
+  defmet __bool__(script, namespace), [] do
+    set = Store.get_value(namespace.self, recursive: false)
+    {script, MapSet.size(set) > 0}
+  end
+
   defmet __contains__(script, namespace), [
     {:element, index: 0, type: :any}
   ] do

@@ -5,6 +5,10 @@ defmodule Pythelix.Scripting.Namespace.None do
 
   use Pythelix.Scripting.Namespace
 
+  defmet __bool__(script, _namespace), [] do
+    {script, false}
+  end
+
   defmet __repr__(script, namespace), [] do
     repr(script, namespace.self)
   end

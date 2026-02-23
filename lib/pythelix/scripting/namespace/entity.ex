@@ -12,6 +12,10 @@ defmodule Pythelix.Scripting.Namespace.Entity do
   alias Pythelix.Scripting.Object.Reference
   alias Pythelix.Scripting.Store
 
+  defmet __bool__(script, _namespace), [] do
+    {script, true}
+  end
+
   defmet __repr__(script, namespace), [] do
     repr(script, namespace.self)
   end

@@ -5,6 +5,10 @@ defmodule Pythelix.Scripting.Namespace.Bool do
 
   use Pythelix.Scripting.Namespace
 
+  defmet __bool__(script, namespace), [] do
+    {script, namespace.self}
+  end
+
   defmet __repr__(script, namespace), [] do
     repr(script, namespace.self)
   end

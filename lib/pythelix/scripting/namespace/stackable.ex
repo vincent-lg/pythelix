@@ -10,6 +10,10 @@ defmodule Pythelix.Scripting.Namespace.Stackable do
   alias Pythelix.Scripting.Callable
   alias Pythelix.Scripting.Interpreter.Script
 
+  defmet __bool__(script, _namespace), [] do
+    {script, true}
+  end
+
   defmet __repr__(script, namespace), [] do
     repr(script, namespace.self)
   end

@@ -10,6 +10,10 @@ defmodule Pythelix.Scripting.Namespace.SubEntity do
   alias Pythelix.Scripting.Display
   alias Pythelix.Scripting.Object.Dict
 
+  defmet __bool__(script, _namespace), [] do
+    {script, true}
+  end
+
   defmet __repr__(script, namespace), [] do
     repr(script, namespace.self)
   end

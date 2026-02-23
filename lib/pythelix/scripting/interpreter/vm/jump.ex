@@ -3,12 +3,13 @@ defmodule Pythelix.Scripting.Interpreter.VM.Jump do
   Grouping of jump operations.
   """
 
+  alias Pythelix.Scripting.Display
   alias Pythelix.Scripting.Interpreter.Script
 
   def iffalse(script, line) do
     {script, value} = Script.get_stack(script)
 
-    if value != :none && value do
+    if Display.to_bool(script, value) do
       script
       |> Script.debug("is true")
     else
@@ -22,7 +23,7 @@ defmodule Pythelix.Scripting.Interpreter.VM.Jump do
   def iftrue(script, line) do
     {script, value} = Script.get_stack(script)
 
-    if value != :none && value do
+    if Display.to_bool(script, value) do
       script
       |> Script.put_stack(value)
       |> Script.debug("is true so jump")
@@ -36,7 +37,7 @@ defmodule Pythelix.Scripting.Interpreter.VM.Jump do
   def popiffalse(script, line) do
     {script, value} = Script.get_stack(script)
 
-    if value != :none && value do
+    if Display.to_bool(script, value) do
       script
       |> Script.debug("is true")
     else
@@ -49,7 +50,7 @@ defmodule Pythelix.Scripting.Interpreter.VM.Jump do
   def popiftrue(script, line) do
     {script, value} = Script.get_stack(script)
 
-    if value != :none && value do
+    if Display.to_bool(script, value) do
       script
       |> Script.debug("is true so jump")
       |> Script.jump(line)

@@ -8,6 +8,10 @@ defmodule Pythelix.Scripting.Namespace.String do
 
   use Pythelix.Scripting.Namespace
 
+  defmet __bool__(script, namespace), [] do
+    {script, namespace.self != ""}
+  end
+
   defmet __contains__(script, namespace), [
     {:element, index: 0, type: :any}
   ] do
