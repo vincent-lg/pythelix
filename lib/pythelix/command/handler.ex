@@ -45,7 +45,7 @@ defmodule Pythelix.Command.Handler do
         send_error(client, "Unknown command")
 
       %Entity{} = command ->
-        case parse_and_prepare_command(command, args_string, client, owner_entity) do
+        case parse_and_prepare_command(command, args_string) do
           {:ok, _args, script, _method_name} ->
             # Start with refine step if refine method exists
             case Record.get_method(command, "refine") do
@@ -53,15 +53,21 @@ defmodule Pythelix.Command.Handler do
                 execute_method(command, "run", script, client, start_time, owner_entity)
 
               refine_method ->
-                # Execute refine method, copying parsed variables and filling any
-                # missing parameters from the method signature's default values.
-                refine_script = Method.fetch_script(refine_method, owner: script.id)
-                script =
-                  %{refine_script | variables: script.variables}
-                  |> apply_method_defaults(refine_method)
+                # Execute refine method through check_args, passing the
+                # client/character entity as the first positional arg and
+                # parsed command variables as keyword args.
+                relevant_vars = relevant_method_vars(script.variables, refine_method)
+
+                refine_script =
+                  Method.fetch_script(refine_method, owner: script.id)
+                  |> Method.check_args(refine_method, entity_positional_args(refine_method, owner_entity || client), Dict.new(relevant_vars), "#{command_key}, method refine")
+                  |> then(fn {method_script, namespace} ->
+                    Method.write_arguments(method_script, Enum.to_list(namespace))
+                  end)
+                  |> Script.write_variable("self", command)
 
                 step = {__MODULE__, :handle_refine_completion, [command, client, start_time, owner_entity]}
-                Runner.run(script, refine_method.code, "#{command_key}, method refine", step: step, sync: true)
+                Runner.run(refine_script, refine_method.code, "#{command_key}, method refine", step: step, sync: true)
             end
 
           {:error, reason} ->
@@ -103,7 +109,7 @@ defmodule Pythelix.Command.Handler do
 
         script =
           Method.fetch_script(method, owner: script.id)
-          |> Method.check_args(method, [], Dict.new(relevant_vars), "#{command.key}, method #{method_name}")
+          |> Method.check_args(method, entity_positional_args(method, owner_entity || client), Dict.new(relevant_vars), "#{command.key}, method #{method_name}")
           |> then(fn {method_script, namespace} ->
             Method.write_arguments(method_script, Enum.to_list(namespace))
           end)
@@ -138,10 +144,10 @@ defmodule Pythelix.Command.Handler do
     Map.get(commands, command_name)
   end
 
-  defp parse_and_prepare_command(command, args_string, client, owner_entity) do
+  defp parse_and_prepare_command(command, args_string) do
     with {:ok, pattern} <- get_command_syntax(command),
          {:ok, parsed_args} <- parse_command_arguments(pattern, args_string),
-         {:ok, script} <- create_command_script(command, parsed_args, client, owner_entity) do
+         {:ok, script} <- create_command_script(command, parsed_args) do
       method_name = "#{command.key}, command execution"
       {:ok, parsed_args, script, method_name}
     else
@@ -164,13 +170,11 @@ defmodule Pythelix.Command.Handler do
     end
   end
 
-  defp create_command_script(_command, args, client, owner_entity) do
+  defp create_command_script(_command, args) do
     script = %Script{id: Store.new_script, bytecode: []}
-    entity_for_script = owner_entity || client
-    final_args = Map.put(args, "client", entity_for_script)
 
     # Write arguments to script
-    script = write_arguments_to_script(script, final_args)
+    script = write_arguments_to_script(script, args)
     {:ok, script}
   end
 
@@ -263,18 +267,16 @@ defmodule Pythelix.Command.Handler do
     Map.take(variables, Enum.map(constraints, fn {name, _} -> name end))
   end
 
-  # Write default values for any method parameters that are missing from the script.
-  # This ensures optional parameters (e.g., `number=1`) are available as variables
-  # when the refine code accesses them, even if the user omitted them from input.
-  defp apply_method_defaults(script, %Method{args: :free}), do: script
-  defp apply_method_defaults(script, %Method{args: constraints}) do
-    Enum.reduce(constraints, script, fn {name, opts}, acc ->
-      if !Map.has_key?(acc.variables, name) && Keyword.has_key?(opts, :default) do
-        Script.write_variable(acc, name, Keyword.get(opts, :default))
-      else
-        acc
-      end
-    end)
+  # Build positional args for check_args: pass the entity as the first
+  # positional arg only if the method declares a positional parameter (index 0).
+  # Methods with :free or empty constraints get no positional args.
+  defp entity_positional_args(%Method{args: :free}, _entity), do: []
+  defp entity_positional_args(%Method{args: constraints}, entity) do
+    if Enum.any?(constraints, fn {_name, opts} -> opts[:index] == 0 end) do
+      [entity]
+    else
+      []
+    end
   end
 
   defp log_performance(start_time) do

@@ -15,6 +15,7 @@ defmodule Pythelix.World do
   @worldlet_pattern "*.txt"
 
   alias Pythelix.Command
+  alias Pythelix.Game.Modes
   alias Pythelix.Record
   alias Pythelix.Scripting
   alias Pythelix.Scripting.Namespace.Extended
@@ -181,7 +182,7 @@ defmodule Pythelix.World do
       %{
         key: @generic_character,
         attributes: %{
-          "game_modes" => %{active: 0, game_modes: []}
+          "game_modes" => %Modes{}
         },
         methods: %{},
       } | entities

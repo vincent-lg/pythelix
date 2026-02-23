@@ -3,8 +3,8 @@ defmodule Pythelix.Scripting.Namespace do
   Defines a namespace, with methods and attributes, for an object.
   """
 
-  alias Pythelix.Entity
-  alias Pythelix.Record
+  alias Pythelix.{Entity, Record}
+  alias Pythelix.Game.Modes
   alias Pythelix.Scripting.Callable
   alias Pythelix.Scripting.Format
   alias Pythelix.Scripting.Interpreter.Script
@@ -188,7 +188,7 @@ defmodule Pythelix.Scripting.Namespace do
       float when is_float(float) -> Namespace.Float
       list when is_list(list) -> Namespace.List
       str when is_binary(str) -> Namespace.String
-      %{active: _active, game_modes: _modes} -> Namespace.GameModes
+      %Modes{} -> Namespace.GameModes
       %Format.String{} -> Namespace.String
       %Dict{} -> Namespace.Dict
       %Password{} -> Namespace.Password
@@ -274,10 +274,12 @@ defmodule Pythelix.Scripting.Namespace do
         {script, args, Dict.new(), kwargs}
 
       from_pos != nil && from_keyword != nil ->
-        message =
-          "positional argument #{index} has also been specified as keyword argument #{keyword}"
+        # Positional arg takes priority over keyword (e.g. system-provided
+        # entity overrides a same-named variable carried from refine scope).
+        type = opts[:type]
+        {script, value} = enforce_arg_type(script, set, from_pos, type)
 
-        {Script.raise(script, TypeError, message), args, kwargs, :error}
+        {script, args, kwargs, value}
 
       from_pos == nil and from_keyword == nil and Keyword.has_key?(opts, :default) ->
         value = Keyword.get(opts, :default)

@@ -65,7 +65,8 @@ defmodule Pythelix.Command.IntegrationTest do
     test "executes command with no arguments", %{client: client, menu: menu} do
       # Create a simple shout command
       {:ok, _command} = Record.create_entity(key: "command/shout", virtual: true)
-      Record.set_method("command/shout", "run", :free, "client.msg('You shout loudly!')")
+      {_, args} = Signature.constraints("run(client)")
+      Record.set_method("command/shout", "run", args, "client.msg('You shout loudly!')")
 
       # Execute command using the new handler system
       run_command_via_handler(client, menu, "shout")
@@ -208,7 +209,8 @@ defmodule Pythelix.Command.IntegrationTest do
     test "command with pause continues execution", %{client: client, menu: menu} do
       # Create command with pause
       {:ok, _command} = Record.create_entity(key: "command/pause_test", virtual: true)
-      Record.set_method("command/pause_test", "run", :free,
+      {_, args} = Signature.constraints("run(client)")
+      Record.set_method("command/pause_test", "run", args,
         """
         client.msg('Before pause')
         wait 1
@@ -228,7 +230,8 @@ defmodule Pythelix.Command.IntegrationTest do
     test "command with multiple pauses", %{client: client, menu: menu} do
       # Create command with multiple pauses
       {:ok, _command} = Record.create_entity(key: "command/pause_test2", virtual: true)
-      Record.set_method("command/pause_test2", "run", :free,
+      {_, args} = Signature.constraints("run(client)")
+      Record.set_method("command/pause_test2", "run", args,
         """
         client.msg('Step 1')
         wait 1

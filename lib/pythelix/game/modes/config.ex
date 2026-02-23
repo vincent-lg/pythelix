@@ -1,4 +1,4 @@
-defmodule Pythelix.Menu.Mode do
+defmodule Pythelix.Game.Modes.Config do
   @moduledoc """
   Configuration module for game mode pipe symbols.
 

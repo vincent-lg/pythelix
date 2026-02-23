@@ -17,10 +17,10 @@ defmodule Pythelix.MixProject do
       ],
       compilers: Mix.compilers() ++ [:pythello],
       test_coverage: [
-        #tool: :cover,
         ignore_modules: [
           ~r/^Mix\./,
           ~r/^Pumpkin\./,
+          ~r/^Pythelix\.Adapters\./,
           ~r/^Pythelix\.Scripting\.Parser/,
           ~r/^PythelixWeb/
         ],

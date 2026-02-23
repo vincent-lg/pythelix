@@ -93,7 +93,7 @@ defmodule Pythelix.Scripting.Interpreter.Script do
   """
   @spec execute(Script.t()) :: Script.t()
   def execute(script, code \\ nil, owner \\ nil, _opts \\ []) do
-    script
+    %{script | code: code, name: owner}
     |> run(code, owner)
   end
 

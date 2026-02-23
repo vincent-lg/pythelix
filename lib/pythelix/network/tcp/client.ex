@@ -5,7 +5,7 @@ defmodule Pythelix.Network.TCP.Client do
   alias Pythelix.Record
   alias Pythelix.Scripting.Format
   alias Pythelix.Game.Hub
-  alias Pythelix.Menu.Mode.Handler, as: ModeHandler
+  alias Pythelix.Game.Modes.Handler, as: ModeHandler
 
   require Logger
 

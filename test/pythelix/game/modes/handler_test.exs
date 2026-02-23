@@ -1,11 +1,12 @@
-defmodule Pythelix.Menu.Mode.HandlerTest do
+defmodule Pythelix.Game.Modes.HandlerTest do
   use Pythelix.DataCase, async: false
 
   @moduletag capture_log: true
   @moduletag :slow
 
   alias Pythelix.Game.Hub
-  alias Pythelix.Menu.Mode.Handler
+  alias Pythelix.Game.Modes
+  alias Pythelix.Game.Modes.Handler
   alias Pythelix.{Record, World}
 
   setup_all do
@@ -21,9 +22,6 @@ defmodule Pythelix.Menu.Mode.HandlerTest do
     Pythelix.Record.Cache.clear()
     World.apply(:static)
 
-    # Create the missing generic entities
-    #ensure_generic_entities()
-
     # Create a test character with game modes
     {:ok, character} = Record.create_entity(key: "test_character", virtual: true, parent: Record.get_entity("generic/character"))
 
@@ -32,7 +30,7 @@ defmodule Pythelix.Menu.Mode.HandlerTest do
     {:ok, _npc2} = Record.create_entity(key: "test_npc2", virtual: true, parent: Record.get_entity("generic/character"))
 
     # Set up game modes for the character
-    game_modes = %{
+    game_modes = %Modes{
       active: 0,
       game_modes: [
         {"menu/game", "test_character"},

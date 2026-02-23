@@ -17,7 +17,7 @@ parent: "generic/command"
 name: "system"
 syntax: ""
 
-{run}
+{run(character)}
 text = f"""
 System statistics:
   Host processors: {stats.number_of_processors} (in {stats.number_of_schedulers} schedulers)
@@ -30,7 +30,7 @@ System statistics:
     Running scripts: {stats.number_of_scripts} using {stats.human_size(stats.memory_of_scripts)} of memory
     Active references: {stats.number_of_references} using {stats.human_size(stats.memory_of_references)} of memory
 """
-client.msg(text)
+character.msg(text)
 
 [command/quit]
 parent: "generic/command"
@@ -40,3 +40,12 @@ syntax: ""
 {run}
 client.msg("Ciao!")
 client.disconnect()
+
+[command/pythello]
+parent: "generic/command"
+name: "pythello"
+syntax: ""
+
+{run(character)}
+character.game_modes.add("menu/pythello", character.id)
+character.msg("Pythello console")
