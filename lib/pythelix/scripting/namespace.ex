@@ -9,7 +9,7 @@ defmodule Pythelix.Scripting.Namespace do
   alias Pythelix.Scripting.Format
   alias Pythelix.Scripting.Interpreter.Script
   alias Pythelix.Scripting.Namespace
-  alias Pythelix.Scripting.Object.{Dict, Password}
+  alias Pythelix.Scripting.Object.{Dict, Duration, Password, Time}
   alias Pythelix.Scripting.Store
   alias Pythelix.Scripting.Traceback
 
@@ -188,6 +188,8 @@ defmodule Pythelix.Scripting.Namespace do
       float when is_float(float) -> Namespace.Float
       list when is_list(list) -> Namespace.List
       str when is_binary(str) -> Namespace.String
+      %Time{} -> Namespace.Time
+      %Duration{} -> Namespace.Duration
       %Modes{} -> Namespace.GameModes
       %Format.String{} -> Namespace.String
       %Dict{} -> Namespace.Dict

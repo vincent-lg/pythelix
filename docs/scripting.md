@@ -188,6 +188,54 @@ True
 >>>
 ```
 
+### Time and duration literals
+
+Pythello has built-in syntax for time and duration values, which are common in game scripting.
+
+**Time** is written as `hour:minute` or `hour:minute:second`, with no spaces around the colons:
+
+```
+>>> 15:00
+15:00
+>>> 8:30:45
+08:30:45
+>>> 15:00.hour
+15
+>>> 15:00.minute
+0
+>>> 8:30:45.second
+45
+>>> 15:00.add(90)
+15:01:30
+>>> 15:00.add(2h30m)
+17:30
+>>> 15:00.difference(12:00)
+3h
+```
+
+**Duration** is written as a series of numbers followed by a unit letter: `s` (seconds), `m` (minutes), `h` (hours), `d` (days), `o` (months), `y` (years). No spaces between parts:
+
+```
+>>> 15s
+15s
+>>> 2h30m
+2h30m
+>>> 2h30m.hours
+2
+>>> 2h30m.minutes
+30
+>>> 3m.total_seconds()
+180
+```
+
+This makes time-related scripting much more natural:
+
+```
+client.msg("Hold on for a few minutes...")
+wait 2m30s
+client.msg("Okay, done.")
+```
+
 ### Conditions
 
 Like in Python but terminated with the keyword `endif`:
@@ -199,7 +247,7 @@ Like in Python but terminated with the keyword `endif`:
 ... endif
 ```
 
-`if` and `else` can be used as usual. Indentation within these blocks doesn't matter, but you must provide an `endif` at the end.
+`if`, `elif` and `else` can be used as usual. Indentation within these blocks doesn't matter, but you must provide an `endif` at the end.
 
 > Python uses indentation to determine blocks. In Pythello, explicit end blocks are used since Pythello can sometimes be executed inside your MUD client, where typing true indentation might be complicated.
 
@@ -227,14 +275,31 @@ done
 
 As with conditions, loops must be terminated with `done`. Indentation within loops doesn't matter.
 
+### Try/except
+
+Pythello supports the usual syntax for a try/except block in Python. It needs to be terminated with a `endtry` however:
+
+```
+try:
+    8 / 0
+except ZeroDivisionError:
+    # ...
+endtry
+```
+
+`else` and `finally` can also be used and they have the same behavior as in Python.
+
+> It is not possible to capture an exception in a variable (`except Type as variable`).
+
 ### Subtleties
 
 A few things to keep in mind:
 
-- Every block must be closed with a matching keyword (`endif` or `done`).
+- Every block must be closed with a matching keyword (`endif`, `done` or `endtry`).
 - Indentation has no impact on code structure.
 - Pythello does not aim to support every Python syntax. Python is an advanced language supporting many features. While Pythello tries to reproduce the Python experience, it is not a Python interpreter and will never be one. If you notice a syntax you think Pythello should support, feel free to reach out. But note that adding complexity adds overhead, so it might not be accepted.
 - F-strings are evaluated at runtime, but *later* than where they're defined. This is so that f-strings including other players can be replaced with proper messages describing them, even if the f-string is sent to everyone in the location, for example. This is a specialized behavior and should not affect most builders. Remember, when you write code like `text = f"..."`, it will not evaluate immediately; the formatted string is stored, and the client evaluates it when it receives it.
+- The time and duration syntax (`12:00` and `3h`) can conflict with other features, so spacing will decide. For instance, `{15:00}` will create a set with one value (a time of 15:00). But `{15: 00}` (just an extra space after the colon) will create a dictionary with one item: a key of 15 and a value of 0.
 
 ## Scripting and entities
 
@@ -251,12 +316,10 @@ Entity(id=7)
 >>> nova.size = 58
 >>> nova.size
 58
->>> nova.size * 2
-116
 >>>
 ```
 
-We've created an entity and stored it in the variable `nova`. We displayed it, showing its ID (7). We then wrote an attribute—just by assigning `nova.size = 58`—and read it back, multiplying it by 2.
+We've created an entity and stored it in the variable `nova`. We displayed it, showing its ID (7). We then wrote an attribute—just by assigning `nova.size = 58`—and read it back.
 
 Worth noting: this small snippet created and saved an entity in the database. Notice its ID (7). It's saved persistently—you can stop your server, restart it, and it will still be there. Assigning attributes saves to the database immediately.
 

@@ -151,6 +151,15 @@ defmodule Pythelix.Scripting.Interpreter.VM.Op do
   def wait(script, nil) do
     {script, wait_time} = Script.get_stack(script)
 
+    wait_time =
+      case wait_time do
+        %Pythelix.Scripting.Object.Duration{} = d ->
+          Pythelix.Scripting.Object.Duration.total_seconds(d)
+
+        other ->
+          other
+      end
+
     %{script | pause: wait_time}
   end
 

@@ -50,6 +50,18 @@ defmodule Pythelix.Scripting.Interpreter.AST.Core do
     |> read_nested_ast(sub)
   end
 
+  def read_ast(code, {:time, h, m, s}) do
+    alias Pythelix.Scripting.Object.Time
+    code
+    |> add({:put, %Time{hour: h, minute: m, second: s}})
+  end
+
+  def read_ast(code, {:duration, map}) when is_map(map) do
+    alias Pythelix.Scripting.Object.Duration
+    code
+    |> add({:put, struct(Duration, map)})
+  end
+
   def read_ast(code, global) when global in [true, false, :none] do
     code
     |> add({:put, global})

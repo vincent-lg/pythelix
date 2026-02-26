@@ -65,6 +65,57 @@ defmodule Pythelix.Scripting.Parser.Value do
     choice([float, int])
     |> label("number")
 
+  time =
+    digits
+    |> ignore(string(":"))
+    |> concat(digits)
+    |> optional(
+      ignore(string(":"))
+      |> concat(digits)
+    )
+    |> isolate(allow_newline: true)
+    |> reduce(:to_time)
+    |> label("time")
+
+  defp to_time([hour, minute]) do
+    {:time, String.to_integer(hour), String.to_integer(minute), 0}
+  end
+
+  defp to_time([hour, minute, second]) do
+    {:time, String.to_integer(hour), String.to_integer(minute), String.to_integer(second)}
+  end
+
+  duration_unit = ascii_char([?s, ?m, ?h, ?d, ?o, ?y])
+
+  duration_part =
+    digits
+    |> concat(duration_unit)
+    |> reduce(:to_duration_part)
+
+  duration =
+    times(duration_part, min: 1)
+    |> isolate(allow_newline: true)
+    |> reduce(:to_duration)
+    |> label("duration")
+
+  defp to_duration_part([digits, unit]) do
+    {String.to_integer(digits), <<unit>>}
+  end
+
+  defp to_duration(parts) do
+    map =
+      Enum.reduce(parts, %{seconds: 0, minutes: 0, hours: 0, days: 0, months: 0, years: 0}, fn
+        {n, "s"}, acc -> %{acc | seconds: n}
+        {n, "m"}, acc -> %{acc | minutes: n}
+        {n, "h"}, acc -> %{acc | hours: n}
+        {n, "d"}, acc -> %{acc | days: n}
+        {n, "o"}, acc -> %{acc | months: n}
+        {n, "y"}, acc -> %{acc | years: n}
+      end)
+
+    {:duration, map}
+  end
+
   defcombinator :string,
     choice([
       Parser.String.quoted("'''", multiline: true, label: "triple-quote with ticks"),
@@ -158,6 +209,8 @@ defmodule Pythelix.Scripting.Parser.Value do
     :nested_values,
     choice([
       globals,
+      time,
+      duration,
       number,
       parsec(:formatted_string),
       parsec(:string) |> isolate(allow_newline: true),
