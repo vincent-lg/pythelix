@@ -46,7 +46,13 @@ defmodule Pythelix.Scripting.Interpreter.VM do
     raw: {VM.Op, :raw},
     pop: {VM.Op, :pop},
     getitem: {VM.Item, :get},
-    line: {VM.Op, :line}
+    line: {VM.Op, :line},
+    setup_try: {VM.Exception, :setup_try},
+    pop_try: {VM.Exception, :pop_try},
+    check_exc: {VM.Exception, :check_exc},
+    end_try: {VM.Exception, :end_try},
+    raise: {VM.Exception, :op_raise},
+    reraise: {VM.Exception, :reraise}
   }
 
   def handle(script, {:noop, nil}), do: script

@@ -25,6 +25,11 @@ defmodule Pythelix.Scripting.Parser.Statement do
   in_kw = string("in") |> label("in") |> replace(:in) |> isolate(space: true)
   wait_kw = string("wait") |> label("wait") |> replace(:wait) |> isolate(space: true)
   return_kw = string("return") |> label("return") |> replace(:return) |> isolate(space: true)
+  try_kw = string("try") |> label("try") |> replace(:try) |> isolate()
+  except_kw = string("except") |> label("except") |> replace(:except) |> isolate()
+  finally_kw = string("finally") |> label("finally") |> replace(:finally) |> isolate()
+  endtry = string("endtry") |> label("endtry") |> replace(:endtry) |> isolate()
+  raise_kw = string("raise") |> label("raise") |> replace(:raise) |> isolate(space: true)
 
   setitem =
     parsec({Pythelix.Scripting.Parser.Value, :getitem})
@@ -140,6 +145,81 @@ defmodule Pythelix.Scripting.Parser.Statement do
     {:for, variable, expression, block, {line, offset}}
   end
 
+  except_clause =
+    ignore(except_kw)
+    |> optional(id())
+    |> ignore(colon)
+    |> ignore(newline)
+    |> parsec(:statement_list)
+    |> tag(:except_clause)
+
+  try_stmt =
+    try_kw
+    |> line()
+    |> ignore(colon)
+    |> ignore(newline)
+    |> parsec(:statement_list)
+    |> times(except_clause, min: 1)
+    |> optional(
+      ignore(else_kw)
+      |> ignore(colon)
+      |> ignore(newline)
+      |> parsec(:statement_list)
+      |> unwrap_and_tag(:else_block)
+    )
+    |> optional(
+      ignore(finally_kw)
+      |> ignore(colon)
+      |> ignore(newline)
+      |> parsec(:statement_list)
+      |> unwrap_and_tag(:finally_block)
+    )
+    |> concat(endtry)
+    |> reduce(:reduce_try)
+
+  def reduce_try(items) do
+    [{[:try], {line, offset}}, {:stmt_list, try_body} | rest] = items
+    {excepts, rest} = extract_excepts(rest)
+    {else_block, rest} = extract_tagged(rest, :else_block)
+    {finally_block, rest} = extract_tagged(rest, :finally_block)
+    [:endtry] = rest
+    {:try, try_body, excepts, else_block, finally_block, {line, offset}}
+  end
+
+  defp extract_excepts(items), do: extract_excepts(items, [])
+  defp extract_excepts([{:except_clause, clause} | rest], acc) do
+    parsed =
+      case clause do
+        [{:var, name}, {:stmt_list, body}] -> {name, body}
+        [{:stmt_list, body}] -> {nil, body}
+      end
+
+    extract_excepts(rest, [parsed | acc])
+  end
+  defp extract_excepts(rest, acc), do: {Enum.reverse(acc), rest}
+
+  defp extract_tagged([{tag, {:stmt_list, body}} | rest], tag), do: {body, rest}
+  defp extract_tagged(rest, _tag), do: {nil, rest}
+
+  raise_stmt =
+    raise_kw
+    |> line()
+    |> concat(id())
+    |> optional(
+      ignore(lparen())
+      |> parsec({Pythelix.Scripting.Parser.Expression, :expr})
+      |> ignore(rparen())
+    )
+    |> reduce(:reduce_raise)
+
+  def reduce_raise([{[:raise], {line, offset}}, {:var, exc_name}, message]) do
+    {:raise, exc_name, [message], {line, offset}}
+  end
+
+  def reduce_raise([{[:raise], {line, offset}}, {:var, exc_name}]) do
+    {:raise, exc_name, [], {line, offset}}
+  end
+
   wait =
     ignore(wait_kw)
     |> line()
@@ -183,6 +263,8 @@ defmodule Pythelix.Scripting.Parser.Statement do
       if_stmt,
       while_stmt,
       for_stmt,
+      try_stmt,
+      raise_stmt,
       wait,
       return,
       raw_value

@@ -25,6 +25,7 @@ defmodule Pythelix.Scripting.Interpreter.Script do
     last_raw: nil,
     pause: nil,
     error: nil,
+    handlers: [],
     debugger: nil,
     parent: nil,
     step: nil,
@@ -43,6 +44,7 @@ defmodule Pythelix.Scripting.Interpreter.Script do
           last_raw: any(),
           pause: nil | :immediately | integer() | float(),
           error: nil | Traceback.t(),
+          handlers: list(),
           debugger: nil | %Debugger{},
           parent: nil | t(),
           step: nil | {atom(), atom(), list()},
@@ -119,6 +121,24 @@ defmodule Pythelix.Scripting.Interpreter.Script do
 
   defp run_next_bytecode(_, %{pause: value} = script, _code, _owner) when value != nil do
     script
+  end
+
+  defp run_next_bytecode(bytecode, %{error: %Traceback{} = traceback, handlers: [handler | rest]} = script, code, owner) do
+    # Exception occurred but we have a handler — jump to except block
+    variables =
+      script.variables
+      |> Map.put("__exception__", traceback.exception)
+      |> Map.put("__exc_message__", traceback.message)
+      |> Map.put("__traceback__", traceback)
+
+    script = %{script |
+      error: nil,
+      handlers: rest,
+      cursor: handler.target,
+      variables: variables
+    }
+
+    run_next_bytecode(bytecode, script, code, owner)
   end
 
   defp run_next_bytecode(_, %{error: %Traceback{} = traceback} = script, code, owner) do

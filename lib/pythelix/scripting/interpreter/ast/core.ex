@@ -101,6 +101,14 @@ defmodule Pythelix.Scripting.Interpreter.AST.Core do
     Expressions.read_ast(code, ast)
   end
 
+  def read_ast(code, {:try, _, _, _, _, _} = ast) do
+    Statements.read_ast(code, ast)
+  end
+
+  def read_ast(code, {:raise, _, _, _} = ast) do
+    Statements.read_ast(code, ast)
+  end
+
   def read_ast(code, {:if, _, _, _, _, _} = ast) do
     Statements.read_ast(code, ast)
   end
