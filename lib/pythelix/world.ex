@@ -113,6 +113,7 @@ defmodule Pythelix.World do
       |> add_client_controls()
       |> add_game_time_base_unit()
       |> add_game_time_unit()
+      |> add_game_time_cyclic_unit()
       |> add_game_time_boundary()
       |> add_game_time_property()
       |> add_game_time_default()
@@ -206,6 +207,34 @@ defmodule Pythelix.World do
             self.__base = base
             self.__factor = factor
             self.__start = start
+            """
+          }
+        },
+      } | entities
+    ]
+  end
+
+  defp add_game_time_cyclic_unit(entities) do
+    [
+      %{
+        key: "GameTimeCyclicUnit",
+        parent: "SubEntity",
+        attributes: %{},
+        methods: %{
+          "__init__" => {
+            [
+              {"self", keyword: "self"},
+              {"base", index: 0, type: :str},
+              {"cycle", index: 1, type: :int},
+              {"start", index: 2, keyword: "start", type: :int, default: 0},
+              {"offset", index: 3, keyword: "offset", type: :int, default: 0}
+            ],
+            """
+            self.__base = base
+            self.__cycle = cycle
+            self.__start = start
+            self.__offset = offset
+            self.__cyclic = True
             """
           }
         },

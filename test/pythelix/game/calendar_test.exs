@@ -254,4 +254,139 @@ defmodule Pythelix.Game.CalendarTest do
       assert units["hour"] == 1
     end
   end
+
+  describe "cyclic units" do
+    defp create_calendar_with_cyclic_unit do
+      Pythelix.World.apply(:static)
+
+      {:ok, _} = Record.create_entity(key: "cyclic_calendar", parent: Record.get_entity("generic/calendar"))
+      Record.set_attribute("cyclic_calendar", "type", "custom")
+      Record.set_attribute("cyclic_calendar", "offset", 0)
+
+      units = %{
+        "second" => %{"__name" => "base"},
+        "minute" => %{"__base" => "second", "__factor" => 60, "__start" => 0},
+        "hour" => %{"__base" => "minute", "__factor" => 60, "__start" => 0},
+        "day" => %{"__base" => "hour", "__factor" => 24, "__start" => 1},
+        "month" => %{"__base" => "day", "__factor" => 30, "__start" => 1},
+        "year" => %{"__base" => "month", "__factor" => 12, "__start" => 1},
+        "weekday" => %{"__base" => "day", "__cycle" => 7, "__start" => 1, "__offset" => 0, "__cyclic" => true}
+      }
+
+      Record.set_attribute("cyclic_calendar", "units", units)
+      Record.get_entity("cyclic_calendar")
+    end
+
+    test "computes cyclic weekday values cycling 1-7" do
+      calendar = create_calendar_with_cyclic_unit()
+
+      # Day 1 (0 seconds into day 1): weekday = rem(0 + 0, 7) + 1 = 1
+      units = Calendar.compute_units(0, calendar)
+      assert units["weekday"] == 1
+      assert units["day"] == 1
+
+      # Day 2 (1 day = 86400 seconds): weekday = rem(1, 7) + 1 = 2
+      units = Calendar.compute_units(86400, calendar)
+      assert units["weekday"] == 2
+      assert units["day"] == 2
+
+      # Day 7 (6 days): weekday = rem(6, 7) + 1 = 7
+      units = Calendar.compute_units(6 * 86400, calendar)
+      assert units["weekday"] == 7
+
+      # Day 8 (7 days): weekday = rem(7, 7) + 1 = 1 (cycles back)
+      units = Calendar.compute_units(7 * 86400, calendar)
+      assert units["weekday"] == 1
+    end
+
+    test "weekday cycles across month boundaries" do
+      calendar = create_calendar_with_cyclic_unit()
+
+      # Day 30 of month 1 (29 days elapsed): weekday = rem(29, 7) + 1 = 2
+      units = Calendar.compute_units(29 * 86400, calendar)
+      assert units["weekday"] == rem(29, 7) + 1
+      assert units["day"] == 30
+      assert units["month"] == 1
+
+      # Day 1 of month 2 (30 days elapsed): weekday = rem(30, 7) + 1 = 3
+      units = Calendar.compute_units(30 * 86400, calendar)
+      assert units["weekday"] == rem(30, 7) + 1
+      assert units["day"] == 1
+      assert units["month"] == 2
+    end
+
+    test "cyclic unit does not interfere with regular units" do
+      calendar = create_calendar_with_cyclic_unit()
+
+      # 90061 seconds = same as the regular test
+      units = Calendar.compute_units(90061, calendar)
+      assert units["second"] == 1
+      assert units["minute"] == 1
+      assert units["hour"] == 1
+      assert units["day"] == 2
+      assert units["weekday"] == 2
+    end
+
+    test "project by cyclic unit advances by base unit seconds" do
+      calendar = create_calendar_with_cyclic_unit()
+
+      # Project by weekday=2 should advance by 2 days (2 * 86400)
+      {adjusted_epoch, units} = Calendar.project_units(0, calendar, %{"weekday" => 2})
+      assert adjusted_epoch == 2 * 86400
+      assert units["day"] == 3
+      assert units["weekday"] == 3
+    end
+
+    test "cyclic unit with offset shifts the cycle" do
+      Pythelix.World.apply(:static)
+
+      {:ok, _} = Record.create_entity(key: "offset_cyclic_cal", parent: Record.get_entity("generic/calendar"))
+      Record.set_attribute("offset_cyclic_cal", "type", "custom")
+      Record.set_attribute("offset_cyclic_cal", "offset", 0)
+
+      units = %{
+        "second" => %{"__name" => "base"},
+        "hour" => %{"__base" => "second", "__factor" => 3600, "__start" => 0},
+        "day" => %{"__base" => "hour", "__factor" => 24, "__start" => 1},
+        "weekday" => %{"__base" => "day", "__cycle" => 7, "__start" => 1, "__offset" => 3, "__cyclic" => true}
+      }
+
+      Record.set_attribute("offset_cyclic_cal", "units", units)
+      calendar = Record.get_entity("offset_cyclic_cal")
+
+      # Day 0 elapsed: weekday = rem(0 + 3, 7) + 1 = 4
+      units = Calendar.compute_units(0, calendar)
+      assert units["weekday"] == 4
+    end
+  end
+
+  describe "gregorian weekday" do
+    test "returns weekday 1 (Monday) through 7 (Sunday)" do
+      calendar = create_gregorian_calendar()
+
+      # 2024-01-15 is a Monday (weekday 1)
+      {:ok, dt} = DateTime.new(~D[2024-01-15], ~T[12:00:00], "Etc/UTC")
+      unix = DateTime.to_unix(dt)
+      units = Calendar.compute_units(unix, calendar)
+      assert units["weekday"] == 1
+
+      # 2024-01-21 is a Sunday (weekday 7)
+      {:ok, dt} = DateTime.new(~D[2024-01-21], ~T[12:00:00], "Etc/UTC")
+      unix = DateTime.to_unix(dt)
+      units = Calendar.compute_units(unix, calendar)
+      assert units["weekday"] == 7
+    end
+
+    test "project by weekday advances by days" do
+      calendar = create_gregorian_calendar()
+
+      {:ok, dt} = DateTime.new(~D[2024-01-15], ~T[12:00:00], "Etc/UTC")
+      unix = DateTime.to_unix(dt)
+
+      {_adjusted, units} = Calendar.project_units(unix, calendar, %{"weekday" => 2})
+      # 2 days after Monday Jan 15 = Wednesday Jan 17
+      assert units["day"] == 17
+      assert units["weekday"] == 3
+    end
+  end
 end

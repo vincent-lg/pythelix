@@ -21,6 +21,24 @@ defmodule Pythelix.Scripting.Namespace.RealDateTimeTest do
       assert is_integer(Script.get_variable_value(script, "s"))
     end
 
+    test "weekday returns 1 (Monday) through 7 (Sunday)" do
+      value = expr_ok("realtime.now().weekday")
+      assert is_integer(value)
+      assert value >= 1 and value <= 7
+    end
+
+    test "weekday changes when advancing by a day" do
+      script = run("""
+      dt = realtime.now()
+      tomorrow = dt.add(86400)
+      diff = tomorrow.weekday - dt.weekday
+      """)
+
+      diff = Script.get_variable_value(script, "diff")
+      # Should be +1 or -6 (when wrapping from Sunday to Monday)
+      assert diff == 1 or diff == -6
+    end
+
     test "timezone returns offset string" do
       script = run("""
       dt = realtime.now()

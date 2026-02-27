@@ -41,6 +41,12 @@ defmodule Pythelix.Scripting.Namespace.Module.RealtimeTest do
       assert is_integer(value)
       assert value >= 0 and value <= 23
     end
+
+    test "weekday returns a valid weekday" do
+      value = expr_ok("realtime.now().weekday")
+      assert is_integer(value)
+      assert value >= 1 and value <= 7
+    end
   end
 
   describe "realtime.from_gametime()" do

@@ -38,6 +38,8 @@ You can read individual components directly as attributes:
 42
 >>> dt.second
 0
+>>> dt.weekday
+5
 >>> dt.timezone
 "+01:00"
 ```
@@ -176,6 +178,41 @@ Defines a derived unit built on top of another. Arguments:
 "year": GameTimeUnit("month", 12, start=1)
 ```
 
+#### `GameTimeCyclicUnit(base, cycle, start=0, offset=0)`
+
+Defines a unit whose value cycles modularly, independent of the unit hierarchy. Unlike `GameTimeUnit`, a cyclic unit does not nest into the hierarchy — its value is computed as `(total_base_elapsed + offset) % cycle + start`.
+
+Arguments:
+
+- `base` — the name of the unit to count from epoch (must be a regular unit in the hierarchy).
+- `cycle` — the modulus (length of the cycle).
+- `start` — the starting value (default `0`). Use `1` if day-of-week should be 1-based.
+- `offset` — shifts the cycle (default `0`). For example, if epoch day 0 is a Wednesday and you want weekday 1 to mean Monday, set `offset` to `-2` (or equivalently `5`).
+
+```
+"weekday": GameTimeCyclicUnit("day", 7, start=1)
+```
+
+This creates a `weekday` unit that cycles 1 through 7 based on total days elapsed. It works across month and year boundaries because it counts from the epoch, not from the current month.
+
+You can attach `GameTimeProperty` entries to name the days:
+
+```
+properties: {
+    "day_name": [
+        GameTimeProperty("weekday", 1, "Moonday"),
+        GameTimeProperty("weekday", 2, "Treeday"),
+        GameTimeProperty("weekday", 3, "Waterday"),
+        GameTimeProperty("weekday", 4, "Fireday"),
+        GameTimeProperty("weekday", 5, "Earthday"),
+        GameTimeProperty("weekday", 6, "Starday"),
+        GameTimeProperty("weekday", 7, "Sunday")
+    ]
+}
+```
+
+> **Note on Gregorian calendars:** the `weekday` unit is automatically available on Gregorian calendars (1 = Monday through 7 = Sunday), following the ISO 8601 convention. You do not need to define it yourself.
+
 #### Putting it together: a complete custom calendar
 
 Here is a minimal earthlike calendar:
@@ -234,7 +271,7 @@ type: "gregorian"
 offset: 0
 ```
 
-No `units` attribute is needed. The engine automatically provides: `year`, `month`, `day`, `hour`, `minute`, and `second`, computed by interpreting game seconds as a Unix timestamp. With `offset: 0` and `scale: 1`, game time is identical to real time.
+No `units` attribute is needed. The engine automatically provides: `year`, `month`, `day`, `hour`, `minute`, `second`, and `weekday`, computed by interpreting game seconds as a Unix timestamp. The `weekday` unit returns 1 (Monday) through 7 (Sunday), following ISO 8601. With `offset: 0` and `scale: 1`, game time is identical to real time.
 
 Identical, but the epoch is usually 1970. If you want to shift to another start date, use an offset (for instance, an offset of 1 billion will shift the starting date in 2001).
 
@@ -514,7 +551,7 @@ real_now = realtime.from_gametime(now)
 real_now.hour  # local hour when this game moment corresponds to
 ```
 
-But of course, it is more useful with projected time. Let's assume you have a calendar `!calendar/earth!` with unit "day", and you want to see what real time it will be in 7 day gametime:
+Of course, it is more useful with projected time. Let's assume you have a calendar `!calendar/earth!` with unit "day", and you want to see what real time it will be in 7 gametime days:
 
 ```
 >>> now = gametime.now(!calendar/earth!)
@@ -554,6 +591,8 @@ Some factors can affect it of course:
 
 It is not recommended to do either (and not very likely to do either).
 
+That said, in most cases, real time and game time will remain consistent, and the calendar(s) you use as well. In particular, game time keeps "increasing" even during a server restart (of if the server is down for 3 days).
+
 ## A complete example: a fantasy world
 
 Here is a full worldlet excerpt for a fantasy game with a custom calendar, time-of-day labels, and a named day of rest:
@@ -587,6 +626,7 @@ properties: {
     "special_day": [
         GameTimeProperty("sol", 4, "market day"),
         GameTimeProperty("sol", 7, "day of rest")
+        GameTimeDefault("")
     ]
 }
 ```
@@ -660,6 +700,7 @@ mix game.epoch.reset
 | `dt.hour` | integer | Hour (0–23) |
 | `dt.minute` | integer | Minute (0–59) |
 | `dt.second` | integer | Second (0–59) |
+| `dt.weekday` | integer | Day of the week (1 = Monday through 7 = Sunday, ISO 8601) |
 | `dt.timezone` | string | UTC offset, e.g. `"+01:00"` or `"Z"` |
 | `dt.add(n)` | `RealDateTime` | New datetime advanced by `n` seconds (or Duration) |
 | `dt.sub(n)` | `RealDateTime` | New datetime rewound by `n` seconds (or Duration) |
@@ -691,6 +732,7 @@ mix game.epoch.reset
 |---|---|---|
 | `GameTimeBaseUnit()` | — | Marks the base unit (equivalent to seconds) |
 | `GameTimeUnit(base, factor, start=0)` | base: str, factor: int, start: int | Defines a unit in terms of a smaller one |
+| `GameTimeCyclicUnit(base, cycle, start=0, offset=0)` | base: str, cycle: int, start: int, offset: int | Defines a cyclic unit (e.g., day of the week) |
 | `GameTimeBoundary(unit, from, to, value)` | unit: str, from: int, to: int, value: str | Matches when `from <= unit_value < to` (inclusive-exclusive) |
 | `GameTimeProperty(unit, index, value)` | unit: str, index: int, value: str | Matches when `unit_value == index` exactly |
 | `GameTimeDefault(value)` | value: str | Always matches — use as the last entry to catch remaining cases |

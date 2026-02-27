@@ -10,8 +10,20 @@ units: {
     "minute": GameTimeUnit("second", 60),
     "hour": GameTimeUnit("minute", 60),
     "day": GameTimeUnit("hour", 24, start=1),
+    "weekday": GameTimeCyclicUnit("day", 7, start=1),
     "month": GameTimeUnit("day", 30, start=1),
     "year": GameTimeUnit("day", 365, start=3000),
+}
+properties: {
+    "day_name": [
+        GameTimeProperty("weekday", 1, "Moonday"),
+        GameTimeProperty("weekday", 2, "Treeday"),
+        GameTimeProperty("weekday", 3, "Waterday"),
+        GameTimeProperty("weekday", 4, "Fireday"),
+        GameTimeProperty("weekday", 5, "Earthday"),
+        GameTimeProperty("weekday", 6, "Starday"),
+        GameTimeProperty("weekday", 7, "Sunday")
+    ]
 }
 
 [calendar/earth]
@@ -19,6 +31,15 @@ parent: "generic/calendar"
 type: "gregorian"
 offset: 1000000000
 properties: {
+    "day_name": [
+        GameTimeProperty("weekday", 1, "Monday"),
+        GameTimeProperty("weekday", 2, "Tuesday"),
+        GameTimeProperty("weekday", 3, "Wednesday"),
+        GameTimeProperty("weekday", 4, "Thursday"),
+        GameTimeProperty("weekday", 5, "Friday"),
+        GameTimeProperty("weekday", 6, "Saturday"),
+        GameTimeProperty("weekday", 7, "Sunday")
+    ],
     "season": [
         GameTimeBoundary("month", 3, 6, "spring"),
         GameTimeBoundary("month", 6, 9, "summer"),

@@ -145,6 +145,88 @@ defmodule Pythelix.Scripting.Namespace.Module.GametimeTest do
     end
   end
 
+  describe "cyclic units (worldlet style)" do
+    test "GameTimeCyclicUnit weekday returns 1-7" do
+      run("""
+      cal = Entity(key="cyclic_cal", parent=!generic/calendar!)
+      cal.type = "custom"
+      cal.offset = 0
+      cal.units = {
+          "second": GameTimeBaseUnit(),
+          "minute": GameTimeUnit("second", 60),
+          "hour": GameTimeUnit("minute", 60),
+          "day": GameTimeUnit("hour", 24, start=1),
+          "month": GameTimeUnit("day", 30, start=1),
+          "year": GameTimeUnit("month", 12, start=1),
+          "weekday": GameTimeCyclicUnit("day", 7, start=1)
+      }
+      """)
+
+      Epoch.cache_calendars()
+
+      value = expr_ok("gametime.now(!cyclic_cal!).weekday")
+      assert is_integer(value)
+      assert value >= 1 and value <= 7
+    end
+
+    test "project by cyclic unit advances by base seconds" do
+      run("""
+      cal = Entity(key="cyclic_cal2", parent=!generic/calendar!)
+      cal.type = "custom"
+      cal.offset = 0
+      cal.units = {
+          "second": GameTimeBaseUnit(),
+          "minute": GameTimeUnit("second", 60),
+          "hour": GameTimeUnit("minute", 60),
+          "day": GameTimeUnit("hour", 24, start=1),
+          "weekday": GameTimeCyclicUnit("day", 7, start=1)
+      }
+      """)
+
+      Epoch.cache_calendars()
+
+      script = run("""
+      now = gametime.now(!cyclic_cal2!)
+      future = now.project(weekday=2)
+      diff = future.day - now.day
+      """)
+
+      diff = Script.get_variable_value(script, "diff")
+      assert diff == 2 or (diff < 0 and diff + 24 == 2)
+    end
+
+    test "GameTimeProperty works with cyclic unit" do
+      run("""
+      cal = Entity(key="cyclic_cal3", parent=!generic/calendar!)
+      cal.type = "custom"
+      cal.offset = 0
+      cal.units = {
+          "second": GameTimeBaseUnit(),
+          "minute": GameTimeUnit("second", 60),
+          "hour": GameTimeUnit("minute", 60),
+          "day": GameTimeUnit("hour", 24, start=1),
+          "weekday": GameTimeCyclicUnit("day", 7, start=1)
+      }
+      cal.properties = {
+          "day_name": [
+              GameTimeProperty("weekday", 1, "Monday"),
+              GameTimeProperty("weekday", 2, "Tuesday"),
+              GameTimeProperty("weekday", 3, "Wednesday"),
+              GameTimeProperty("weekday", 4, "Thursday"),
+              GameTimeProperty("weekday", 5, "Friday"),
+              GameTimeProperty("weekday", 6, "Saturday"),
+              GameTimeProperty("weekday", 7, "Sunday")
+          ]
+      }
+      """)
+
+      Epoch.cache_calendars()
+
+      value = expr_ok("gametime.now(!cyclic_cal3!).day_name")
+      assert value in ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+    end
+  end
+
   describe "error handling" do
     test "error when no calendar and multiple exist" do
       # Create a second calendar

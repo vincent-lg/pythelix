@@ -101,25 +101,45 @@ defmodule Pythelix.Game.Calendar do
 
   defp compute_custom_units(adjusted_seconds, units_dict) do
     units = get_dict_items(units_dict)
-    hierarchy = build_hierarchy(units)
+    {cyclic_units, regular_units} = split_cyclic_units(units)
+    hierarchy = build_hierarchy(regular_units)
 
-    Enum.reduce(hierarchy, %{}, fn {name, unit_info}, acc ->
-      total_seconds = unit_total_seconds(name, units, hierarchy)
+    regular_values =
+      Enum.reduce(hierarchy, %{}, fn {name, unit_info}, acc ->
+        total_seconds = unit_total_seconds(name, regular_units, hierarchy)
+        start = get_sub_entity_attr(unit_info, "__start", 0)
+
+        # The wrapping factor for a unit comes from the child unit that builds on it.
+        # e.g., "second" wraps at 60 because "minute" has factor=60.
+        # If no child references this unit, it's the top-level and doesn't wrap.
+        wrap_factor = find_wrap_factor(name, regular_units)
+
+        value =
+          if wrap_factor != nil and wrap_factor > 0 do
+            rem(div(adjusted_seconds, total_seconds), wrap_factor) + start
+          else
+            div(adjusted_seconds, total_seconds) + start
+          end
+
+        Map.put(acc, name, value)
+      end)
+
+    # Compute cyclic units separately
+    Enum.reduce(cyclic_units, regular_values, fn {name, unit_info}, acc ->
+      base_ref = get_sub_entity_attr(unit_info, "__base")
+      cycle = get_sub_entity_attr(unit_info, "__cycle")
       start = get_sub_entity_attr(unit_info, "__start", 0)
+      offset = get_sub_entity_attr(unit_info, "__offset", 0)
+      base_total = unit_total_seconds(base_ref, regular_units, hierarchy)
 
-      # The wrapping factor for a unit comes from the child unit that builds on it.
-      # e.g., "second" wraps at 60 because "minute" has factor=60.
-      # If no child references this unit, it's the top-level and doesn't wrap.
-      wrap_factor = find_wrap_factor(name, units)
-
-      value =
-        if wrap_factor != nil and wrap_factor > 0 do
-          rem(div(adjusted_seconds, total_seconds), wrap_factor) + start
-        else
-          div(adjusted_seconds, total_seconds) + start
-        end
-
+      value = rem(div(adjusted_seconds, base_total) + offset, cycle) + start
       Map.put(acc, name, value)
+    end)
+  end
+
+  defp split_cyclic_units(units) do
+    Enum.split_with(units, fn {_name, info} ->
+      get_sub_entity_attr(info, "__cyclic") == true
     end)
   end
 
@@ -176,25 +196,44 @@ defmodule Pythelix.Game.Calendar do
 
   defp custom_unit_to_seconds(unit_name, amount, units_dict) do
     units = get_dict_items(units_dict)
-    hierarchy = build_hierarchy(units)
-    total = unit_total_seconds(unit_name, units, hierarchy)
-    total * amount
+    {cyclic_units, regular_units} = split_cyclic_units(units)
+    hierarchy = build_hierarchy(regular_units)
+
+    # Check if this is a cyclic unit
+    case Enum.find(cyclic_units, fn {name, _} -> name == unit_name end) do
+      {_, unit_info} ->
+        base_ref = get_sub_entity_attr(unit_info, "__base")
+        base_total = unit_total_seconds(base_ref, regular_units, hierarchy)
+        base_total * amount
+
+      nil ->
+        total = unit_total_seconds(unit_name, regular_units, hierarchy)
+        total * amount
+    end
   end
 
   defp custom_units_to_seconds(unit_values, units_dict) do
     units = get_dict_items(units_dict)
-    hierarchy = build_hierarchy(units)
+    {_cyclic_units, regular_units} = split_cyclic_units(units)
+    hierarchy = build_hierarchy(regular_units)
+
+    # Only include regular (non-cyclic) units in the inverse computation
+    regular_names = MapSet.new(regular_units, fn {name, _} -> name end)
 
     Enum.reduce(unit_values, 0, fn {name, value}, acc ->
-      total = unit_total_seconds(name, units, hierarchy)
+      if MapSet.member?(regular_names, name) do
+        total = unit_total_seconds(name, regular_units, hierarchy)
 
-      start =
-        case Enum.find(hierarchy, fn {n, _} -> n == name end) do
-          {_, unit_info} -> get_sub_entity_attr(unit_info, "__start", 0)
-          nil -> 0
-        end
+        start =
+          case Enum.find(hierarchy, fn {n, _} -> n == name end) do
+            {_, unit_info} -> get_sub_entity_attr(unit_info, "__start", 0)
+            nil -> 0
+          end
 
-      acc + (value - start) * total
+        acc + (value - start) * total
+      else
+        acc
+      end
     end)
   end
 
@@ -209,7 +248,8 @@ defmodule Pythelix.Game.Calendar do
       "day" => dt.day,
       "hour" => dt.hour,
       "minute" => dt.minute,
-      "second" => dt.second
+      "second" => dt.second,
+      "weekday" => Date.day_of_week(Date.new!(dt.year, dt.month, dt.day))
     }
   end
 
@@ -219,6 +259,7 @@ defmodule Pythelix.Game.Calendar do
       "minute" -> amount * 60
       "hour" -> amount * 3600
       "day" -> amount * 86400
+      "weekday" -> amount * 86400
       _ -> 0
     end
   end

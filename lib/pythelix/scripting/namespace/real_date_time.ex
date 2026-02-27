@@ -35,6 +35,11 @@ defmodule Pythelix.Scripting.Namespace.RealDateTime do
     Store.get_value(self).datetime.time_zone
   end
 
+  defattr weekday(_script, self) do
+    dt = Store.get_value(self).datetime
+    Date.day_of_week(Date.new!(dt.year, dt.month, dt.day))
+  end
+
   defmet __repr__(script, namespace), [] do
     rdt = Store.get_value(namespace.self)
     {script, "<RealDateTime #{format_dt(rdt.datetime)}>"}
