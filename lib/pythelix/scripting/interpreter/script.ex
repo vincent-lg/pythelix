@@ -10,7 +10,7 @@ defmodule Pythelix.Scripting.Interpreter.Script do
   alias Pythelix.Scripting.Callable.{Method, SubMethod}
   alias Pythelix.Scripting.Format
   alias Pythelix.Scripting.Interpreter.{Debugger, Script, VM}
-  alias Pythelix.Scripting.Object.Reference
+  alias Pythelix.Scripting.Object.{GameTime, RealDateTime, Reference}
   alias Pythelix.Scripting.Store
   alias Pythelix.Scripting.Traceback
 
@@ -243,7 +243,8 @@ defmodule Pythelix.Scripting.Interpreter.Script do
   def references?(value) when is_binary(value), do: false
   def references?(%Format.String{}), do: false
   def references?(value) when is_tuple(value), do: false
-  # Game modes structures should not be referenced
+  def references?(%RealDateTime{}), do: false
+  def references?(%GameTime{}), do: false
   def references?(_value), do: true
 
   def debug(%{debugger: %Debugger{} = debugger} = script, text) do

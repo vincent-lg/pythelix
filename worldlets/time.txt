@@ -1,0 +1,74 @@
+[game_epoch]
+scale: 10
+
+[calendar/shire]
+parent: "generic/calendar"
+type: "custom"
+offset: 0
+units: {
+    "second": GameTimeBaseUnit(),
+    "minute": GameTimeUnit("second", 60),
+    "hour": GameTimeUnit("minute", 60),
+    "day": GameTimeUnit("hour", 24, start=1),
+    "month": GameTimeUnit("day", 30, start=1),
+    "year": GameTimeUnit("day", 365, start=3000),
+}
+
+[calendar/earth]
+parent: "generic/calendar"
+type: "gregorian"
+offset: 1000000000
+properties: {
+    "season": [
+        GameTimeBoundary("month", 3, 6, "spring"),
+        GameTimeBoundary("month", 6, 9, "summer"),
+        GameTimeBoundary("month", 9, 12, "autumn"),
+        GameTimeDefault("winter")
+    ],
+    "month_name": [
+        GameTimeProperty("month", 1, "January"),
+        GameTimeProperty("month", 2, "February"),
+        GameTimeProperty("month", 3, "March"),
+        GameTimeProperty("month", 4, "April"),
+        GameTimeProperty("month", 5, "May"),
+        GameTimeProperty("month", 6, "June"),
+        GameTimeProperty("month", 7, "July"),
+        GameTimeProperty("month", 8, "August"),
+        GameTimeProperty("month", 9, "September"),
+        GameTimeProperty("month", 10, "October"),
+        GameTimeProperty("month", 11, "November"),
+        GameTimeProperty("month", 12, "December")
+    ]
+}
+
+[calendar/mars]
+parent: "generic/calendar"
+type: "custom"
+offset: 0
+units: {
+    "second": GameTimeBaseUnit(),
+    "minute": GameTimeUnit("second", 60),
+    "hour": GameTimeUnit("minute", 60),
+    "sol": GameTimeUnit("hour", 25, start=1),
+    "year": GameTimeUnit("sol", 668, start=1)
+}
+properties: {
+    "northern_season": [
+        GameTimeBoundary("sol", 1, 195, "spring"),
+        GameTimeBoundary("sol", 195, 373, "summer"),
+        GameTimeBoundary("sol", 373, 515, "autumn"),
+        GameTimeDefault("winter")
+    ],
+    "southern_season": [
+        GameTimeBoundary("sol", 1, 195, "autumn"),
+        GameTimeBoundary("sol", 195, 373, "winter"),
+        GameTimeBoundary("sol", 373, 515, "spring"),
+        GameTimeDefault("summer")
+    ],
+    "time_of_day": [
+        GameTimeBoundary("hour", 5, 8, "dawn"),
+        GameTimeBoundary("hour", 8, 19, "day"),
+        GameTimeBoundary("hour", 19, 22, "dusk"),
+        GameTimeDefault("night")
+    ]
+}

@@ -85,9 +85,9 @@ Now is a good time to reach for the [tutorials](./tutorials/index.md) about doin
 
 If you'd like to practice or see what happens when you type lines of script, read the next section before heading to a tutorial.
 
-## A scripting playground
+## The Pythello console
 
-If you're new to programming—or have some Python experience—you might want to check the playground: it is a console where you can type Pythello scripts and see them in action. Very useful to check syntax before writing your worldlet, for instance.
+If you're new to programming—or have some Python experience—you might want to check the playground, also called the Pythello console: it is a console where you can type Pythello scripts and see them in action. Very useful to check syntax before writing your worldlet, for instance.
 
 To start it:
 

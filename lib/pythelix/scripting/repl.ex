@@ -188,6 +188,23 @@ defmodule Pythelix.Scripting.REPL do
     {:error, "right parent ) at line #{line} doesn't close anything"}
   end
 
+  # Braces
+  defp parse_token({"{", line}, stack, :normal) do
+    {:ok, [{:lc, line} | stack], :normal}
+  end
+
+  defp parse_token({"}", _}, [{:lc, _} | stack], :normal) do
+    {:ok, stack, :normal}
+  end
+
+  defp parse_token({"}", line}, [{other, other_line} | _], :normal) do
+    {:error, "found } on line #{line}, but unclosed #{other} at #{other_line}"}
+  end
+
+  defp parse_token({"}", line}, _, :normal) do
+    {:error, "right brace } at line #{line} doesn't close anything"}
+  end
+
   # Brackets
   defp parse_token({"[", line}, stack, :normal) do
     {:ok, [{:lb, line} | stack], :normal}

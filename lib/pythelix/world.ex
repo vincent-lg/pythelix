@@ -16,7 +16,7 @@ defmodule Pythelix.World do
   @worldlet_pattern "*.txt"
 
   alias Pythelix.Command
-  alias Pythelix.Game.Modes
+  alias Pythelix.Game.{Epoch, Modes}
   alias Pythelix.Record
   alias Pythelix.Scripting
   alias Pythelix.Scripting.Namespace.Extended
@@ -111,6 +111,12 @@ defmodule Pythelix.World do
       entities
       |> add_sub_entity()
       |> add_client_controls()
+      |> add_game_time_base_unit()
+      |> add_game_time_unit()
+      |> add_game_time_boundary()
+      |> add_game_time_property()
+      |> add_game_time_default()
+      |> add_base_calendar_entity()
       |> add_motd_menu_entity()
       |> add_game_menu_entity()
       |> add_base_menu_entity()
@@ -160,6 +166,136 @@ defmodule Pythelix.World do
             "self.__controls.discard(entity.id or entity.key)"
           },
         },
+      } | entities
+    ]
+  end
+
+  defp add_game_time_base_unit(entities) do
+    [
+      %{
+        key: "GameTimeBaseUnit",
+        parent: "SubEntity",
+        attributes: %{},
+        methods: %{
+          "__init__" => {
+            [
+              {"self", keyword: "self"}
+            ],
+            "self.__name = 'base'"
+          }
+        },
+      } | entities
+    ]
+  end
+
+  defp add_game_time_unit(entities) do
+    [
+      %{
+        key: "GameTimeUnit",
+        parent: "SubEntity",
+        attributes: %{},
+        methods: %{
+          "__init__" => {
+            [
+              {"self", keyword: "self"},
+              {"base", index: 0, type: :str},
+              {"factor", index: 1, type: :int},
+              {"start", index: 2, keyword: "start", type: :int, default: 0}
+            ],
+            """
+            self.__base = base
+            self.__factor = factor
+            self.__start = start
+            """
+          }
+        },
+      } | entities
+    ]
+  end
+
+  defp add_game_time_boundary(entities) do
+    [
+      %{
+        key: "GameTimeBoundary",
+        parent: "SubEntity",
+        attributes: %{},
+        methods: %{
+          "__init__" => {
+            [
+              {"self", keyword: "self"},
+              {"unit", index: 0, type: :str},
+              {"from_val", index: 1, type: :int},
+              {"to_val", index: 2, type: :int},
+              {"value", index: 3, type: :str}
+            ],
+            """
+            self.__unit = unit
+            self.__from = from_val
+            self.__to = to_val
+            self.__value = value
+            """
+          }
+        },
+      } | entities
+    ]
+  end
+
+  defp add_game_time_property(entities) do
+    [
+      %{
+        key: "GameTimeProperty",
+        parent: "SubEntity",
+        attributes: %{},
+        methods: %{
+          "__init__" => {
+            [
+              {"self", keyword: "self"},
+              {"unit", index: 0, type: :str},
+              {"index", index: 1, type: :int},
+              {"value", index: 2, type: :str}
+            ],
+            """
+            self.__unit = unit
+            self.__index = index
+            self.__value = value
+            """
+          }
+        },
+      } | entities
+    ]
+  end
+
+  defp add_game_time_default(entities) do
+    [
+      %{
+        key: "GameTimeDefault",
+        parent: "SubEntity",
+        attributes: %{},
+        methods: %{
+          "__init__" => {
+            [
+              {"self", keyword: "self"},
+              {"value", index: 0, type: :str}
+            ],
+            """
+            self.__value = value
+            self.__default = True
+            """
+          }
+        },
+      } | entities
+    ]
+  end
+
+  defp add_base_calendar_entity(entities) do
+    [
+      %{
+        key: "generic/calendar",
+        attributes: %{
+          "offset" => 0,
+          "type" => "\"custom\""
+        },
+        methods: %{},
       } | entities
     ]
   end
@@ -442,6 +578,7 @@ defmodule Pythelix.World do
     end)
     |> tap(fn _ -> Record.Diff.apply() end)
     |> tap(fn _ -> link_commands() end)
+    |> tap(fn _ -> Epoch.init() end)
   end
 
   defp create_entity(entity, opts \\ []) do
