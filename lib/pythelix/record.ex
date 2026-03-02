@@ -15,6 +15,7 @@ defmodule Pythelix.Record do
   def warmup() do
     warmup_database()
     warmup_cache()
+    Pythelix.Rangen.warmup()
   end
 
   @doc """

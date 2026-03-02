@@ -56,6 +56,8 @@ defmodule Pythelix.Application do
       },
       Pythelix.Repo,
       {Registry, keys: :unique, name: Registry.LongRunning},
+      {Registry, keys: :unique, name: Pythelix.Rangen.Registry},
+      {DynamicSupervisor, strategy: :one_for_one, name: Pythelix.Rangen.Supervisor},
       {DynamicSupervisor, strategy: :one_for_one, name: Pythelix.Network.TCP.ClientSupervisor},
       {Task.Supervisor, name: Pythelix.Game.TaskSupervisor},
       Pythelix.Game.Hub,

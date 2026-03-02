@@ -9,6 +9,7 @@ defmodule Pythelix.World do
   @generic_client "generic/client"
   @generic_character "generic/character"
   @generic_menu "generic/menu"
+  @generic_rangen "generic/rangen"
   @motd_menu "menu/motd"
   @game_menu "menu/game"
   @worldlet_dir "worldlets"
@@ -115,6 +116,7 @@ defmodule Pythelix.World do
       |> add_base_menu_entity()
       |> add_base_client_entity()
       |> add_base_character_entity()
+      |> add_base_rangen_entity()
       |> Command.add_base_command_entity()
     }
   end
@@ -185,6 +187,32 @@ defmodule Pythelix.World do
           "game_modes" => %Modes{}
         },
         methods: %{},
+      } | entities
+    ]
+  end
+
+  defp add_base_rangen_entity(entities) do
+    [
+      %{
+        virtual: true,
+        key: @generic_rangen,
+        attributes: %{
+          "patterns" => "[]",
+          "generate" => {:extended, Extended.Rangen, :m_generate},
+          "add" => {:extended, Extended.Rangen, :m_add},
+          "remove" => {:extended, Extended.Rangen, :m_remove},
+          "clear" => {:extended, Extended.Rangen, :m_clear},
+          "count" => {:extended_property, Extended.Rangen, :count},
+        },
+        methods: %{
+          "check" => {
+            [
+              {"self", keyword: "self"},
+              {"text", index: 0, type: :str}
+            ],
+            "return True"
+          },
+        },
       } | entities
     ]
   end
