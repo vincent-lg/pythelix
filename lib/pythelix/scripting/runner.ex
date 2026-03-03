@@ -129,6 +129,17 @@ defmodule Pythelix.Scripting.Runner do
       nil ->
         Logger.warning("Cannot resume unknown task #{task_id}")
 
+      %Task{action: {:entity_method, entity_key, method_name}} = task ->
+        cleanup_task(task.id)
+
+        case Record.get_entity(entity_key) do
+          nil ->
+            Logger.warning("Scheduled entity #{entity_key} no longer exists, skipping #{method_name}")
+
+          entity ->
+            run_method({entity, method_name}, [], %{"self" => entity}, [])
+        end
+
       task ->
         # Restore references and resume script
         Task.restore(task)

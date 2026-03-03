@@ -6,6 +6,7 @@ defmodule Pythelix.Scripting.Namespace.RealDateTime do
   use Pythelix.Scripting.Namespace
 
   alias Pythelix.Scripting.Object.{Duration, RealDateTime}
+  alias Pythelix.Task.Persistent, as: PersistentTask
 
   defattr year(_script, self) do
     Store.get_value(self).datetime.year
@@ -106,20 +107,11 @@ defmodule Pythelix.Scripting.Namespace.RealDateTime do
 
     now_unix = System.system_time(:second)
     target_unix = DateTime.to_unix(rdt.datetime)
-    delay_seconds = target_unix - now_unix
 
-    if delay_seconds > 0 do
-      delay_ms = trunc(delay_seconds * 1000)
+    if target_unix > now_unix do
       entity_key = entity.key || entity.gen_id
-
-      Cachex.put(:px_tasks, {:scheduled, entity_key, method}, %{
-        delay: delay_ms,
-        entity: entity_key,
-        method: method,
-        scheduled_at: System.system_time(:millisecond)
-      })
-
-      Process.send_after(self(), {:scheduled_call, entity_key, method}, delay_ms)
+      name = "schedule:#{entity_key}:#{method}"
+      PersistentTask.add_entity_method(rdt.datetime, name, entity_key, method)
     end
 
     {script, :none}

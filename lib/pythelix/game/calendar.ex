@@ -97,8 +97,6 @@ defmodule Pythelix.Game.Calendar do
     seconds - offset
   end
 
-  # --- Custom calendar computation ---
-
   defp compute_custom_units(adjusted_seconds, units_dict) do
     units = get_dict_items(units_dict)
     {cyclic_units, regular_units} = split_cyclic_units(units)
@@ -237,8 +235,6 @@ defmodule Pythelix.Game.Calendar do
     end)
   end
 
-  # --- Gregorian calendar computation ---
-
   defp compute_gregorian_units(adjusted_seconds) do
     dt = DateTime.from_unix!(adjusted_seconds)
 
@@ -276,8 +272,6 @@ defmodule Pythelix.Game.Calendar do
     {:ok, dt} = DateTime.from_naive(naive, "Etc/UTC")
     DateTime.to_unix(dt)
   end
-
-  # --- Property computation ---
 
   # Iterate a list of sub-entities and return the value of the first match.
   defp compute_list_property_value(items, unit_values) when is_list(items) do
@@ -326,8 +320,6 @@ defmodule Pythelix.Game.Calendar do
         nil
     end
   end
-
-  # --- Helpers ---
 
   defp get_dict_items(%Dict{} = dict) do
     Dict.items(dict)

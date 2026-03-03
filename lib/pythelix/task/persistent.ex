@@ -10,8 +10,8 @@ defmodule Pythelix.Task.Persistent do
 
   require Logger
 
-  @enforce_keys [:id, :expire_at, :name, :code, :script]
-  defstruct [:id, :expire_at, :name, :code, :script, references: %{}]
+  @enforce_keys [:id, :expire_at, :name]
+  defstruct [:id, :expire_at, :name, :code, :script, :action, references: %{}]
 
   @typedoc "A persistent task"
   @type t() :: %{
@@ -83,6 +83,36 @@ defmodule Pythelix.Task.Persistent do
 
     {:ok, task} =
       %Task{id: id, expire_at: expire_at, name: name, code: code, script: script}
+      |> save()
+      |> schedule()
+
+    ids = Enum.sort([id | ids])
+    Cachex.put(@cache, :ids, ids)
+    Cachex.put(@cache, :status, Map.put(status, id, :scheduled))
+
+    task
+  end
+
+  @doc """
+  Schedule a plain entity method call at a future time.
+
+  Unlike `add/4`, this stores no code or script context. When the task fires,
+  a fresh script is started and the named method is called on the entity.
+
+  Args:
+
+  * expire_at (nil or DateTime): the expiration.
+  * name (string): a descriptive name for the task (e.g. "schedule:my_room:open_gates").
+  * entity_key (string): the key of the entity whose method to call.
+  * method_name (string): the name of the method to call.
+  """
+  @spec add_entity_method(nil | DateTime.t(), String.t(), String.t(), String.t()) :: t()
+  def add_entity_method(expire_at, name, entity_key, method_name) do
+    {id, ids} = find_free_id()
+    status = get_status()
+
+    {:ok, task} =
+      %Task{id: id, expire_at: expire_at, name: name, action: {:entity_method, entity_key, method_name}}
       |> save()
       |> schedule()
 
@@ -243,6 +273,8 @@ defmodule Pythelix.Task.Persistent do
   defp find_free_id(id, [], ids), do: {id, ids}
   defp find_free_id(id, [first | _], ids) when id < first, do: {id, ids}
   defp find_free_id(id, [_ | rest], ids), do: find_free_id(id + 1, rest, ids)
+
+  def restore(%Task{action: {:entity_method, _, _}}), do: :ok
 
   def restore(task) do
     owner = task.script.id

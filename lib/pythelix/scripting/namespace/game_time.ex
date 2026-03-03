@@ -11,6 +11,7 @@ defmodule Pythelix.Scripting.Namespace.GameTime do
   alias Pythelix.Game.{Calendar, Epoch}
   alias Pythelix.Scripting.Callable
   alias Pythelix.Scripting.Object.{Dict, GameTime}
+  alias Pythelix.Task.Persistent, as: PersistentTask
 
   defmet __repr__(script, namespace), [] do
     gt = Store.get_value(namespace.self)
@@ -80,17 +81,10 @@ defmodule Pythelix.Scripting.Namespace.GameTime do
     real_delay = Epoch.real_seconds_until(gt.epoch)
 
     if real_delay > 0 do
-      delay_ms = trunc(real_delay * 1000)
       entity_key = entity.key || entity.gen_id
-
-      Cachex.put(:px_tasks, {:scheduled, entity_key, method}, %{
-        delay: delay_ms,
-        entity: entity_key,
-        method: method,
-        scheduled_at: System.system_time(:millisecond)
-      })
-
-      Process.send_after(self(), {:scheduled_call, entity_key, method}, delay_ms)
+      name = "schedule:#{entity_key}:#{method}"
+      expire_at = DateTime.add(DateTime.utc_now(), trunc(real_delay * 1000), :millisecond)
+      PersistentTask.add_entity_method(expire_at, name, entity_key, method)
     end
 
     {script, :none}

@@ -85,8 +85,6 @@ defmodule Pythelix.Scripting.Namespace.Module.Gametime do
     {script, :none}
   end
 
-  # --- Helpers ---
-
   defp resolve_calendar(_script, calendar_ref) when calendar_ref == :none do
     calendars = Epoch.get_calendars()
 
