@@ -27,6 +27,8 @@ defmodule Pythelix.Scripting.Interpreter.VM do
     put_set: {VM.Set, :put},
     set: {VM.Set, :new},
     list: {VM.List, :new},
+    tuple: {VM.Tuple, :new},
+    unpack: {VM.Tuple, :unpack},
     iffalse: {VM.Jump, :iffalse},
     iftrue: {VM.Jump, :iftrue},
     popiffalse: {VM.Jump, :popiffalse},

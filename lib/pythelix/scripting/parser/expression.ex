@@ -64,6 +64,37 @@ defmodule Pythelix.Scripting.Parser.Expression do
 
   def reduce_list([{:list, value}]), do: value
 
+  value_tuple =
+    ignore(lparen())
+    |> concat(
+      choice([
+        # Empty tuple: ()
+        empty() |> tag(:tuple) |> ignore(rparen()),
+        # Non-empty: parse first expr, then check for comma
+        parsec(:expr)
+        |> choice([
+          # Has comma after first expr → tuple
+          ignore(comma())
+          |> concat(
+            optional(
+              parsec(:expr)
+              |> repeat(ignore(comma()) |> parsec(:expr))
+              |> optional(ignore(comma()))
+            )
+          )
+          |> tag(:tuple)
+          |> ignore(rparen()),
+          # No comma → just grouping parens
+          ignore(rparen()) |> tag(:paren)
+        ])
+      ])
+    )
+    |> reduce(:reduce_paren_or_tuple)
+
+  def reduce_paren_or_tuple([{:tuple, []}]), do: {:tuple, []}
+  def reduce_paren_or_tuple([expr, {:paren, []}]), do: expr
+  def reduce_paren_or_tuple([first, {:tuple, rest}]), do: {:tuple, [first | rest]}
+
   dict_pair =
     parsec(:expr)
     |> ignore(string(":") |> isolate(allow_newline: true))
@@ -105,7 +136,7 @@ defmodule Pythelix.Scripting.Parser.Expression do
   defcombinatorp(
     :nested,
     choice([
-      ignore(lparen()) |> parsec(:expr) |> ignore(rparen()),
+      value_tuple,
       value_list,
       dict,
       set,

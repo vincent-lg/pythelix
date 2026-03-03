@@ -81,6 +81,13 @@ defmodule Pythelix.Scripting.Interpreter.AST.Expressions do
     end)
   end
 
+  def read_ast(code, {:tuple, elements}) do
+    Enum.reduce(elements, code, fn element, code ->
+      AST.Core.read_ast(code, element)
+    end)
+    |> add({:tuple, length(elements)})
+  end
+
   def read_ast(code, seq) when is_list(seq) do
     Enum.reduce(seq, code, fn element, code ->
       AST.Core.read_ast(code, element)

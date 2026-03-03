@@ -109,7 +109,7 @@ defmodule Pythelix.Scripting.Interpreter.AST.Core do
     Expressions.read_ast(code, seq)
   end
 
-  def read_ast(code, {collection, _} = ast) when collection in [:dict, :set] do
+  def read_ast(code, {collection, _} = ast) when collection in [:dict, :set, :tuple] do
     Expressions.read_ast(code, ast)
   end
 
@@ -147,6 +147,10 @@ defmodule Pythelix.Scripting.Interpreter.AST.Core do
 
   def read_ast(code, {:stmt_list, _} = ast) do
     Statements.read_ast(code, ast)
+  end
+
+  def read_ast(code, {:unpack, _, _, _} = ast) do
+    Assignments.read_ast(code, ast)
   end
 
   def read_ast(code, {:=, _, _, _} = ast) do

@@ -10,6 +10,7 @@ defmodule Pythelix.Scripting.Namespace.Builtin do
   alias Pythelix.Scripting.Display
   alias Pythelix.Scripting.Format
   alias Pythelix.Scripting.Object.Dict
+  alias Pythelix.Scripting.Object.Tuple
   alias Pythelix.Stackable
   alias Pythelix.World
 
@@ -107,6 +108,20 @@ defmodule Pythelix.Scripting.Namespace.Builtin do
       end
 
     {script, set}
+  end
+
+  deffun tuple(script, namespace), [
+    {:iterable, index: 0, type: :list, default: nil}
+  ] do
+    iterable = Store.get_value(namespace.iterable, recursive: false)
+
+    tuple =
+      case iterable do
+        nil -> %Tuple{elements: []}
+        list when is_list(list) -> %Tuple{elements: list}
+      end
+
+    {script, tuple}
   end
 
   deffun stackable(script, namespace), [

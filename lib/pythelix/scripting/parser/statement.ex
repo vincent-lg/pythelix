@@ -31,6 +31,51 @@ defmodule Pythelix.Scripting.Parser.Statement do
   endtry = string("endtry") |> label("endtry") |> replace(:endtry) |> isolate()
   raise_kw = string("raise") |> label("raise") |> replace(:raise) |> isolate(space: true)
 
+  # Implicit tuple expression: one or more expressions separated by commas.
+  # With a single expression it reduces to that expression;
+  # with multiple it produces {:tuple, [expr1, expr2, ...]}.
+  implicit_tuple_expr =
+    parsec({Pythelix.Scripting.Parser.Expression, :expr})
+    |> repeat(ignore(comma()) |> parsec({Pythelix.Scripting.Parser.Expression, :expr}))
+    |> reduce(:reduce_implicit_tuple)
+
+  def reduce_implicit_tuple([single]), do: single
+  def reduce_implicit_tuple(many), do: {:tuple, many}
+
+  # Bare tuple target: a, b [, c ...] — at least 2 ids
+  bare_tuple_target =
+    id()
+    |> times(ignore(comma()) |> concat(id()), min: 1)
+    |> tag(:tuple_target)
+
+  # Parenthesized tuple target: (a) or (a, b) or (a,) etc.
+  paren_tuple_target =
+    ignore(lparen())
+    |> concat(id())
+    |> repeat(ignore(comma()) |> concat(id()))
+    |> optional(ignore(comma()))
+    |> ignore(rparen())
+    |> tag(:tuple_target)
+
+  bare_tuple_assignment =
+    bare_tuple_target
+    |> line()
+    |> ignore(equal)
+    |> concat(implicit_tuple_expr)
+    |> reduce(:reduce_unpack_assign)
+
+  paren_tuple_assignment =
+    paren_tuple_target
+    |> line()
+    |> ignore(equal)
+    |> concat(implicit_tuple_expr)
+    |> reduce(:reduce_unpack_assign)
+
+  defp reduce_unpack_assign([{[{:tuple_target, targets}], {line, offset}}, value]) do
+    names = for {:var, name} <- targets, do: name
+    {:unpack, names, value, {line, offset}}
+  end
+
   setitem =
     parsec({Pythelix.Scripting.Parser.Value, :getitem})
     |> tag(:setitem)
@@ -229,7 +274,7 @@ defmodule Pythelix.Scripting.Parser.Statement do
   return =
     ignore(return_kw)
     |> line()
-    |> parsec({Pythelix.Scripting.Parser.Expression, :expr})
+    |> concat(implicit_tuple_expr)
     |> tag(:return)
 
   defparsecp(
@@ -245,7 +290,7 @@ defmodule Pythelix.Scripting.Parser.Statement do
   )
 
   raw_value =
-    parsec({Pythelix.Scripting.Parser.Expression, :expr})
+    implicit_tuple_expr
     |> line()
     |> choice([
       eos(),
@@ -259,6 +304,8 @@ defmodule Pythelix.Scripting.Parser.Statement do
   defcombinatorp(
     :statement,
     choice([
+      paren_tuple_assignment,
+      bare_tuple_assignment,
       assignment,
       if_stmt,
       while_stmt,

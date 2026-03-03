@@ -71,6 +71,18 @@ defmodule Pythelix.Scripting.Interpreter.AST.Assignments do
     |> replace({:unset, after_ref}, fn _code -> false end)
   end
 
+  def read_ast(code, {:unpack, targets, value, {line, _}}) do
+    code
+    |> add({:line, line})
+    |> AST.Core.read_ast(value)
+    |> add({:unpack, length(targets)})
+    |> then(fn code ->
+      Enum.reduce(targets, code, fn target, code ->
+        add(code, {:store, target})
+      end)
+    end)
+  end
+
   def read_ast(code, {eq_op, names, value, {line, _}})
        when eq_op in [:"+=", :"-=", :"*=", :"/="] do
     op = Map.get(@eq_op, eq_op)

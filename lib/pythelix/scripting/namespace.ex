@@ -9,7 +9,7 @@ defmodule Pythelix.Scripting.Namespace do
   alias Pythelix.Scripting.Format
   alias Pythelix.Scripting.Interpreter.Script
   alias Pythelix.Scripting.Namespace
-  alias Pythelix.Scripting.Object.{Dict, Duration, GameTime, Password, RealDateTime, Time}
+  alias Pythelix.Scripting.Object.{Dict, Duration, GameTime, Password, RealDateTime, Time, Tuple}
   alias Pythelix.Scripting.Store
   alias Pythelix.Scripting.Traceback
 
@@ -194,6 +194,7 @@ defmodule Pythelix.Scripting.Namespace do
       %Format.String{} -> Namespace.String
       %Dict{} -> Namespace.Dict
       %Password{} -> Namespace.Password
+      %Tuple{} -> Namespace.Tuple
       %MapSet{} -> Namespace.Set
       %RealDateTime{} -> Namespace.RealDateTime
       %GameTime{} -> Namespace.GameTime
