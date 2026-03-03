@@ -26,7 +26,7 @@ defmodule Pythelix.World.File do
     |> parse_lines(%State{})
     |> case do
       %{error: message} when message != nil ->
-        {:error, message}
+        {:error, "#{path}: #{message}"}
 
       %{entities: entities} ->
         entities = Enum.map(entities, &Map.put(&1, :file, path))

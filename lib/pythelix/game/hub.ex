@@ -3,6 +3,8 @@ defmodule Pythelix.Game.Hub do
   The game HUB, responsible for queueing tasks (all inputs)
   and exeucing them one at a time.
   """
+  require Logger
+
   alias Pythelix.{Method, Record, World}
   alias Pythelix.Task.Persistent
 
@@ -186,13 +188,16 @@ defmodule Pythelix.Game.Hub do
     init_start_time = System.monotonic_time(:microsecond)
 
     if Application.get_env(:pythelix, :worldlets) do
-      World.init()
+      result = World.init()
       init_elapsed = System.monotonic_time(:microsecond) - init_start_time
       if Application.get_env(:pythelix, :show_stats) do
         IO.puts("⏱️ World initialized in #{init_elapsed} µs")
       end
 
-      :ok
+      case result do
+        {:error, reason} -> Logger.error("World init failed: #{reason}")
+        _ -> :ok
+      end
     end
     |> tap(fn _ ->
       tasks_start_time = System.monotonic_time(:microsecond)

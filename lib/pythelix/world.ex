@@ -24,6 +24,8 @@ defmodule Pythelix.World do
   def init() do
     if Application.get_env(:pythelix, :worldlets) do
       apply(:all)
+    else
+      :ok
     end
   end
 
@@ -34,22 +36,28 @@ defmodule Pythelix.World do
 
   - `worldlet` (or `:all`): the path leading to the directory or worldlet file.
   """
-  @spec apply(String.t() | :all) :: {:ok, integer()} | :error | :nofile
+  @spec apply(String.t() | :all) :: {:ok, String.t(), integer()} | {:error, String.t()} | :nofile
   def apply(:all) do
-    System.get_env("WORLDLETS_PATH", "worldlets")
-    |> then(fn path ->
-      System.get_env("RELEASE_ROOT", File.cwd!())
-      |> Path.join(path)
-    end)
-    |> String.replace("\\", "/")
-    |> apply()
+    result =
+      System.get_env("WORLDLETS_PATH", "worldlets")
+      |> then(fn path ->
+        System.get_env("RELEASE_ROOT", File.cwd!())
+        |> Path.join(path)
+      end)
+      |> String.replace("\\", "/")
+      |> apply()
+
+    case result do
+      {:error, _} = error -> error
+      other -> other
+    end
   end
 
   def apply(worldlet) do
     if worldlet == :static or File.exists?(worldlet) do
       case process_worldlets(worldlet) do
-        :error ->
-          :error
+        {:error, reason} ->
+          {:error, reason}
 
         entities ->
           worldlet =
@@ -444,23 +452,25 @@ defmodule Pythelix.World do
   defp maybe_deduce_parents({:error, error}), do: {:error, error}
 
   defp maybe_deduce_parents({:ok, entities}) do
-    Enum.map(entities, fn entity ->
+    Enum.reduce_while(entities, {:ok, []}, fn entity, {:ok, acc} ->
       attributes = entity.attributes
       parent = attributes["parent"]
 
-      parent =
-        if parent do
-          {:ok, parent} = Scripting.eval(parent)
+      case parent do
+        nil ->
+          {:cont, {:ok, acc ++ [entity]}}
 
-          parent
-        else
-          nil
-        end
+        parent ->
+          case Scripting.eval(parent) do
+            {:ok, parent} ->
+              attributes = Map.put(attributes, "parent", parent)
+              {:cont, {:ok, acc ++ [%{entity | attributes: attributes}]}}
 
-      attributes = Map.put(attributes, "parent", parent)
-      %{entity | attributes: attributes}
+            {:error, reason} ->
+              {:halt, {:error, "error evaluating parent '#{parent}' for entity '#{entity.key}': #{reason}"}}
+          end
+      end
     end)
-    |> then(&{:ok, &1})
   end
 
   defp merge_entities([entity]), do: entity
@@ -479,7 +489,7 @@ defmodule Pythelix.World do
     end)
   end
 
-  defp maybe_sort_entities({:error, error}), do: error
+  defp maybe_sort_entities({:error, error}), do: {:error, error}
 
   defp maybe_sort_entities({:ok, entities}) do
     # Group entities by key and merge duplicates
@@ -563,51 +573,55 @@ defmodule Pythelix.World do
   defp maybe_create_entities({:error, _} = error), do: error
 
   defp maybe_create_entities({:ok, entities}) do
-    {sub_entities, entities} =
-      entities
-      |> Enum.split_with(fn entity ->
-        (entity.key && entity.key =~ ~r/^\p{Lu}/u) || false
-      end)
-
-    Enum.each(sub_entities, & create_entity(&1, sub_entity: true))
-
-    entities
-    |> Enum.map(&create_entity/1)
-    |> tap(fn records ->
-      locations =
-        Enum.map(entities, fn entity ->
-          {entity.key, Map.get(entity.attributes, "location")}
+    try do
+      {sub_entities, entities} =
+        entities
+        |> Enum.split_with(fn entity ->
+          (entity.key && entity.key =~ ~r/^\p{Lu}/u) || false
         end)
-        |> Map.new()
 
-      Enum.each(records, fn record ->
-        location =
-          Map.get(locations, record.key)
-          |> then(fn
-            nil -> nil
-            location ->
-              {:ok, location} = Scripting.eval(location)
-              location
+      Enum.each(sub_entities, & create_entity(&1, sub_entity: true))
+
+      entities
+      |> Enum.map(&create_entity/1)
+      |> tap(fn records ->
+        locations =
+          Enum.map(entities, fn entity ->
+            {entity.key, Map.get(entity.attributes, "location")}
           end)
-          |> then(& (&1 && Record.get_entity(&1)) || nil)
+          |> Map.new()
 
-        place_entity(record, location)
+        Enum.each(records, fn record ->
+          location =
+            Map.get(locations, record.key)
+            |> then(fn
+              nil -> nil
+              location ->
+                {:ok, location} = Scripting.eval(location)
+                location
+            end)
+            |> then(& (&1 && Record.get_entity(&1)) || nil)
+
+          place_entity(record, location)
+        end)
       end)
-    end)
-    |> tap(fn records ->
-      default_location = Record.get_entity("menu/game")
+      |> tap(fn records ->
+        default_location = Record.get_entity("menu/game")
 
-      Enum.each(records, fn record ->
-        if Record.has_parent?(record, "generic/command") do
-          if Record.get_location_entity(record) == nil do
-            place_entity(record, default_location)
+        Enum.each(records, fn record ->
+          if Record.has_parent?(record, "generic/command") do
+            if Record.get_location_entity(record) == nil do
+              place_entity(record, default_location)
+            end
           end
-        end
+        end)
       end)
-    end)
-    |> tap(fn _ -> Record.Diff.apply() end)
-    |> tap(fn _ -> link_commands() end)
-    |> tap(fn _ -> Epoch.init() end)
+      |> tap(fn _ -> Record.Diff.apply() end)
+      |> tap(fn _ -> link_commands() end)
+      |> tap(fn _ -> Epoch.init() end)
+    rescue
+      e -> {:error, Exception.message(e)}
+    end
   end
 
   defp create_entity(entity, opts \\ []) do

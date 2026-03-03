@@ -33,14 +33,14 @@ defmodule Pythelix.Task.Apply do
       strategy: :one_for_one
     )
 
-    pid = Task.wait_for_global(Pythelix.Command.Hub)
+    pid = Task.wait_for_global(Pythelix.Game.Ext)
 
     if pid == nil do
       IO.puts("There's no running server to connect to, cannot continue.")
     else
       IO.puts("Applying a worldlet directory or file...")
 
-      GenServer.cast({:global, Pythelix.Command.Hub}, {:start, id, %{file: file, pid: self()}, World.Executor})
+      GenServer.cast(pid, {:run, {__MODULE__, :execute, [self(), file]}})
 
       receive do
         {:ok, path, number} ->
@@ -48,6 +48,9 @@ defmodule Pythelix.Task.Apply do
 
         :nofile ->
           IO.puts("The specified file #{inspect(file)} doesn't exist.")
+
+        {:error, reason} ->
+          IO.puts("An error occurred: #{reason}")
 
         :error ->
           IO.puts("An error occurred, applying cancelled.")
@@ -57,5 +60,10 @@ defmodule Pythelix.Task.Apply do
 
   def run(_) do
     IO.puts("Please specify which worldlet directory or file to apply.")
+  end
+
+  def execute(process, file) do
+    World.apply(file)
+    |> tap(fn result -> send(process, result) end)
   end
 end

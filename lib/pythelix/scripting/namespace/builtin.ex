@@ -38,6 +38,9 @@ defmodule Pythelix.Scripting.Namespace.Builtin do
       :nofile ->
         {script, "The specified file #{inspect(namespace.file)} doesn't exist."}
 
+      {:error, reason} ->
+        {Script.raise(script, RuntimeError, reason), :none}
+
       :error ->
         {script, "An error occurred, applying cancelled."}
     end
