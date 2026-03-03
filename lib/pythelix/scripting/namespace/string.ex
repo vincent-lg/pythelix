@@ -8,6 +8,20 @@ defmodule Pythelix.Scripting.Namespace.String do
 
   use Pythelix.Scripting.Namespace
 
+  alias Pythelix.Scripting.Format
+
+  defmet __add__(script, namespace), [
+    {:other, index: 0, type: :str}
+  ] do
+    {script, string_concat(namespace.self, namespace.other)}
+  end
+
+  defmet __mul__(script, namespace), [
+    {:times, index: 0, type: :int}
+  ] do
+    {script, string_repeat(namespace.self, namespace.times)}
+  end
+
   defmet __bool__(script, namespace), [] do
     {script, namespace.self != ""}
   end
@@ -649,5 +663,35 @@ defmodule Pythelix.Scripting.Namespace.String do
     |> String.split(~r{\s}, include_captures: true)
     |> Enum.map(&String.capitalize/1)
     |> Enum.join()
+  end
+
+  defp string_concat(%Format.String{} = a, %Format.String{} = b) do
+    %Format.String{
+      string: a.string <> b.string,
+      variables: Map.merge(a.variables, b.variables)
+    }
+  end
+
+  defp string_concat(%Format.String{} = a, b) when is_binary(b) do
+    %Format.String{string: a.string <> b, variables: a.variables}
+  end
+
+  defp string_concat(a, %Format.String{} = b) when is_binary(a) do
+    %Format.String{string: a <> b.string, variables: b.variables}
+  end
+
+  defp string_concat(a, b) when is_binary(a) and is_binary(b) do
+    a <> b
+  end
+
+  defp string_repeat(%Format.String{} = s, n) do
+    %Format.String{
+      string: String.duplicate(s.string, n),
+      variables: s.variables
+    }
+  end
+
+  defp string_repeat(s, n) when is_binary(s) do
+    String.duplicate(s, n)
   end
 end

@@ -8,6 +8,22 @@ defmodule Pythelix.Scripting.Namespace.Tuple do
   alias Pythelix.Scripting.Display
   alias Pythelix.Scripting.Object.Tuple
 
+  defmet __add__(script, namespace), [
+    {:other, index: 0, type: :any}
+  ] do
+    %Tuple{elements: elems1} = Store.get_value(namespace.self, recursive: false)
+    %Tuple{elements: elems2} = Store.get_value(namespace.other, recursive: false)
+    {script, %Tuple{elements: elems1 ++ elems2}}
+  end
+
+  defmet __mul__(script, namespace), [
+    {:times, index: 0, type: :int}
+  ] do
+    %Tuple{elements: elements} = Store.get_value(namespace.self, recursive: false)
+    result = List.duplicate(elements, namespace.times) |> List.flatten()
+    {script, %Tuple{elements: result}}
+  end
+
   defmet __bool__(script, namespace), [] do
     %Tuple{elements: elements} = Store.get_value(namespace.self, recursive: false)
     {script, elements != []}

@@ -158,6 +158,11 @@ defmodule Pythelix.Scripting.Runner do
             update_persistent_task(task.id, paused_script, task.code, task.name, wait_time)
             Script.destroy(paused_script)
 
+          %Script{pause: :wait_child} ->
+            # Script is waiting for a child to complete - clean up the task,
+            # the child will handle resuming the parent when it finishes.
+            cleanup_task(task.id)
+
           %Script{error: %Traceback{} = traceback} = failed_script ->
             # Script failed - clean up and execute step
             traceback = Traceback.build_from_bottom(traceback)

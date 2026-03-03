@@ -7,6 +7,22 @@ defmodule Pythelix.Scripting.Namespace.List do
 
   alias Pythelix.Scripting.Display
 
+  defmet __add__(script, namespace), [
+    {:other, index: 0, type: :list}
+  ] do
+    list = Store.get_value(namespace.self, recursive: false)
+    other = Store.get_value(namespace.other, recursive: false)
+    {script, list ++ other}
+  end
+
+  defmet __mul__(script, namespace), [
+    {:times, index: 0, type: :int}
+  ] do
+    list = Store.get_value(namespace.self, recursive: false)
+    result = List.duplicate(list, namespace.times) |> List.flatten()
+    {script, result}
+  end
+
   defmet __bool__(script, namespace), [] do
     {script, Store.get_value(namespace.self, recursive: false) != []}
   end
