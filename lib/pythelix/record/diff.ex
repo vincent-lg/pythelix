@@ -210,6 +210,9 @@ defmodule Pythelix.Record.Diff do
     end)
     |> Repo.transaction()
     |> handle_apply(entries)
+  catch
+    _kind, _reason ->
+      :error
   end
 
   defp return_and_increment(entry) do
