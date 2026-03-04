@@ -100,12 +100,14 @@ defmodule Pythelix.Game.Hub do
 
   def busy(:info, {:job_ok, ticket, _result}, %{ticket: ticket, mon_ref: mon} = data) do
     Process.demonitor(mon, [:flush])
+    Record.Diff.apply()
     data = send_prompts_to_clients_with_messages(data)
     {:next_state, :idle, %{data | job_pid: nil, mon_ref: nil, ticket: nil}}
   end
 
   # Anything else (crash, kill, or "no ok sent"): rely on :DOWN to recover
   def busy(:info, {:DOWN, mon, :process, _pid, _reason}, %{mon_ref: mon} = data) do
+    Record.Diff.apply()
     data = send_prompts_to_clients_with_messages(data)
     {:next_state, :idle, %{data | job_pid: nil, mon_ref: nil, ticket: nil}}
   end

@@ -29,7 +29,7 @@ defmodule Pythelix.Scripting.Namespace.Module.Clients do
 
     active()
     |> Enum.filter(fn client ->
-      owner = Record.get_attribute(client, "__owner")
+      owner = Record.get_attribute(client, "owner")
       owner == entity
     end)
     |> Enum.at(0, :none)

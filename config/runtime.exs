@@ -38,6 +38,8 @@ if config_env() == :prod do
 
     File.write!(env_file, """
     DATABASE_PATH=pythelix.db
+    WORLDLETS_PATH=worldlets
+    TASKS_PATH=tasks
     SECRET_KEY_BASE=#{secret}
     """)
   end
@@ -51,12 +53,31 @@ if config_env() == :prod do
     end)
     |> Enum.into(%{})
 
-  database_path =
-    env_vars["DATABASE_PATH"]
-    |> then(fn path ->
-      System.get_env("RELEASE_ROOT", File.cwd!())
-      |> Path.join(path)
-    end)
+  # Base directory: PYTHELIX_DIR > RELEASE_ROOT > cwd
+  base_dir =
+    System.get_env("PYTHELIX_DIR") ||
+      System.get_env("RELEASE_ROOT") ||
+      File.cwd!()
+
+  # Resolve a path config value: env var > .env file > default.
+  # Absolute paths are used as-is; relative paths are joined with base_dir.
+  resolve_path = fn key, default ->
+    path = System.get_env(key) || env_vars[key] || default
+
+    if Path.type(path) == :absolute do
+      path
+    else
+      Path.join(base_dir, path)
+    end
+  end
+
+  database_path = resolve_path.("DATABASE_PATH", "pythelix.db")
+  worldlets_path = resolve_path.("WORLDLETS_PATH", "worldlets")
+  tasks_path = resolve_path.("TASKS_PATH", "tasks")
+
+  config :pythelix,
+    worldlets_path: worldlets_path,
+    tasks_path: tasks_path
 
   config :pythelix, Pythelix.Repo,
     database: database_path,

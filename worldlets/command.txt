@@ -3,14 +3,14 @@ parent: "generic/command"
 name: "shout"
 syntax: "<message>"
 
-{refine}
+{refine(character, message)}
 message = message.upper()
 
-{run}
+{run(character, message)}
 i = 15
-client.msg("Waiting...")
+character.msg("Waiting...")
 wait 2
-client.msg(f"And i]{i} and {message.center(10)}")
+character.msg(f"And i]{i} and {message.center(10)}")
 
 [command/system]
 parent: "generic/command"
@@ -37,7 +37,8 @@ parent: "generic/command"
 name: "quit"
 syntax: ""
 
-{run}
+{run(character)}
+client = clients.owning(character)
 client.msg("Ciao!")
 client.disconnect()
 

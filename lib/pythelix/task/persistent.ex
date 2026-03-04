@@ -189,11 +189,7 @@ defmodule Pythelix.Task.Persistent do
 
   defp cache_path() do
     path =
-      System.get_env("TASKS_PATH", "tasks")
-      |> then(fn path ->
-        System.get_env("RELEASE_ROOT", File.cwd!())
-        |> Path.join(path)
-      end)
+      Application.get_env(:pythelix, :tasks_path, Path.join(File.cwd!(), "tasks"))
       |> String.replace("\\", "/")
 
     if !File.exists?(path) do

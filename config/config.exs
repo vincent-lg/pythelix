@@ -70,7 +70,9 @@ config :libcluster,
 
 config :pythelix,
   worldlets: true,
-  show_stats: true
+  show_stats: true,
+  worldlets_path: Path.join(File.cwd!(), "worldlets"),
+  tasks_path: Path.join(File.cwd!(), "tasks")
 
 # Password algorithms
 config :pythelix, :password_algorithms, [

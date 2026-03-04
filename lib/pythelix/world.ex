@@ -39,11 +39,7 @@ defmodule Pythelix.World do
   @spec apply(String.t() | :all) :: {:ok, String.t(), integer()} | {:error, String.t()} | :nofile
   def apply(:all) do
     result =
-      System.get_env("WORLDLETS_PATH", "worldlets")
-      |> then(fn path ->
-        System.get_env("RELEASE_ROOT", File.cwd!())
-        |> Path.join(path)
-      end)
+      Application.get_env(:pythelix, :worldlets_path, Path.join(File.cwd!(), "worldlets"))
       |> String.replace("\\", "/")
       |> apply()
 

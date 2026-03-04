@@ -91,7 +91,6 @@ client.account.password = password.hash(input)
 client.msg("Awesome!")
 character = Entity(parent=!generic/character!)
 client.location = !menu/username!
-character.game_modes.add("menu/game", character.id)
 client.account.character = character
 
 [menu/game]
