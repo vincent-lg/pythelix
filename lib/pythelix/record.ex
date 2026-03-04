@@ -718,10 +718,14 @@ defmodule Pythelix.Record do
     entity
   end
 
-  defp set_entity_attribute(%Entity{id: :virtual} = entity, name, value, _opts) do
+  defp set_entity_attribute(%Entity{id: :virtual} = entity, name, value, opts) do
     id_or_key = Entity.get_id_or_key(entity)
 
-    Cache.cache_entity_attribute(id_or_key, name, value)
+    attributes = Cache.get_cached_entity_attributes(entity)
+
+    unless opts[:new] && Map.has_key?(attributes, name) do
+      Cache.cache_entity_attribute(id_or_key, name, value)
+    end
 
     entity
   end

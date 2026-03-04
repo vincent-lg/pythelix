@@ -588,17 +588,15 @@ defmodule Pythelix.World do
           |> Map.new()
 
         Enum.each(records, fn record ->
-          location =
-            Map.get(locations, record.key)
-            |> then(fn
-              nil -> nil
-              location ->
-                {:ok, location} = Scripting.eval(location)
-                location
-            end)
-            |> then(& (&1 && Record.get_entity(&1)) || nil)
+          case Map.get(locations, record.key) do
+            nil ->
+              :ok
 
-          place_entity(record, location)
+            location ->
+              {:ok, location} = Scripting.eval(location)
+              location = Record.get_entity(location)
+              place_entity(record, location)
+          end
         end)
       end)
       |> tap(fn records ->

@@ -102,6 +102,9 @@ And that's pythelix!
 {get_prompt(_client)}
 return "HP: 200"
 
+{invalid_input(character, _input)}
+character.msg("Command not found.")
+
 [menu/pythello]
 parent: "generic/menu"
 text: """
