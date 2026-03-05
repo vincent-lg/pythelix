@@ -1,11 +1,11 @@
-[StatsHandler]
-parent: "SubEntity"
+!StatsHandler!
+parent = "SubEntity"
 
-{__init__(a: int)}
+def __init__(a: int):
 self.a = a
 
-[generic/character]
-{msg(self, text)}
+!generic/character!
+def msg(self, text):
 for client in clients.controlling(self):
     client.msg(text)
 done

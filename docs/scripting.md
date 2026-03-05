@@ -25,23 +25,23 @@ Most scripts live in [entities](./entities.md). More specifically, they're usual
 This might all sound abstract, so let's see an example you can paste into your [worldlet](./worldlets.md) file:
 
 ```
-[command/shout]
-parent: "generic/command"
-name: "shout"
-syntax: "<message>"
+!command/shout!
+parent = "generic/command"
+name = "shout"
+syntax = "<message>"
 
-{run}
+def run:
 client.msg(f"You shout at top volume: {message}")
 ```
 
 Here's our first method! But let's first look at the entity definition:
 
-- `[command/shout]`: this starts a new entity with the unique key `command/shout` in our [worldlet file](./worldlets.md). The following lines describe it until the next entity definition;
-- `parent: "generic/command"`: sets the entity's parent as `generic/command`, marking it as a command (otherwise, it would be a different kind of entity);
-- `name: "shout"`: commands have a name;
-- `syntax: "<message>"`: all commands should have a syntax. When the user enters `shout`, they should specify the message to shout. The syntax can be quite extensive—refer to [the documentation about commands](./commands.md) for details.
+- `!command/shout!`: this starts a new entity with the unique key `command/shout` in our [worldlet file](./worldlets.md). The following lines describe it until the next entity definition;
+- `parent = "generic/command"`: sets the entity's parent as `generic/command`, marking it as a command (otherwise, it would be a different kind of entity);
+- `name = "shout"`: commands have a name;
+- `syntax = "<message>"`: all commands should have a syntax. When the user enters `shout`, they should specify the message to shout. The syntax can be quite extensive—refer to [the documentation about commands](./commands.md) for details.
 
-Next is our first method. It's called `run`. Everything that follows is considered the method's script until the next method (starting with a `{`), the next entity definition, or the end of the file.
+Next is our first method. It's called `run`. Everything that follows is considered the method's script until the next method (starting with `def`), the next entity definition, or the end of the file.
 
 Our script looks like this:
 

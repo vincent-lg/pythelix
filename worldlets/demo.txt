@@ -1,11 +1,11 @@
-[account]
+!account!
 
-[room]
+!room!
 
-[bakery]
-parent: "room"
-title: "A bakery"
-Description: """
+!bakery!
+parent = "room"
+title = "A bakery"
+Description = """
 The warm, inviting scent of freshly baked bread and sweet pastries fills
 the air upon entering this cozy little shop. A fine dusting of flour clings
 lightly to the wooden floorboards and countertops. Shelves and display cases
@@ -15,41 +15,41 @@ while nuts, berries, and chocolate chips adorn many of the treats with artistic
 precision. At the back of the shop, an antique wooden cash register rests
 atop a counter, its brass details dulled slightly with age and use.
 """
-price: 30000
+price = 30000
 
-{spill}
+def spill:
 author.msg("You swipe the merchandise and throw it to the ground. How rude!")
 author.announce(f"{author} swipes the merchandise and throws it to the ground. Really!")
 
-{honk}
+def honk:
 author.msg("You honk and that's nhot great.")
 
-{test}
+def test:
 e = !bakery!
 e.id = 8
 
-[sidewalk]
-parent: "room"
-title: "The sidewalk"
+!sidewalk!
+parent = "room"
+title = "The sidewalk"
 
-{walk}
+def walk:
 author.msg("You're walking... and that's already something.")
 
-{test}
+def test:
 e = !bakery!
 e.test()
 
-[animal]
-height: 0
-weight: 0
+!animal!
+height = 0
+weight = 0
 
-{call(client: Entity["generic/client"])}
+def call(client: Entity["generic/client"]):
 client.msg("The animal calls... don't know what.")
 
-{add(a: int, b: int)}
+def add(a: int, b: int):
 return [a, b, 58]
 
-{test()}
+def test():
 log("That's the one")
 wait 3
 log("That's the second")

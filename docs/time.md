@@ -104,8 +104,8 @@ Game time integrates with *calendars*: custom unit hierarchies that let you defi
 Game time requires a `game_epoch` entity anywhere in your worldlet. This entity configures how the game clock works:
 
 ```
-[game_epoch]
-scale: 10
+!game_epoch!
+scale = 10
 ```
 
 The key is important (it needs to be `game_epoch`). The `scale` attribute sets how many game seconds pass per real second. A scale of `10` means game time flows ten times faster than real time.
@@ -136,9 +136,9 @@ A calendar tells Pythelix how to interpret a raw number of game seconds as human
 Every calendar is an entity whose parent is `generic/calendar`:
 
 ```
-[my_calendar]
-parent: "generic/calendar"
-type: "custom"
+!my_calendar!
+parent = "generic/calendar"
+type = "custom"
 ```
 
 > The `generic/calendar` entity is a built-in base entity provided by Pythelix. You never define it yourself; just make your calendar entities its children.
@@ -198,7 +198,7 @@ This creates a `weekday` unit that cycles 1 through 7 based on total days elapse
 You can attach `GameTimeProperty` entries to name the days:
 
 ```
-properties: {
+properties = {
     "day_name": [
         GameTimeProperty("weekday", 1, "Moonday"),
         GameTimeProperty("weekday", 2, "Treeday"),
@@ -218,11 +218,11 @@ properties: {
 Here is a minimal earthlike calendar:
 
 ```
-[calendar/earth]
-parent: "generic/calendar"
-type: "custom"
-offset: 0
-units: {
+!calendar/earth!
+parent = "generic/calendar"
+type = "custom"
+offset = 0
+units = {
     "second": GameTimeBaseUnit(),
     "minute": GameTimeUnit("second", 60),
     "hour": GameTimeUnit("minute", 60),
@@ -235,11 +235,11 @@ units: {
 The `offset` attribute shifts the game epoch before calculating units. A value of `0` means the clock starts at second=0, minute=0, hour=0, day=1, month=1, year=1. To start the world at year 3000, you could set:
 
 ```
-[calendar/shire]
-parent: "generic/calendar"
-type: "custom"
-offset: 0
-units: {
+!calendar/shire!
+parent = "generic/calendar"
+type = "custom"
+offset = 0
+units = {
     "second": GameTimeBaseUnit(),
     "minute": GameTimeUnit("second", 60),
     "hour": GameTimeUnit("minute", 60),
@@ -255,7 +255,7 @@ Now epoch 0 will be year 3000, increasing from then.
 The `offset` attribute is added to the raw game clock before any unit calculation. It effectively shifts where in the calendar the world starts. For example, if you want the world to start at midnight on day 15 of the first month (and your units are seconds), you would set:
 
 ```
-offset: (14 * 24 * 3600)   # 14 days in seconds
+offset = (14 * 24 * 3600)   # 14 days in seconds
 ```
 
 This way, when the game clock is at 0 real game seconds, the calendar reads day 15.
@@ -265,10 +265,10 @@ This way, when the game clock is at 0 real game seconds, the calendar reads day 
 If you want game time to map to real Gregorian dates (useful, for example, if your game is set in a near-future Earth), use `type: "gregorian"`:
 
 ```
-[calendar/real_world]
-parent: "generic/calendar"
-type: "gregorian"
-offset: 0
+!calendar/real_world!
+parent = "generic/calendar"
+type = "gregorian"
+offset = 0
 ```
 
 No `units` attribute is needed. The engine automatically provides: `year`, `month`, `day`, `hour`, `minute`, `second`, and `weekday`, computed by interpreting game seconds as a Unix timestamp. The `weekday` unit returns 1 (Monday) through 7 (Sunday), following ISO 8601. With `offset: 0` and `scale: 1`, game time is identical to real time.
@@ -318,11 +318,11 @@ Always matches. Use it as the **last** entry in a list to catch any case not cov
 ### Example: time of day and named days
 
 ```
-[calendar/earth]
-parent: "generic/calendar"
-type: "custom"
-offset: 0
-units: {
+!calendar/earth!
+parent = "generic/calendar"
+type = "custom"
+offset = 0
+units = {
     "second": GameTimeBaseUnit(),
     "minute": GameTimeUnit("second", 60),
     "hour":   GameTimeUnit("minute", 60),
@@ -330,7 +330,7 @@ units: {
     "month":  GameTimeUnit("day", 30, start=1),
     "year":   GameTimeUnit("month", 12, start=1)
 }
-properties: {
+properties = {
     "time_of_day": [
         GameTimeBoundary("hour", 5, 12, "morning"),
         GameTimeBoundary("hour", 12, 18, "afternoon"),
@@ -373,11 +373,11 @@ endif
 You can add a `properties` attribute to a Gregorian calendar exactly as you would for a custom one. The unit names available to check are `"year"`, `"month"`, `"day"`, `"hour"`, `"minute"`, and `"second"`. This is the recommended way to add localised labels like month names or season names, since those are language- and setting-specific:
 
 ```
-[calendar/real_world]
-parent: "generic/calendar"
-type: "gregorian"
-offset: 0
-properties: {
+!calendar/real_world!
+parent = "generic/calendar"
+type = "gregorian"
+offset = 0
+properties = {
     "season": [
         GameTimeBoundary("month", 3, 6, "spring"),
         GameTimeBoundary("month", 6, 9, "summer"),
@@ -413,18 +413,18 @@ Mars makes a nice calendar challenge because two things differ significantly fro
 Mars has no conventional months, so we go straight from sol to year. The `start=1` makes both units begin counting at 1.
 
 ```
-[calendar/mars]
-parent: "generic/calendar"
-type: "custom"
-offset: 0
-units: {
+!calendar/mars!
+parent = "generic/calendar"
+type = "custom"
+offset = 0
+units = {
     "second": GameTimeBaseUnit(),
     "minute": GameTimeUnit("second", 60),
     "hour": GameTimeUnit("minute", 60),
     "sol": GameTimeUnit("hour", 25, start=1),
     "year": GameTimeUnit("sol", 668, start=1)
 }
-properties: {
+properties = {
     "northern_season": [
         GameTimeBoundary("sol", 1, 195, "spring"),
         GameTimeBoundary("sol", 195, 373, "summer"),
@@ -599,15 +599,15 @@ Here is a full worldlet excerpt for a fantasy game with a custom calendar, time-
 
 ```
 # The game epoch: game time flows 30× faster than real time
-[game_epoch]
-scale: 30
+!game_epoch!
+scale = 30
 
 # The calendar
-[calendar/aetherion]
-parent: "generic/calendar"
-type: "custom"
-offset: 0
-units: {
+!calendar/aetherion!
+parent = "generic/calendar"
+type = "custom"
+offset = 0
+units = {
     "heartbeat": GameTimeBaseUnit(),
     "breath": GameTimeUnit("heartbeat", 60),
     "bell": GameTimeUnit("breath", 60),
@@ -616,7 +616,7 @@ units: {
     "season": GameTimeUnit("sennight", 13, start=1),
     "age": GameTimeUnit("season", 4, start=1)
 }
-properties: {
+properties = {
     "time_of_day": [
         GameTimeBoundary("bell", 5, 8, "dawn"),
         GameTimeBoundary("bell", 8, 19, "daylight"),
@@ -634,7 +634,7 @@ properties: {
 In a script running in a room:
 
 ```
-{tick}
+def tick:
 now = gametime.now(!calendar/aetherion!)
 
 if now.time_of_day == "dawn":

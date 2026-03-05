@@ -1,11 +1,11 @@
-[game_epoch]
-scale: 10
+!game_epoch!
+scale = 10
 
-[calendar/shire]
-parent: "generic/calendar"
-type: "custom"
-offset: 0
-units: {
+!calendar/shire!
+parent = "generic/calendar"
+type = "custom"
+offset = 0
+units = {
     "second": GameTimeBaseUnit(),
     "minute": GameTimeUnit("second", 60),
     "hour": GameTimeUnit("minute", 60),
@@ -14,7 +14,7 @@ units: {
     "month": GameTimeUnit("day", 30, start=1),
     "year": GameTimeUnit("day", 365, start=3000),
 }
-properties: {
+properties = {
     "day_name": [
         GameTimeProperty("weekday", 1, "Moonday"),
         GameTimeProperty("weekday", 2, "Treeday"),
@@ -26,11 +26,11 @@ properties: {
     ]
 }
 
-[calendar/earth]
-parent: "generic/calendar"
-type: "gregorian"
-offset: 1000000000
-properties: {
+!calendar/earth!
+parent = "generic/calendar"
+type = "gregorian"
+offset = 1000000000
+properties = {
     "day_name": [
         GameTimeProperty("weekday", 1, "Monday"),
         GameTimeProperty("weekday", 2, "Tuesday"),
@@ -62,18 +62,18 @@ properties: {
     ]
 }
 
-[calendar/mars]
-parent: "generic/calendar"
-type: "custom"
-offset: 0
-units: {
+!calendar/mars!
+parent = "generic/calendar"
+type = "custom"
+offset = 0
+units = {
     "second": GameTimeBaseUnit(),
     "minute": GameTimeUnit("second", 60),
     "hour": GameTimeUnit("minute", 60),
     "sol": GameTimeUnit("hour", 25, start=1),
     "year": GameTimeUnit("sol", 668, start=1)
 }
-properties: {
+properties = {
     "northern_season": [
         GameTimeBoundary("sol", 1, 195, "spring"),
         GameTimeBoundary("sol", 195, 373, "summer"),

@@ -34,11 +34,11 @@ Stackables offer three clear benefits over managing individual item entities:
 A stackable entity is a normal entity in a [worldlet](./worldlets.md), distinguished only by the `stackable: True` attribute:
 
 ```
-[gold_coin]
-stackable: True
-name: "gold coin"
-description: "A shiny gold coin."
-value: 1
+!gold_coin!
+stackable = True
+name = "gold coin"
+description = "A shiny gold coin."
+value = 1
 ```
 
 This creates an entity with the key `"gold_coin"`. It acts as a prototype: it is never placed directly in the world—instead, stacks reference it.
@@ -183,10 +183,10 @@ Stackable quantities stored in a container are automatically persisted alongside
 In your worldlet:
 
 ```
-[gold_coin]
-stackable: True
-name: "gold coin"
-value: 1
+!gold_coin!
+stackable = True
+name = "gold coin"
+value = 1
 ```
 
 In a method or command:

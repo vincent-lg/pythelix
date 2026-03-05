@@ -9,17 +9,17 @@ Methods define behavior (what to do when something happens). [Entities](./entiti
 Inside a [worldlet](./worldlets.md), a method is set in an entity like this:
 
 ```
-[entity key]
-attribute1: value1
-attribute2: value2
+!entity key!
+attribute1 = value1
+attribute2 = value2
 
-{method name}
+def method name:
 method code
 on several
 lines
 ```
 
-All it takes is to create a method by writing a line with braces (`{method name}`), followed by the method code. The code itself, written in [Pythello](./scripting.md), is the behavior associated with this method.
+All it takes is to create a method by writing a line with the `def` keyword (`def method name:`), followed by the method code. The code itself, written in [Pythello](./scripting.md), is the behavior associated with this method.
 
 We'll use the same example throughout this documentation: a method that simply displays a message to the client. It's a simple example, but it illustrates the power of methods.
 
@@ -30,11 +30,11 @@ Let's begin by defining an entity representing an animal:
 You can copy this code into your [worldlet](./worldlets.md) files. If you're not sure how to do that (or how to apply them), refer to the [documentation about worldlets](./worldlets.md).
 
 ```
-[animal]
-height: None
-weight: None
+!animal!
+height = None
+weight = None
 
-{call}
+def call:
 client.msg("The animal calls... don't know what.")
 ```
 
@@ -156,11 +156,11 @@ The error is a bit strange. It tries to find `msg` on a string and, of course, f
 Our `call` method should take one and only one argument: the client. To enforce that, we simply update our method definition in our worldlet. Replace it with these lines:
 
 ```
-[animal]
-height: None
-weight: None
+!animal!
+height = None
+weight = None
 
-{call(client)}
+def call(client):
 client.msg("The animal calls... don't know what.")
 ```
 
@@ -209,7 +209,7 @@ But you can still do something like `animal.call("ok")`. Nothing prevents you fr
 Enter type hints: they're called type hints (or annotations) because that's the name in Python. In Pythelix, they're not mandatory (you can omit them), but if you specify them, that's a contract. A type hint is set after the argument name followed by a colon (and a space for readability). For example:
 
 ```
-{add(a: int, b: int)}
+def add(a: int, b: int):
 ```
 
 In our case, we want to make sure the first argument is a client.
@@ -217,7 +217,7 @@ In our case, we want to make sure the first argument is a client.
 Clients are entities. Every client has a parent of `generic/client`. So we need to enforce that the first argument inherits (directly or indirectly) from `generic/client`. Doing so is simple, especially if you're used to type hints in Python:
 
 ```
-{call(client: Entity["generic/client"])}
+def call(client: Entity["generic/client"]):
 ```
 
 The syntax might look a bit strange at first: the type hint contains the class name (`Entity` with a capital `E`), followed by square brackets, with the entity key as a string, then a closing bracket.
@@ -230,7 +230,7 @@ Pythelix will make sure:
 Here's our new method (only the method part is shown, not the full entity):
 
 ```
-{call(client: Entity["generic/client"])}
+def call(client: Entity["generic/client"]):
 client.msg("The animal calls... don't know what.")
 ```
 

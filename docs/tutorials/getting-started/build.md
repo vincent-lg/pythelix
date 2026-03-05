@@ -16,10 +16,10 @@ You have ideas for a text-based game, and Pythelix, like most MUD engines, is he
 Let’s start small. Suppose you want to add a bakery to your world:
 
 ```
-[bakery]
-parent: "room"
-title: "A bakery"
-description: """
+!bakery!
+parent = "room"
+title = "A bakery"
+description = """
 The warm, inviting scent of freshly baked bread and sweet pastries fills
 the air upon entering this cozy little shop. A fine dusting of flour clings
 lightly to the wooden floorboards and countertops. Shelves and display cases
@@ -29,7 +29,7 @@ while nuts, berries, and chocolate chips adorn many of the treats with artistic
 precision. At the back of the shop, an antique wooden cash register rests
 atop a counter, its brass details dulled slightly with age and use.
 """
-price: 30000
+price = 30000
 ```
 
 In Pythelix, this bakery is an entity: a single "thing" in your game world, with its own data (`title`, `description`, `price`) and behavior (what happens when a player interacts with it).
@@ -86,10 +86,10 @@ If you're still unsure about the nature of entities, read on. It might become cl
 A worldlet is just a text file on your computer (or server). It describes game entities. For instance, a worldlet defining a room could look like this:
 
 ```
-[room/135]
-parent: "generic/room"
-title: "A splendid room"
-description: "This room looks so beautiful, I cannot properly describe it."
+!room/135!
+parent = "generic/room"
+title = "A splendid room"
+description = "This room looks so beautiful, I cannot properly describe it."
 ```
 
 This small piece of worldlet creates an entity (or updates it if it already exists). Three attributes are defined: `parent`, `title`, and `description`.
@@ -101,12 +101,12 @@ The `title` and `description` attributes are more straightforward: they store th
 In addition to attributes, we can define methods:
 
 ```
-[room/135]
-parent: "generic/room"
-title: "A splendid room"
-description: "This room looks so beautiful, I cannot properly describe it."
+!room/135!
+parent = "generic/room"
+title = "A splendid room"
+description = "This room looks so beautiful, I cannot properly describe it."
 
-{look}
+def look:
 return [
     self.title,
     self.description,
@@ -118,11 +118,11 @@ Here, we have defined a `look` method on the room. It reads the `title` and `des
 To complete our example, we could add a command. This is also an entity, defined in a worldlet too (perhaps the same file):
 
 ```
-[command/look]
-parent: "generic/command"
-name: "look"
+!command/look!
+parent = "generic/command"
+name = "look"
 
-{run(character)}
+def run(character):
 room = character.location
 lines = room.look()
 character.msg("\n".join(lines))

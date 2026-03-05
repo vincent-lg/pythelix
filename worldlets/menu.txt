@@ -1,19 +1,19 @@
-[menu/motd]
-parent: "generic/menu"
-text: """
+!menu/motd!
+parent = "generic/menu"
+text = """
 Pythelix
 """
 
-{enter(client)}
+def enter(client):
 client.location = !menu/username!
 
-[menu/username]
-parent: "generic/menu"
-text: """
+!menu/username!
+parent = "generic/menu"
+text = """
 Enter your username or 'new' to create a new one.
 """
 
-{unknown_input(client, input)}
+def unknown_input(client, input):
 account = search.one(!account!, username=input.strip().lower())
 if account:
     client.account = account
@@ -22,21 +22,21 @@ else:
     client.msg(f"The username {input} doesn't exist. Want to create one? Enter NEW.")
 endif
 
-[command/username/new]
-parent: "generic/command"
-location: "menu/username"
-name: "new"
+!command/username/new!
+parent = "generic/command"
+location = "menu/username"
+name = "new"
 
-{run(client)}
+def run(client):
 client.location = !menu/new/username!
 
-[menu/password]
-parent: "generic/menu"
-text: """
+!menu/password!
+parent = "generic/menu"
+text = """
 Enter the password for this account.
 """
 
-{input(client, input)}
+def input(client, input):
 account = client.account
 if account.password.verify(input):
     character = account.character
@@ -48,28 +48,28 @@ else:
     client.location = !menu/invalid/password!
 endif
 
-[menu/invalid/password]
-parent: "generic/menu"
-text: """
+!menu/invalid/password!
+parent = "generic/menu"
+text = """
 Invalid password. Waiting...
 """
 
-{enter(client)}
+def enter(client):
 log("Before wait")
 wait 3
 log("After wait")
 client.location = !menu/password!
 
-{unknown_input(client, _input)}
+def unknown_input(client, _input):
 client.msg("Wait a bit...")
 
-[menu/new/username]
-parent: "generic/menu"
-text: """
+!menu/new/username!
+parent = "generic/menu"
+text = """
 Welcome! Enter your new username.
 """
 
-{input(client, input)}
+def input(client, input):
 account = search.one(!account!, username=input.lower())
 if account:
     client.msg("This account already exists. Try a new one.")
@@ -80,49 +80,49 @@ else:
     client.location = !menu/new/password!
 endif
 
-[menu/new/password]
-parent: "generic/menu"
-text: """
+!menu/new/password!
+parent = "generic/menu"
+text = """
 Great! Enter your new password.
 """
 
-{input(client, input=2)}
+def input(client, input=2):
 client.account.password = password.hash(input)
 client.msg("Awesome!")
 character = Entity(parent=!generic/character!)
 client.location = !menu/username!
 client.account.character = character
 
-[menu/game]
-parent: "generic/menu"
-text: """
+!menu/game!
+parent = "generic/menu"
+text = """
 And that's pythelix!
 """
 
-{get_prompt(_client)}
+def get_prompt(_client):
 return "HP: 200"
 
-{invalid_input(character, _input)}
+def invalid_input(character, _input):
 character.msg("Command not found.")
 
-[menu/pythello]
-parent: "generic/menu"
-text: """
+!menu/pythello!
+parent = "generic/menu"
+text = """
 Welcome to the Pythello scripting console
 You can enter Pythello scripting instructions and see the result in your console.
 Enter 'quit' to quit this console.
 Use '>' followed by a command to enter a command in the normal game mode (like '>look').
 """
-prompt: ">>>"
+prompt = ">>>"
 
-{unknown_input(character, input)}
+def unknown_input(character, input):
 character.msg(f"Received: {input}.")
 
-[command/pythello/quit]
-parent: "generic/command"
-location: "menu/pythello"
-name: "quit"
+!command/pythello/quit!
+parent = "generic/command"
+location = "menu/pythello"
+name = "quit"
 
-{run(character)}
+def run(character):
 character.game_modes.remove(0)
 character.msg("Good bye.")

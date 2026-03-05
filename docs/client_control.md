@@ -15,7 +15,7 @@ By connecting a client to a character entity, you gain several advantages:
 - **Persistent state**: The character entity is stored in the database and persists across connections. A player can disconnect and reconnect later, and their character retains all its attributes.
 - **Separation of concerns**: The client handles the connection (sending and receiving text), while the character holds game state (location, inventory, stats, etc.).
 - **Multi-client support**: Multiple clients can potentially control the same character (useful for testing or multiboxing).
-- **Cleaner methods**: Commands and menus receive the character as their first argument, so you can write `{run(character)}` and work directly with the game entity.
+- **Cleaner methods**: Commands and menus receive the character as their first argument, so you can write `def run(character):` and work directly with the game entity.
 
 First, a clarification: we talk a lot about characters. You can come up with another system entirely. The important part is to connect a client with an entity. Which entity is your choice. It could be a vehicle, a room or anything you fancy. But it usually is a character, so that's what this documentation describes. If you have another working approach though, adaptation is quite simple.
 
@@ -26,7 +26,7 @@ Client control relies on two mechanisms:
 1. **`client.owner`**: Associates the client with a single entity (usually a character).
 2. **`client.controls`**: A `Controls` object that tracks which entities this client can influence.
 
-When a client has an owner, Pythelix passes the **owner entity** (not the client) as the first positional argument to command `run`/`refine` methods and menu `input`/`unknown_input` methods. This is why you can write `{run(character)}` in your commands and receive the character directly.
+When a client has an owner, Pythelix passes the **owner entity** (not the client) as the first positional argument to command `run`/`refine` methods and menu `input`/`unknown_input` methods. This is why you can write `def run(character):` in your commands and receive the character directly.
 
 > Why the two mechanisms with owner and controls?
 
@@ -43,13 +43,13 @@ This system was adopted to handle most use cases: if a builder wants to take con
 The typical place to connect a client to a character is during login, after verifying the player's credentials. Here is the relevant excerpt from the menu [worldlet](./worldlets.md) example (found in the `worldlets/` directory):
 
 ```
-[menu/password]
-parent: "generic/menu"
-text: """
+!menu/password!
+parent = "generic/menu"
+text = """
 Enter the password for this account.
 """
 
-{input(client, input)}
+def input(client, input):
 account = client.account
 if account.password.verify(input):
     character = account.character
@@ -78,8 +78,8 @@ Once a client controls a character, you need a way to send text from the charact
 The `clients.controlling()` function returns all clients currently controlling a given entity. The character [worldlet](./worldlets.md) example uses this to define a `msg` method on the character:
 
 ```
-[generic/character]
-{msg(self, text)}
+!generic/character!
+def msg(self, text):
 for client in clients.controlling(self):
     client.msg(text)
 done
@@ -92,11 +92,11 @@ With this method, any code can call `character.msg("some text")` and the message
 Once client control is set up, your commands can declare `character` (or any name you choose) as their first argument. Pythelix will pass the owner entity instead of the client:
 
 ```
-[command/system]
-parent: "generic/command"
-name: "system"
+!command/system!
+parent = "generic/command"
+name = "system"
 
-{run(character)}
+def run(character):
 character.msg(f"You are connected as {character.key}.")
 ```
 

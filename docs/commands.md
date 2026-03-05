@@ -13,11 +13,11 @@ Virtual entities are created when applying a [worldlet](./worldlets.md) as usual
 You could create a command in Pythelix by writing something like this:
 
 ```
-[command/shout]
-parent: "generic/command"
-name: "shout"
+!command/shout!
+parent = "generic/command"
+name = "shout"
 
-{run}
+def run:
 client.msg("NOT SO LOUD!")
 ```
 
@@ -52,14 +52,14 @@ Now for the finer points.
 > **Tip:** Want to disable command abbreviations globally without repeating `can_shorten = False` in every command? Easy. Just create an entity in your [worldlet](./worldlets.md) that inherits from `"generic/command"` with this configuration:
 
 ```
-[generic/custom_command]
-parent: "generic/command"
-can_shorten: False
+!generic/custom_command!
+parent = "generic/command"
+can_shorten = False
 ```
 
 Then, have your commands inherit from `"generic/custom_command"` instead of `"generic/command"`. The entity key can be whatever makes sense for your world; the principle applies regardless.
 
-> Why does this work? Attributes like `can_shorten` are looked up hierarchically: if they are not defined on the individual command entity, their value is inherited from the parent. By setting `can_shorten: False` on the parent entity, all child commands will default to that unless they override it.
+> Why does this work? Attributes like `can_shorten` are looked up hierarchically: if they are not defined on the individual command entity, their value is inherited from the parent. By setting `can_shorten = False` on the parent entity, all child commands will default to that unless they override it.
 
 ## Command methods
 
@@ -101,18 +101,18 @@ Our shout command could accept any argument (one word, multiple words, anything)
 For example, if we call the syntax variable `message`, the command's `syntax` would be:
 
 ```
-syntax: "<message>"
+syntax = "<message>"
 ```
 
 Let's review the complete command:
 
 ```
-[command/shout]
-parent: "generic/command"
-name: "shout"
-syntax: "<message>"
+!command/shout!
+parent = "generic/command"
+name = "shout"
+syntax = "<message>"
 
-{run}
+def run:
 client.send(f"You shout at top volume: {message}")
 ```
 
@@ -150,15 +150,15 @@ Let's see an example.
 ### Refining arguments
 
 ```
-[command/shout]
-parent: "generic/command"
-name: "shout"
-syntax: "<message>"
+!command/shout!
+parent = "generic/command"
+name = "shout"
+syntax = "<message>"
 
-{refine}
+def refine:
 message = message.upper()
 
-{run}
+def run:
 client.send(f"You shout at top volume: {message}")
 ```
 
@@ -218,12 +218,12 @@ To specify this in syntax, write the keywords plainly (no angle brackets):
 Let's see the full command:
 
 ```
-[command/get]
-parent: "generic/command"
-name: "get"
-syntax: "<object> from <container>"
+!command/get!
+parent = "generic/command"
+name = "get"
+syntax = "<object> from <container>"
 
-{run}
+def run:
 client.send(f"You'd like to take {object} from {container}.")
 ```
 
@@ -244,15 +244,15 @@ Produces:
 By default, a parse error occurs with a generic message. You can provide a more helpful message by overriding the `parse_error` method:
 
 ```
-[command/get]
-parent: "generic/command"
-name: "get"
-syntax: "<object> from <container>"
+!command/get!
+parent = "generic/command"
+name = "get"
+syntax = "<object> from <container>"
 
-{run}
+def run:
 client.send(f"You'd like to take {object} from {container}.")
 
-{parse_error}
+def parse_error:
 client.send("Enter the object name, followed by FROM, followed by the container name.")
 ```
 
@@ -263,7 +263,7 @@ client.send("Enter the object name, followed by FROM, followed by the container 
 You can also use delimiters like commas as symbols in syntax:
 
 ```
-syntax: "<object>, <container>"
+syntax = "<object>, <container>"
 ```
 
 The player would type:
@@ -288,15 +288,15 @@ To indicate a number syntax variable, surround its name with `#` symbols:
 For example, we can extend the `shout` command to take the number of times to shout and the message:
 
 ```
-[command/shout]
-parent: "generic/command"
-name: "shout"
-syntax: "#times# <message>"
+!command/shout!
+parent = "generic/command"
+name = "shout"
+syntax = "#times# <message>"
 
-{refine}
+def refine:
 message = message.upper()
 
-{run}
+def run:
 client.send(f"You shout {times} times at top volume: {message}")
 ```
 
@@ -351,12 +351,12 @@ If the player does not specify `from <container>`, the `container` variable does
 Here's an example:
 
 ```
-[command/get]
-parent: "generic/command"
-name: "get"
-syntax: "<object> (from <container>)"
+!command/get!
+parent = "generic/command"
+name = "get"
+syntax = "<object> (from <container>)"
 
-{run(client, object, container=None)}
+def run(client, object, container=None):
 if container:
   client.send(f"You'd like to take {object} from {container}.")
 else:
@@ -406,7 +406,7 @@ Usually, we want to do something once, wait for a pause, then allow it to happen
 The syntax is quite simple. For instance:
 
 ```
-{run(client)}
+def run(client):
 client.msg("Before the pause")
 wait 5  # Wait 5 seconds
 client.msg("After these five seconds")
@@ -429,7 +429,7 @@ You specify the pause in seconds after the keyword `wait`. It can be a variable,
 You can also specify an interval with `min..max`. For example:
 
 ```
-{run(client)}
+def run(client):
 client.msg("Before the pause")
 wait 2..4
 client.msg("After this pause")

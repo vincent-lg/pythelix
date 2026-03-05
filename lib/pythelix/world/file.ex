@@ -2,8 +2,8 @@ defmodule Pythelix.World.File do
   alias Pythelix.Scripting.REPL
   alias Pythelix.World.File.State
 
-  @pattern_entity ~r/^\[(.*?)\]$/
-  @pattern_method ~r/^\{(.*?)\}$/
+  @pattern_entity ~r/^!(.*?)!$/
+  @pattern_method ~r/^def\s+(.+):$/
 
   def parse_file(path) do
     File.stream!(path)
@@ -85,7 +85,7 @@ defmodule Pythelix.World.File do
         state = parse_method_content(state, {line, index})
         parse_lines(rest, state)
 
-      !need_more && String.contains?(line, ":") ->
+      !need_more && String.contains?(line, "=") ->
         state = parse_attribute(state, {line, index})
         parse_lines(rest, state)
 
@@ -141,7 +141,7 @@ defmodule Pythelix.World.File do
   end
 
   defp parse_attribute(%{current: current} = state, {line, index}) do
-    [key, val] = String.split(line, ":", parts: 2)
+    [key, val] = String.split(line, "=", parts: 2)
     key = String.trim(key)
     val = String.trim(val)
 

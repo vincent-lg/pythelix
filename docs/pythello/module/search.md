@@ -166,15 +166,15 @@ The method receives the raw text as its first argument and must return a string.
 **Signature:**
 
 ```
-{normalize(text: str) -> str}
+def normalize(text: str) -> str:
 ```
 
 **Example — accent-insensitive French matching:**
 
 ```
-[search]
+!search!
 
-{normalize(text: str) -> str}
+def normalize(text: str) -> str:
 result = text.lower()
 result = result.replace("é", "e")
 result = result.replace("è", "e")
@@ -203,7 +203,7 @@ This hook is the right place to implement:
 **Signature:**
 
 ```
-{__visible__(viewer: Entity) -> bool}
+def __visible__(viewer: Entity) -> bool:
 ```
 
 Any return value other than an explicit `False` (including `:nomethod`, `:noresult`, and a method error) is treated as visible. This makes the default behaviour — no `__visible__` method defined — equivalent to always visible.
@@ -211,9 +211,9 @@ Any return value other than an explicit `False` (including `:nomethod`, `:noresu
 **Example — hide items in unlit rooms:**
 
 ```
-[object]
+!object!
 
-{__visible__(viewer: Entity) -> bool}
+def __visible__(viewer: Entity) -> bool:
 lit = self.location.is_lit
 carrying_light = viewer.has_light
 return lit or carrying_light
@@ -222,11 +222,11 @@ return lit or carrying_light
 **Example — items visible only to administrators:**
 
 ```
-[secret_document]
-parent: "object"
-name: "secret document"
+!secret_document!
+parent = "object"
+name = "secret document"
 
-{__visible__(viewer: Entity) -> bool}
+def __visible__(viewer: Entity) -> bool:
 return viewer.is_admin
 ```
 
@@ -239,13 +239,13 @@ When `search.match` is called with a `viewer=` argument, it calls `__namefor__(v
 **Signature:**
 
 ```
-{__namefor__(viewer: Entity) -> str}
+def __namefor__(viewer: Entity) -> str:
 ```
 
 The method can also accept an optional second argument, `quantity`. When called by [`names.group`](./names.md), the total group quantity is passed as the second argument, enabling pluralised display names:
 
 ```
-{__namefor__(viewer: Entity, quantity: int = 1) -> str}
+def __namefor__(viewer: Entity, quantity: int = 1) -> str:
 ```
 
 Both signatures are supported. The engine inspects the method's argument count before calling: if the method accepts two positional arguments, `quantity` is passed; if it only accepts one, only `viewer` is passed. Existing one-argument `__namefor__` methods continue to work without changes.
@@ -262,9 +262,9 @@ This hook enables:
 **Example — administrators see entity IDs:**
 
 ```
-[object]
+!object!
 
-{__namefor__(viewer: Entity) -> str}
+def __namefor__(viewer: Entity) -> str:
 if viewer.is_admin:
     return f"{self.name} [#{self.id}]"
 return self.name
@@ -275,12 +275,12 @@ With this method, an administrator searching for `"gold coin [#"` would find the
 **Example — item identified only after examination:**
 
 ```
-[unidentified_potion]
-parent: "object"
-name: "strange potion"
-true_name: "potion of healing"
+!unidentified_potion!
+parent = "object"
+name = "strange potion"
+true_name = "potion of healing"
 
-{__namefor__(viewer: Entity) -> str}
+def __namefor__(viewer: Entity) -> str:
 if viewer.has_identified(self):
     return self.true_name
 return self.name
@@ -289,9 +289,9 @@ return self.name
 **Example — pluralised display names:**
 
 ```
-[object]
+!object!
 
-{__namefor__(viewer: Entity, quantity: int = 1) -> str}
+def __namefor__(viewer: Entity, quantity: int = 1) -> str:
 if quantity == 1:
     return self.name
 return f"{quantity} {self.name}s"

@@ -20,10 +20,10 @@ Attributes are easier to understand: they are simply named data values on your e
 Here is an example of [a worldlet file](./worldlets.md):
 
 ```
-[bakery]
-parent: "room"
-title: "A bakery"
-description: """
+!bakery!
+parent = "room"
+title = "A bakery"
+description = """
 The warm, inviting scent of freshly baked bread and sweet pastries fills
 the air upon entering this cozy little shop. A fine dusting of flour clings
 lightly to the wooden floorboards and countertops. Shelves and display cases
@@ -35,9 +35,9 @@ atop a counter, its brass details dulled slightly with age and use.
 """
 ```
 
-For now, note that an entity begins with a line between brackets (`[bakery]`). All attributes follow this syntax:
+For now, note that an entity begins with a line between exclamation marks (`!bakery!`). All attributes follow this syntax:
 
-    attribute_name: attribute_value
+    attribute_name = attribute_value
 
 In this example, we see several attributes:
 
@@ -102,10 +102,10 @@ On the other hand, there are issues with modeling exits as entities:
 What alternatives do we have? We can just set exits on the room as an attribute:
 
 ```
-[bakery]
-title: "A bakery"
-description: "..."
-exits: {
+!bakery!
+title = "A bakery"
+description = "..."
+exits = {
     "north": !room/demo/2!,
     "east": !room/demo/58!,
     "down": !room/underground/1!,
@@ -136,40 +136,40 @@ Entities need not be visible or "physical" in the game world to be powerful tool
 For example, suppose you're building a game set in the Star Wars universe. Characters (player and NPC) belong to different races. Some races have more limbs than others, affecting how many "hand slots" they have for equipping items. Humans typically have two arms (two hand slots), while Besalisks have four arms (four hand slots). This adds interesting variety to gameplay and character design. You could create an entity like:
 
 ```
-[generic/race]
-title: "non specified"
-description: "not set"
-hand_slots: 0
+!generic/race!
+title = "non specified"
+description = "not set"
+hand_slots = 0
 ```
 
 Then add humans:
 
 ```
-[race/human]
-parent: "generic/race"
-title: "Humans"
-description: """
+!race/human!
+parent = "generic/race"
+title = "Humans"
+description = """
 Humans are a highly adaptable, resourceful species known for their diversity
 and resilience. While not the most physically remarkable race in the galaxy,
 their ingenuity and cultural variety make them one of the dominant civilizations
 in most star systems.
 """
-hand_slots: 2
+hand_slots = 2
 ```
 
 ... and Besalisks:
 
 ```
-[race/besalisk]
-parent: "generic/race"
-title: "Besalisks"
-description: """
+!race/besalisk!
+parent = "generic/race"
+title = "Besalisks"
+description = """
 Besalisks are a large, four-armed species known for their strength, endurance,
 and multitasking ability. Native to the planet Ojom, Besalisks can wield
 multiple weapons or tools simultaneously, making them formidable in both combat
 and technical fields.
 """
-hand_slots: 4
+hand_slots = 4
 ```
 
 This setup allows a clean, flexible structure where abstract traits like race meaningfully influence gameplay without cluttering visible game content.

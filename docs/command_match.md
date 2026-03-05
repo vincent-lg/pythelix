@@ -17,15 +17,15 @@ Matching commands follow a three-step structure:
 This split maps directly onto the `refine` and `run` methods of a command:
 
 ```
-[command/get]
-parent: "generic/command"
-name: "get"
-syntax: "(#number#) <object>"
+!command/get!
+parent = "generic/command"
+name = "get"
+syntax = "(#number#) <object>"
 
-{refine(client, object, number=1)}
+def refine(client, object, number=1):
 to_pick = search.match(client.location, object, limit=number)
 
-{run(client, to_pick)}
+def run(client, to_pick):
 for item in to_pick:
     item.location = client
 done
@@ -54,7 +54,7 @@ When the player types `get apple`, the parser captures `object = "apple"` and le
 ### Refine: finding the items
 
 ```
-{refine(client, object, number=1)}
+def refine(client, object, number=1):
 to_pick = search.match(client.location, object, limit=number)
 ```
 
@@ -67,7 +67,7 @@ The result, `to_pick`, is a list of entities and stackables. It is available in 
 ### Run: moving items and reporting
 
 ```
-{run(client, to_pick)}
+def run(client, to_pick):
 for item in to_pick:
     item.location = client
 done
@@ -107,10 +107,10 @@ Omitting `limit` (or using `limit=None`) returns **all** matching items.
 When nothing matches, `search.match` returns an empty list. The `for` loops in `run` simply produce no iterations, so the player receives no output. If you want explicit feedback, check the length of the list after the search:
 
 ```
-{refine(client, object, number=1)}
+def refine(client, object, number=1):
 to_pick = search.match(client.location, object, limit=number)
 
-{run(client, object, to_pick)}
+def run(client, object, to_pick):
 if len(to_pick) == 0:
     client.msg(f"You don't see {object} here.")
     return
@@ -130,9 +130,9 @@ done
 To get output like `"3 apples"` rather than `"apple"`, define `__namefor__` on the item entity (or a shared parent such as `object`):
 
 ```
-[object]
+!object!
 
-{__namefor__(viewer: Entity, quantity: int = 1) -> str}
+def __namefor__(viewer: Entity, quantity: int = 1) -> str:
 if quantity == 1:
     return self.name
 return f"{quantity} {self.name}s"
@@ -162,9 +162,9 @@ to_take = search.match(!treasure_chest!, object, limit=number)
 When multiple items share the same name, players often use `2.sword` or `3.apple` to pick a specific one. Support this with the `index` parameter:
 
 ```
-syntax: "(#index#.) (#number#) <object>"
+syntax = "(#index#.) (#number#) <object>"
 
-{refine(client, object, index=None, number=1)}
+def refine(client, object, index=None, number=1):
 to_pick = search.match(client.location, object, index=index, limit=number)
 ```
 

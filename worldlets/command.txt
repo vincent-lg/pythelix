@@ -1,23 +1,23 @@
-[command/shout]
-parent: "generic/command"
-name: "shout"
-syntax: "<message>"
+!command/shout!
+parent = "generic/command"
+name = "shout"
+syntax = "<message>"
 
-{refine(character, message)}
+def refine(character, message):
 message = message.upper()
 
-{run(character, message)}
+def run(character, message):
 i = 15
 character.msg("Waiting...")
 wait 2
 character.msg(f"And i]{i} and {message.center(10)}")
 
-[command/system]
-parent: "generic/command"
-name: "system"
-syntax: ""
+!command/system!
+parent = "generic/command"
+name = "system"
+syntax = ""
 
-{run(character)}
+def run(character):
 text = f"""
 System statistics:
   Host processors: {stats.number_of_processors} (in {stats.number_of_schedulers} schedulers)
@@ -32,21 +32,21 @@ System statistics:
 """
 character.msg(text)
 
-[command/quit]
-parent: "generic/command"
-name: "quit"
-syntax: ""
+!command/quit!
+parent = "generic/command"
+name = "quit"
+syntax = ""
 
-{run(character)}
+def run(character):
 client = clients.owning(character)
 client.msg("Ciao!")
 client.disconnect()
 
-[command/pythello]
-parent: "generic/command"
-name: "pythello"
-syntax: ""
+!command/pythello!
+parent = "generic/command"
+name = "pythello"
+syntax = ""
 
-{run(character)}
+def run(character):
 character.game_modes.add("menu/pythello", character.id)
 character.msg("Pythello console")

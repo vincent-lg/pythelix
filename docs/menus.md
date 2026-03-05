@@ -29,9 +29,9 @@ Like most things, menus are [entities](./entities.md). They are defined in [worl
 Here's a very simple Message Of The Day (MOTD) menu:
 
 ```
-[menu/motd]
-parent: "generic/menu"
-text: """
+!menu/motd!
+parent = "generic/menu"
+text = """
 Welcome to this AWESOME MUD!!!
 We hope you have fun.
                                      Powered by Pythelix.
@@ -53,9 +53,9 @@ Let's move on to our next menu.
 It becomes more interesting when multiple menus exist. Let's create another menu with contact information:
 
 ```
-[menu/contact]
-parent: "generic/menu"
-text: """
+!menu/contact!
+parent = "generic/menu"
+text = """
 Don't hesitate to contact us if you have any questions, if you cannot connect
 to your account, or if you just want to say hi.
 Email contact@myveryownmud.com
@@ -65,32 +65,32 @@ Email contact@myveryownmud.com
 Now we need to connect the two menus. The most common approach is to intercept client input while inside the MOTD menu. If the input matches something, we can change the client's menu. Here's our two menus fleshed out a bit:
 
 ```
-[menu/motd]
-parent: "generic/menu"
-text: """
+!menu/motd!
+parent = "generic/menu"
+text = """
 Welcome to this AWESOME MUD!!!
 We hope you have fun.
 Type CONTACT to contact us.
                                      Powered by Pythelix.
 """
 
-{input(client, input)}
+def input(client, input):
 if input.lower() == "contact":
     client.location = !menu/contact!
 else:
     client.msg("That's not a valid command.")
 endif
 
-[menu/contact]
-parent: "generic/menu"
-text: """
+!menu/contact!
+parent = "generic/menu"
+text = """
 Don't hesitate to contact us if you have any questions, if you cannot connect
 to your account, or if you just want to say hi.
 Email contact@myveryownmud.com
 Press ENTER to close this menu.
 """
 
-{input(client, _input)}
+def input(client, _input):
 client.location = !menu/motd!
 ```
 
@@ -113,12 +113,12 @@ If you have read [the documentation about commands](./commands.md), you might wo
 Commands provide capabilities that menus alone do not. A command is usually defined inside a menu (the command's `location` can be set to a different menu). By default, all commands are defined inside the `menu/game` menu, which is special: this is the menu where players arrive after logging in (after entering their username and password). However, commands can be assigned to different menus:
 
 ```
-[command/motd/contact]
-parent: "generic/command"
-location: "menu/motd"
-name: "contact"
+!command/motd/contact!
+parent = "generic/command"
+location = "menu/motd"
+name = "contact"
 
-{run(client)}
+def run(client):
 client.location = !menu/contact!
 ```
 
@@ -142,13 +142,13 @@ There are several ways to address this:
 Let's see an example illustrating why this strategy is useful. We'll focus on the menu used to enter a username. The user can enter `new` to create a new account, or enter an existing username to connect. `new` is a command (best to define it in the menu). But what if the user enters a valid username? We could handle that in `unknown_input`, which will be called if the command does not match. But consider this alternative approach:
 
 ```
-[menu/username]
+!menu/username!
 text = """
 If you have an existing account, enter its username.
 If not, you can enter 'new' to create a new account.
 """
 
-{input}
+def input:
 account = search.one(!account!, username=text.lower())
 if account:
     client.account = account
@@ -158,7 +158,7 @@ else:
     return False
 endif
 
-{unknown_input}
+def unknown_input:
 client.msg("The provided username doesn't exist, try again.")
 ```
 

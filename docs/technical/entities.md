@@ -37,7 +37,7 @@ The rule is simple:
 `!account!` is defined within a worldlet (in `wordlet/demo.txt`):
 
 ```
-[account]
+!account!
 ```
 
 That's all it takes to define an entity in a worldlet. So this creates (or updates) an entity with a key of `"account"`. The first time the worldlets are loaded, this entity is created. It's not a virtual entity (like a command or a menu), so Pythelix saves it to the database. next time the worldlet is loaded, the `!account!` entity is updated (not created again).

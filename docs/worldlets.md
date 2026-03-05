@@ -53,10 +53,10 @@ Your game world consists of [entities](./entities.md). An entity is a single pie
 Here's an example from `demo.txt` (open `worldlets/demo.txt` in your favorite editor):
 
 ```
-[bakery]
-parent: "room"
-title: "A bakery"
-description: """
+!bakery!
+parent = "room"
+title = "A bakery"
+description = """
 The warm, inviting scent of freshly baked bread and sweet pastries fills
 the air upon entering this cozy little shop. A fine dusting of flour clings
 lightly to the wooden floorboards and countertops. Shelves and display cases
@@ -70,45 +70,45 @@ atop a counter, its brass details dulled slightly with age and use.
 
 Let's break it down:
 
-- The entity key is between brackets at the top (`[bakery]` here). Each entity key is unique (defining an entity with an existing key updates it). Sometimes, using a path-like key such as `[room/demo/bakery]` helps avoid conflicts. Here, `room/demo/bakery` is the key and slashes act as path separators; you can use another separator as long as you're consistent.
-- `parent: "room"` indicates that this entity has a parent with key `"room"` (defined elsewhere, e.g., `worldlets/base.txt`). To learn more, see the [entities documentation](./entities.md).
-- `title: "A bakery"` sets the `title` attribute to `"A bakery"`. Note the quotation marks—they are needed because attribute values can be various types (text, numbers, lists, other entities, etc.).
-- `description: """ ... """` uses triple quotes to define a multiline string as the value of the `description` attribute.
+- The entity key is between exclamation marks at the top (`!bakery!` here). Each entity key is unique (defining an entity with an existing key updates it). Sometimes, using a path-like key such as `!room/demo/bakery!` helps avoid conflicts. Here, `room/demo/bakery` is the key and slashes act as path separators; you can use another separator as long as you're consistent.
+- `parent = "room"` indicates that this entity has a parent with key `"room"` (defined elsewhere, e.g., `worldlets/base.txt`). To learn more, see the [entities documentation](./entities.md).
+- `title = "A bakery"` sets the `title` attribute to `"A bakery"`. Note the quotation marks—they are needed because attribute values can be various types (text, numbers, lists, other entities, etc.).
+- `description = """ ... """` uses triple quotes to define a multiline string as the value of the `description` attribute.
 
-A single file can contain many entities (noted by multiple `[entity key]` declarations).
+A single file can contain many entities (noted by multiple `!entity key!` declarations).
 
 ### Attributes in entities
 
 To recap, the syntax for attributes is:
 
-> `attribute_name: attribute_value`
+> `attribute_name = attribute_value`
 
 - `attribute_name` should be a valid name (no spaces, use underscores if needed; it cannot start with a digit but can contain Unicode characters such as `é`).
 
 Attribute values accept any value valid in [Pythello](./scripting.md), the scripting language. For example:
 
-- `price: 300` — integer value 300
-- `volume: 15.8` — floating-point number 15.8
-- `title: "some title"` — string
-- `tips: """ ... on multiple lines ... """` — multiline string (triple quotes on opening and closing lines):
+- `price = 300` — integer value 300
+- `volume = 15.8` — floating-point number 15.8
+- `title = "some title"` — string
+- `tips = """ ... on multiple lines ... """` — multiline string (triple quotes on opening and closing lines):
 
   ```txt
-  tips: """
+  tips = """
   Some tip on multiple
   lines.
   """
   ```
 
-- `friend: !room/demo/fruit_stand!` — reference to another entity with key `room/demo/fruit_stand`. The `!entity key!` syntax is a Pythello shortcut.
-- `food: ["white bread", "cookie", "croissant"]` — a list of strings (can be multiline, but the opening bracket must be on the starting line)
-- `info: {"price": 31, "weight": 72}` — a dictionary
+- `friend = !room/demo/fruit_stand!` — reference to another entity with key `room/demo/fruit_stand`. The `!entity key!` syntax is a Pythello shortcut.
+- `food = ["white bread", "cookie", "croissant"]` — a list of strings (can be multiline, but the opening bracket must be on the starting line)
+- `info = {"price": 31, "weight": 72}` — a dictionary
 
 and so on.
 
 All valid scripting values (numbers, strings, lists, dictionaries, entities, function calls, operations, etc.) are valid attributes. Attributes are evaluated when the worldlet is applied, so be cautious with function calls. For example:
 
 ```
-choice: random.randint(1, 6)
+choice = random.randint(1, 6)
 ```
 
 This will assign an integer between 1 and 6 to `choice`, but the value will reset each time the worldlet is reapplied, which may not be desired.
@@ -124,33 +124,33 @@ An entity can have zero, one, or multiple methods.
 Methods are more complex, so it's advisable to read the [methods documentation](./methods.md). In worldlets, methods look like this:
 
 ```
-[entity_key]
-attr1: value1
-attr2: value2
+!entity_key!
+attr1 = value1
+attr2 = value2
 ...
 
-{method_name}
+def method_name:
 code on
 several
 lines
 
-{another_method}
+def another_method:
 Some
 other
 code
 ...
 ```
 
-To define a method, specify its name between braces (e.g., `{greet}`), followed by the method's code on one or more lines. When Pythelix sees a line starting a new entity (`[another entity]`), starting a new method (`{another method}`), or end-of-file, and considers the method body complete, it adds the method to the entity.
+To define a method, use the `def` keyword followed by the method name and a colon (e.g., `def greet:`), followed by the method's code on one or more lines. When Pythelix sees a line starting a new entity (`!another entity!`), starting a new method (`def another_method:`), or end-of-file, and considers the method body complete, it adds the method to the entity.
 
 Example:
 
 ```txt
-[bakery]
-parent: "room"
-title: "A bakery"
+!bakery!
+parent = "room"
+title = "A bakery"
 
-{spill}
+def spill:
 author.msg("You swipe the merchandise and throw it to the ground. How rude!")
 author.announce(f"{author} swipes the merchandise and throws it to the ground. Really!")
 ```
@@ -160,19 +160,19 @@ This `spill` method sends a message to the action's author and announces it to t
 Methods can have arguments, specified in parentheses after the method name:
 
 ```
-{spill(author)}
+def spill(author):
 ```
 
 Multiple arguments are also supported:
 
 ```
-{roll_dice(min, max)}
+def roll_dice(min, max):
 ```
 
 Here, `roll_dice` takes two arguments, `min` and `max`. You can add type annotations (similar to Python) for argument types:
 
 ```
-{roll_dice(min: int, max: int)}
+def roll_dice(min: int, max: int):
 ```
 
 Now, `min` and `max` are expected to be integers. If called with incorrect argument types, an error is raised or the call rejected.
@@ -180,7 +180,7 @@ Now, `min` and `max` are expected to be integers. If called with incorrect argum
 Arguments can also be entities, with type hints:
 
 ```
-{spill(author: Entity["player"])}
+def spill(author: Entity["player"]):
 ```
 
 This means `spill` expects `author` to be an entity whose parent (or ancestor) key is `"player"`. This syntax resembles Python’s typing but is designed to avoid confusion.
@@ -188,7 +188,7 @@ This means `spill` expects `author` to be an entity whose parent (or ancestor) k
 Specifying type hints is strongly recommended. You can also specify a return type:
 
 ```txt
-{roll_dice(min: int, max: int) -> str}
+def roll_dice(min: int, max: int) -> str:
 ```
 
 This method takes two integers and returns a string, aiding error detection.
@@ -196,7 +196,7 @@ This method takes two integers and returns a string, aiding error detection.
 Default argument values can be set with `=`:
 
 ```txt
-{roll_dice(min: int = 1, max: int = 6) -> str}
+def roll_dice(min: int = 1, max: int = 6) -> str:
 ```
 
 Calling this method with no arguments uses defaults; you can override one or both arguments.

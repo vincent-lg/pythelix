@@ -80,9 +80,9 @@ done
 To produce pluralised group names, define `__namefor__` with two positional arguments on your entity (or a parent entity):
 
 ```
-[object]
+!object!
 
-{__namefor__(viewer: Entity, quantity: int = 1) -> str}
+def __namefor__(viewer: Entity, quantity: int = 1) -> str:
 if quantity == 1:
     return self.name
 return f"{quantity} {self.name}s"

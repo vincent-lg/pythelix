@@ -25,21 +25,21 @@ We will explore several use cases where sub-entities are beneficial. You might t
 First example: exits. Entities typically represent small parts of your game world—objects, rooms, characters, etc. Why shouldn’t they represent exits? Something like this:
 
 ```
-[exit]
-name: None
-destination: None
-door: None
-open: True
+!exit!
+name = None
+destination = None
+door = None
+open = True
 
 # ... and then later
-[bakery/north]
-parent: "exit"
-name: "north"
-destination: !sidewalk!
+!bakery/north!
+parent = "exit"
+name = "north"
+destination = !sidewalk!
 
-[bakery]
-parent: "room"
-exits: [
+!bakery!
+parent = "room"
+exits = [
     !bakery/north!
 ]
 ```
@@ -53,19 +53,19 @@ Most importantly, our exit is generally not useful on its own. It is meant to be
 Now, let's see the same example using a sub-entity instead:
 
 ```
-[Exit]
-parent: "SubEntity"
+!Exit!
+parent = "SubEntity"
 
-{__init__(self, name: str, destination: Entity)}
+def __init__(self, name: str, destination: Entity):
 self.name = name
 self.destination = destination
 self.door = None
 self.open = True
 
 # ... and then later
-[bakery]
-parent: "room"
-exits: [
+!bakery!
+parent = "room"
+exits = [
     Exit("north", !sidewalk!)
 ]
 ```
@@ -96,29 +96,29 @@ Here, both issues are resolved:
 Another common use case for sub-entities is handlers—objects used to avoid cluttering your entity with too many attributes and methods. Consider stats: in most games, a character has many stats (HP, EP, strength, charisma, chance, etc.). Some have maximum values that must be respected. Sure, you could put them all inside the character entity and add methods there, but a handler is cleaner.
 
 ```
-[StatsHandler]
-parent: "SubEntity"
+!StatsHandler!
+parent = "SubEntity"
 
-{__init__(self, hp: int, ep: int)}
+def __init__(self, hp: int, ep: int):
 self.hp = hp
 self.hp_max = hp
 self.ep = ep
 self.ep_max = ep
 
-{restore()}
+def restore():
 self.hp = self.hp_max
 self.ep = self.ep_max
 
-{die()}
+def die():
 self.hp = 0
 
-{hurt(damage: int)}
+def hurt(damage: int):
 self.hp -= damage
 if self.hp < 0:
     self.hp = 0
 endif
 
-{heal(gain: int)}
+def heal(gain: int):
 self.hp += gain
 if self.hp > self.hp_max:
     self.hp = self.hp_max
@@ -128,9 +128,9 @@ endif
 Inside a character entity, you would use it like this:
 
 ```
-[guard]
-parent: "Character"
-stats: StatsHandler(hp=8, ep=15)
+!guard!
+parent = "Character"
+stats = StatsHandler(hp=8, ep=15)
 ```
 
 You can then do things like:
@@ -159,13 +159,13 @@ What about equipment though? Equipment is technically “on” the character as 
 Different games propose different strategies. Pythelix asks you: why not separate them more cleanly?
 
 ```
-[Inventory]
-parent: "SubEntity"
+!Inventory!
+parent = "SubEntity"
 
-{__init__(self)}
+def __init__(self):
 self.objects = []
 
-{get(object: Entity, from_location: Entity)}
+def get(object: Entity, from_location: Entity):
 if object in self.objects:
     return None
 elif object not in from_location.content:
@@ -174,7 +174,7 @@ else:
     object.location = None
     self.objects.append(object)
 
-{drop(object: Entity, location: Entity)}
+def drop(object: Entity, location: Entity):
 if object not in self.objects:
     return None
 elif object in location.content:
@@ -187,8 +187,8 @@ else:
 Then, on the character entity:
 
 ```
-[character]
-inventory: Inventory()
+!character!
+inventory = Inventory()
 ```
 
 Inventory is clearly separated (you can define a sub-entity for equipment as well). This is likely much more robust for your game design, instead of merely relying on changing the location of objects to mimic get/drop/give, especially when handling more complex scenarios like containers.
@@ -202,10 +202,10 @@ So we need to store the messages: should text messages be entities? Players migh
 Text messages could instead be modeled as sub-entities:
 
 ```
-[TextMessage]
-parent: "SubEntity"
+!TextMessage!
+parent = "SubEntity"
 
-{__init__(self, sender: Entity, recipient: Entity, content: str)}
+def __init__(self, sender: Entity, recipient: Entity, content: str):
 self.sender = sender
 self.recipient = recipient
 self.content = content
