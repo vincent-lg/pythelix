@@ -169,6 +169,60 @@ defmodule Pythelix.Scripting.Namespace.Entity do
     end
   end
 
+  @doc """
+  Deletes an entity from the database (del entity).
+  """
+  def delattr(script, self) do
+    entity = Store.get_value(self)
+    id_or_key = Entity.get_id_or_key(entity)
+
+    case Record.delete_entity(id_or_key) do
+      :ok ->
+        {script, :none}
+
+      {:error, message} ->
+        {Script.raise(script, AttributeError, message), :none}
+    end
+  end
+
+  @doc """
+  Deletes an attribute from an entity (del entity.attr).
+  """
+  def delattr(script, _self, "id") do
+    {Script.raise(script, AttributeError, "can't delete attribute"), :none}
+  end
+
+  def delattr(script, _self, "parent") do
+    {Script.raise(script, AttributeError, "can't delete attribute"), :none}
+  end
+
+  def delattr(script, _self, "children") do
+    {Script.raise(script, AttributeError, "can't delete attribute"), :none}
+  end
+
+  def delattr(script, _self, "contents") do
+    {Script.raise(script, AttributeError, "can't delete attribute"), :none}
+  end
+
+  def delattr(script, _self, "location") do
+    {Script.raise(script, AttributeError, "can't delete attribute"), :none}
+  end
+
+  def delattr(script, self, name) do
+    entity = Store.get_value(self)
+    id_or_key = Entity.get_id_or_key(entity)
+    attributes = Record.get_attributes(entity)
+
+    case Map.get(attributes, name) do
+      nil ->
+        {Script.raise(script, AttributeError, "'#{id_or_key}' has no attribute '#{name}'"), :none}
+
+      _ ->
+        Record.delete_attribute(id_or_key, name)
+        {script, :none}
+    end
+  end
+
   defp get_attribute(entity, name, script, self) do
     id_or_key = Entity.get_id_or_key(entity)
 

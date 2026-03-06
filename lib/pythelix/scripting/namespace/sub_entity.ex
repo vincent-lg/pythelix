@@ -48,6 +48,24 @@ defmodule Pythelix.Scripting.Namespace.SubEntity do
     {script, :none}
   end
 
+  @doc """
+  Deletes an attribute from a sub entity.
+  """
+  def delattr(script, self, name) do
+    sub = Store.get_value(self, recursive: false)
+    data = Store.get_value(sub.data, recursive: false)
+
+    case Dict.get(data, name) do
+      nil ->
+        {Script.raise(script, AttributeError, "sub-entity has no attribute '#{name}'"), :none}
+
+      _ ->
+        new_data = Dict.delete(data, name)
+        Store.update_reference(sub.data, new_data)
+        {script, :none}
+    end
+  end
+
   defp get_attribute(data, name) do
     case Dict.get(data, name) do
       nil ->

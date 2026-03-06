@@ -56,6 +56,23 @@ defmodule Pythelix.Scripting.Namespace.Dict do
     {script, :none}
   end
 
+  defmet __delitem__(script, namespace), [
+    {:item, index: 0, type: :any}
+  ] do
+    dict = Store.get_value(namespace.self, recursive: false)
+
+    case Dict.get(dict, namespace.item, nil) do
+      nil ->
+        message = inspect(namespace.item)
+        {Script.raise(script, KeyError, message), :none}
+
+      _ ->
+        dict = Dict.delete(dict, namespace.item)
+        Store.update_reference(namespace.self, dict)
+        {script, :none}
+    end
+  end
+
   defmet clear(script, namespace), [] do
     dict = Dict.new()
     Store.update_reference(namespace.self, dict)

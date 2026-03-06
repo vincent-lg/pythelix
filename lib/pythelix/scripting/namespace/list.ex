@@ -67,6 +67,23 @@ defmodule Pythelix.Scripting.Namespace.List do
       end
   end
 
+  defmet __delitem__(script, namespace), [
+    {:item, index: 0, type: :int}
+  ] do
+    list = Store.get_value(namespace.self, recursive: false)
+
+    case Enum.at(list, namespace.item, :out) do
+      :out ->
+        message = "list index out of range"
+        {Script.raise(script, IndexError, message), :none}
+
+      _ ->
+        list = List.delete_at(list, namespace.item)
+        Store.update_reference(namespace.self, list)
+        {script, :none}
+    end
+  end
+
   defmet __repr__(script, namespace), [] do
     repr(script, namespace.self)
   end

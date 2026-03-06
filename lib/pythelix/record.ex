@@ -624,6 +624,33 @@ defmodule Pythelix.Record do
   end
 
   @doc """
+  Deletes an attribute from an entity.
+  """
+  @spec delete_attribute(integer() | binary(), String.t()) :: :ok | {:error, any()}
+  def delete_attribute(id_or_key, name) do
+    case get_entity(id_or_key) do
+      nil ->
+        {:error, "invalid entity"}
+
+      %Entity{id: :virtual} = entity ->
+        Cache.uncache_entity_attribute(entity, name)
+        :ok
+
+      entity ->
+        case Cache.get_cached_stored_entity_attribute(entity, name) do
+          nil ->
+            Cache.uncache_entity_attribute(entity, name)
+            :ok
+
+          attribute_id ->
+            Diff.add({:delattr, attribute_id})
+            Cache.uncache_entity_attribute(entity, name)
+            :ok
+        end
+    end
+  end
+
+  @doc """
   Deletes an entity.
   """
   @spec delete_entity(integer() | binary()) :: :ok | {:error, any()}

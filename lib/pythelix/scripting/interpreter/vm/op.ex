@@ -181,6 +181,24 @@ defmodule Pythelix.Scripting.Interpreter.VM.Op do
     script
   end
 
+  def delvar(%{variables: variables} = script, name) do
+    {script, {value, self}} = Script.get_stack(script, :reference)
+    namespace = Namespace.locate(value)
+
+    {script, _} = namespace.delattr(script, self)
+
+    %{script | variables: Map.delete(variables, name)}
+  end
+
+  def delattr(script, name) do
+    {script, {value, self}} = Script.get_stack(script, :reference)
+
+    namespace = Namespace.locate(value)
+    {script, _result} = namespace.delattr(script, self, name)
+
+    script
+  end
+
   def line(script, line) do
     %{script | line: line}
   end

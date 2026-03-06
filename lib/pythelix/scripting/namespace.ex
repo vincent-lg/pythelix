@@ -111,6 +111,17 @@ defmodule Pythelix.Scripting.Namespace do
         Traceback.raise(script, AttributeError, "can't set attribute")
         |> then(& {%{script | error: &1}, :none})
       end
+
+      @doc false
+      def delattr(script, _) do
+        {script, :none}
+      end
+
+      @doc false
+      def delattr(script, _, _) do
+        Traceback.raise(script, AttributeError, "can't delete attribute")
+        |> then(& {%{script | error: &1}, :none})
+      end
     end
   end
 

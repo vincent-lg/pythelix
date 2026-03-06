@@ -54,7 +54,9 @@ defmodule Pythelix.Scripting.Interpreter.VM do
     check_exc: {VM.Exception, :check_exc},
     end_try: {VM.Exception, :end_try},
     raise: {VM.Exception, :op_raise},
-    reraise: {VM.Exception, :reraise}
+    reraise: {VM.Exception, :reraise},
+    delvar: {VM.Op, :delvar},
+    delattr: {VM.Op, :delattr}
   }
 
   def handle(script, {:noop, nil}), do: script

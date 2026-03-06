@@ -30,6 +30,7 @@ defmodule Pythelix.Scripting.Parser.Statement do
   finally_kw = string("finally") |> label("finally") |> replace(:finally) |> isolate()
   endtry = string("endtry") |> label("endtry") |> replace(:endtry) |> isolate()
   raise_kw = string("raise") |> label("raise") |> replace(:raise) |> isolate(space: true)
+  del_kw = string("del") |> label("del") |> replace(:del) |> isolate(space: true)
 
   # Implicit tuple expression: one or more expressions separated by commas.
   # With a single expression it reduces to that expression;
@@ -265,6 +266,18 @@ defmodule Pythelix.Scripting.Parser.Statement do
     {:raise, exc_name, [], {line, offset}}
   end
 
+  del_stmt =
+    del_kw
+    |> line()
+    |> choice([setitem, id()])
+    |> repeat(ignore(dot()) |> choice([setitem, id()]))
+    |> reduce(:reduce_del)
+
+  def reduce_del([{[:del], {line, offset}} | parts]) do
+    names = for {_, name} <- parts, do: name
+    {:del, names, {line, offset}}
+  end
+
   wait =
     ignore(wait_kw)
     |> line()
@@ -312,6 +325,7 @@ defmodule Pythelix.Scripting.Parser.Statement do
       for_stmt,
       try_stmt,
       raise_stmt,
+      del_stmt,
       wait,
       return,
       raw_value
