@@ -88,10 +88,10 @@ defmodule Pythelix.Network.TCP.Client do
   end
 
   @doc """
-  Generate a unique client ID.
+  Request the next incremental client ID from the server.
   """
   def assign_client_id do
-    System.unique_integer([:positive])
+    Pythelix.Network.TCP.Server.next_client_id()
   end
 
   @doc """
