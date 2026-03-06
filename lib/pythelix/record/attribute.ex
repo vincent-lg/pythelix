@@ -5,7 +5,7 @@ defmodule Pythelix.Record.Attribute do
   @primary_key {:gen_id, :integer, []}
 
   schema "attributes" do
-    #field :gen_id, :integer, primary_key: true
+    # field :gen_id, :integer, primary_key: true
     field :name, :string
     field :value, :binary
     belongs_to :entity, Pythelix.Record.Entity, foreign_key: :entity_gen_id, references: :gen_id

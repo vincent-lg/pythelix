@@ -9,14 +9,8 @@ defmodule Pythelix.Entity.StackableTest do
   alias Pythelix.Record
   alias Pythelix.Stackable
 
-  # ---------------------------------------------------------------------------
-  # Helpers
-
   defp make_container, do: Record.create_entity() |> elem(1)
   defp make_stackable_entity(key), do: Record.create_entity(key: key) |> elem(1)
-
-  # ---------------------------------------------------------------------------
-  # Adding stackables
 
   describe "add_stackable" do
     test "adds a stackable entry to a container" do
@@ -62,9 +56,6 @@ defmodule Pythelix.Entity.StackableTest do
       assert Record.get_stackable_quantity(container_b, coin) == 25
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # Removing stackables
 
   describe "remove_stackable" do
     test "decrements the quantity of a stackable entry" do
@@ -112,9 +103,6 @@ defmodule Pythelix.Entity.StackableTest do
       assert Record.get_stackable_quantity(container, coin) == 0
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # get_contained with stackables
 
   describe "get_contained" do
     test "returns Stackable structs for stackable entries" do
@@ -172,9 +160,6 @@ defmodule Pythelix.Entity.StackableTest do
       assert second.quantity == 10
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # Persistence: saving and reloading from the database
 
   describe "persistence" do
     test "stackable quantity survives a cache clear and reload" do

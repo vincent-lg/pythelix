@@ -23,7 +23,7 @@ defmodule Pythelix.ScriptTestHelpers do
     def handle_cast({:run, {module, :execute, [process, input, variables]}}, state) do
       # Simulate script execution
       apply(module, :execute, [process, input, variables])
-      
+
       # Track executed scripts for testing
       new_state = %{state | executed_scripts: [{input, variables} | state.executed_scripts]}
       {:noreply, new_state}
@@ -64,7 +64,8 @@ defmodule Pythelix.ScriptTestHelpers do
     """
     def wait_for_global(_name) do
       case Process.get(:mock_global_pid) do
-        nil -> spawn(fn -> :ok end)  # Return a dummy PID by default
+        # Return a dummy PID by default
+        nil -> spawn(fn -> :ok end)
         :not_found -> nil
         pid when is_pid(pid) -> pid
       end
@@ -104,13 +105,13 @@ defmodule Pythelix.ScriptTestHelpers do
       cond do
         String.ends_with?(String.trim(input), "\\") ->
           {:need_more, "Line continuation"}
-        
+
         incomplete_brackets?(input) ->
           {:need_more, "Incomplete brackets"}
-        
+
         String.trim(input) == "syntax_error" ->
           {:error, "Mock syntax error"}
-        
+
         true ->
           :complete
       end
@@ -121,7 +122,7 @@ defmodule Pythelix.ScriptTestHelpers do
       close_parens = String.graphemes(input) |> Enum.count(&(&1 == ")"))
       open_brackets = String.graphemes(input) |> Enum.count(&(&1 == "["))
       close_brackets = String.graphemes(input) |> Enum.count(&(&1 == "]"))
-      
+
       open_parens != close_parens || open_brackets != close_brackets
     end
   end
@@ -166,11 +167,11 @@ defmodule Pythelix.ScriptTestHelpers do
       {:get_messages, sender} ->
         send(sender, {:messages, Enum.reverse(messages)})
         message_collector(messages)
-        
+
       {:clear, sender} ->
         send(sender, :cleared)
         message_collector([])
-        
+
       message ->
         message_collector([message | messages])
     end
@@ -181,6 +182,7 @@ defmodule Pythelix.ScriptTestHelpers do
   """
   def get_messages(collector_pid) do
     send(collector_pid, {:get_messages, self()})
+
     receive do
       {:messages, messages} -> messages
     after
@@ -193,6 +195,7 @@ defmodule Pythelix.ScriptTestHelpers do
   """
   def clear_messages(collector_pid) do
     send(collector_pid, {:clear, self()})
+
     receive do
       :cleared -> :ok
     after
@@ -208,7 +211,7 @@ defmodule Pythelix.ScriptTestHelpers do
       receive do
         unquote(pattern) -> :ok
       after
-        unquote(timeout) -> 
+        unquote(timeout) ->
           flunk("Expected to receive #{inspect(unquote(pattern))} within #{unquote(timeout)}ms")
       end
     end

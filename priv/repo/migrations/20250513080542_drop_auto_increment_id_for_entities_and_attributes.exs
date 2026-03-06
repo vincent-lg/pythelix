@@ -7,8 +7,13 @@ defmodule Pythelix.Repo.Migrations.DropAutoIncrementIdForEntitiesAndAttributes d
     create table(:entities, primary_key: false) do
       add :gen_id, :integer, primary_key: true
       add :key, :text
-      add :parent_id, references(:entities, column: :gen_id, type: :integer, on_delete: :nilify_all)
-      add :location_id, references(:entities, column: :gen_id, type: :integer, on_delete: :nilify_all)
+
+      add :parent_id,
+          references(:entities, column: :gen_id, type: :integer, on_delete: :nilify_all)
+
+      add :location_id,
+          references(:entities, column: :gen_id, type: :integer, on_delete: :nilify_all)
+
       add :methods, :binary
 
       timestamps(type: :utc_datetime)
@@ -24,7 +29,9 @@ defmodule Pythelix.Repo.Migrations.DropAutoIncrementIdForEntitiesAndAttributes d
       add :gen_id, :integer, primary_key: true
       add :name, :text
       add :value, :binary
-      add :entity_gen_id, references(:entities, column: :gen_id, type: :integer, on_delete: :delete_all)
+
+      add :entity_gen_id,
+          references(:entities, column: :gen_id, type: :integer, on_delete: :delete_all)
 
       timestamps(type: :utc_datetime)
     end

@@ -8,7 +8,9 @@ defmodule Pythelix.Game.CalendarTest do
   defp create_custom_calendar do
     Pythelix.World.apply(:static)
 
-    {:ok, _} = Record.create_entity(key: "test_calendar", parent: Record.get_entity("generic/calendar"))
+    {:ok, _} =
+      Record.create_entity(key: "test_calendar", parent: Record.get_entity("generic/calendar"))
+
     Record.set_attribute("test_calendar", "type", "custom")
     Record.set_attribute("test_calendar", "offset", 0)
 
@@ -28,7 +30,9 @@ defmodule Pythelix.Game.CalendarTest do
   defp create_calendar_with_offset do
     Pythelix.World.apply(:static)
 
-    {:ok, _} = Record.create_entity(key: "offset_calendar", parent: Record.get_entity("generic/calendar"))
+    {:ok, _} =
+      Record.create_entity(key: "offset_calendar", parent: Record.get_entity("generic/calendar"))
+
     Record.set_attribute("offset_calendar", "type", "custom")
     Record.set_attribute("offset_calendar", "offset", 0)
 
@@ -47,7 +51,9 @@ defmodule Pythelix.Game.CalendarTest do
   defp create_gregorian_calendar do
     Pythelix.World.apply(:static)
 
-    {:ok, _} = Record.create_entity(key: "greg_calendar", parent: Record.get_entity("generic/calendar"))
+    {:ok, _} =
+      Record.create_entity(key: "greg_calendar", parent: Record.get_entity("generic/calendar"))
+
     Record.set_attribute("greg_calendar", "type", "gregorian")
     Record.set_attribute("greg_calendar", "offset", 0)
     Record.get_entity("greg_calendar")
@@ -259,7 +265,12 @@ defmodule Pythelix.Game.CalendarTest do
     defp create_calendar_with_cyclic_unit do
       Pythelix.World.apply(:static)
 
-      {:ok, _} = Record.create_entity(key: "cyclic_calendar", parent: Record.get_entity("generic/calendar"))
+      {:ok, _} =
+        Record.create_entity(
+          key: "cyclic_calendar",
+          parent: Record.get_entity("generic/calendar")
+        )
+
       Record.set_attribute("cyclic_calendar", "type", "custom")
       Record.set_attribute("cyclic_calendar", "offset", 0)
 
@@ -270,7 +281,13 @@ defmodule Pythelix.Game.CalendarTest do
         "day" => %{"__base" => "hour", "__factor" => 24, "__start" => 1},
         "month" => %{"__base" => "day", "__factor" => 30, "__start" => 1},
         "year" => %{"__base" => "month", "__factor" => 12, "__start" => 1},
-        "weekday" => %{"__base" => "day", "__cycle" => 7, "__start" => 1, "__offset" => 0, "__cyclic" => true}
+        "weekday" => %{
+          "__base" => "day",
+          "__cycle" => 7,
+          "__start" => 1,
+          "__offset" => 0,
+          "__cyclic" => true
+        }
       }
 
       Record.set_attribute("cyclic_calendar", "units", units)
@@ -340,7 +357,12 @@ defmodule Pythelix.Game.CalendarTest do
     test "cyclic unit with offset shifts the cycle" do
       Pythelix.World.apply(:static)
 
-      {:ok, _} = Record.create_entity(key: "offset_cyclic_cal", parent: Record.get_entity("generic/calendar"))
+      {:ok, _} =
+        Record.create_entity(
+          key: "offset_cyclic_cal",
+          parent: Record.get_entity("generic/calendar")
+        )
+
       Record.set_attribute("offset_cyclic_cal", "type", "custom")
       Record.set_attribute("offset_cyclic_cal", "offset", 0)
 
@@ -348,7 +370,13 @@ defmodule Pythelix.Game.CalendarTest do
         "second" => %{"__name" => "base"},
         "hour" => %{"__base" => "second", "__factor" => 3600, "__start" => 0},
         "day" => %{"__base" => "hour", "__factor" => 24, "__start" => 1},
-        "weekday" => %{"__base" => "day", "__cycle" => 7, "__start" => 1, "__offset" => 3, "__cyclic" => true}
+        "weekday" => %{
+          "__base" => "day",
+          "__cycle" => 7,
+          "__start" => 1,
+          "__offset" => 3,
+          "__cyclic" => true
+        }
       }
 
       Record.set_attribute("offset_cyclic_cal", "units", units)

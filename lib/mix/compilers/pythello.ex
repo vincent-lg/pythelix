@@ -5,11 +5,12 @@ defmodule Mix.Tasks.Compile.Pythello do
   @recursive true
 
   def run(_args) do
-    #{:ok, _} = Application.load(:pythelix)
+    # {:ok, _} = Application.load(:pythelix)
 
     modules =
       :pythelix
-      |> Application.spec(:modules)             # all modules in this app
+      # all modules in this app
+      |> Application.spec(:modules)
       |> Enum.filter(&is_pythello?/1)
 
     content = generate_registry_module(modules)

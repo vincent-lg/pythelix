@@ -17,10 +17,11 @@ defmodule Pythelix.Scripting.Namespace.Module.NamesTest do
       Record.set_attribute("ng_apple2", "name", "apple")
       Record.set_attribute("ng_apple3", "name", "apple")
 
-      script = run("""
-      items = !ng_room!.contents
-      result = names.group(items)
-      """)
+      script =
+        run("""
+        items = !ng_room!.contents
+        result = names.group(items)
+        """)
 
       result = Script.get_variable_value(script, "result")
       assert result == ["apple"]
@@ -33,10 +34,11 @@ defmodule Pythelix.Scripting.Namespace.Module.NamesTest do
       Record.set_attribute("ng_sword", "name", "sword")
       Record.set_attribute("ng_shield", "name", "shield")
 
-      script = run("""
-      items = !ng_diff_room!.contents
-      result = names.group(items)
-      """)
+      script =
+        run("""
+        items = !ng_diff_room!.contents
+        result = names.group(items)
+        """)
 
       result = Script.get_variable_value(script, "result")
       assert length(result) == 2
@@ -45,9 +47,10 @@ defmodule Pythelix.Scripting.Namespace.Module.NamesTest do
     end
 
     test "empty list returns an empty list" do
-      script = run("""
-      result = names.group([])
-      """)
+      script =
+        run("""
+        result = names.group([])
+        """)
 
       result = Script.get_variable_value(script, "result")
       assert result == []
@@ -66,10 +69,11 @@ defmodule Pythelix.Scripting.Namespace.Module.NamesTest do
       Record.set_attribute("ng_order_key", "name", "key")
       Record.set_attribute("ng_order_apple2", "name", "apple")
 
-      script = run("""
-      items = !ng_order_room!.contents
-      result = names.group(items)
-      """)
+      script =
+        run("""
+        items = !ng_order_room!.contents
+        result = names.group(items)
+        """)
 
       result = Script.get_variable_value(script, "result")
       # sword first, apple second (first occurrence), key third
@@ -89,10 +93,11 @@ defmodule Pythelix.Scripting.Namespace.Module.NamesTest do
       Record.set_attribute("ng_stack_coin", "name", "gold coin")
       Record.add_stackable(room, Record.get_entity("ng_stack_coin"), 100)
 
-      script = run("""
-      items = !ng_stack_room!.contents
-      result = names.group(items)
-      """)
+      script =
+        run("""
+        items = !ng_stack_room!.contents
+        result = names.group(items)
+        """)
 
       result = Script.get_variable_value(script, "result")
       assert result == ["gold coin"]
@@ -107,10 +112,11 @@ defmodule Pythelix.Scripting.Namespace.Module.NamesTest do
       Record.set_attribute("ng_mix_coin", "name", "gold coin")
       Record.add_stackable(room, Record.get_entity("ng_mix_coin"), 50)
 
-      script = run("""
-      items = !ng_mix_room!.contents
-      result = names.group(items)
-      """)
+      script =
+        run("""
+        items = !ng_mix_room!.contents
+        result = names.group(items)
+        """)
 
       result = Script.get_variable_value(script, "result")
       assert length(result) == 2
@@ -137,20 +143,33 @@ defmodule Pythelix.Scripting.Namespace.Module.NamesTest do
       endif
       return f"{quantity} {self.name}s"
       """
-      Record.set_method("ng_nf2_apple1", "__namefor__",
-        [{"viewer", [index: 0, type: :entity]}, {"quantity", [index: 1, type: :int, default: 1]}],
-        namefor_code)
-      Record.set_method("ng_nf2_apple2", "__namefor__",
-        [{"viewer", [index: 0, type: :entity]}, {"quantity", [index: 1, type: :int, default: 1]}],
-        namefor_code)
-      Record.set_method("ng_nf2_apple3", "__namefor__",
-        [{"viewer", [index: 0, type: :entity]}, {"quantity", [index: 1, type: :int, default: 1]}],
-        namefor_code)
 
-      script = run("""
-      items = !ng_nf2_room!.contents
-      result = names.group(items, viewer=!ng_nf2_player!)
-      """)
+      Record.set_method(
+        "ng_nf2_apple1",
+        "__namefor__",
+        [{"viewer", [index: 0, type: :entity]}, {"quantity", [index: 1, type: :int, default: 1]}],
+        namefor_code
+      )
+
+      Record.set_method(
+        "ng_nf2_apple2",
+        "__namefor__",
+        [{"viewer", [index: 0, type: :entity]}, {"quantity", [index: 1, type: :int, default: 1]}],
+        namefor_code
+      )
+
+      Record.set_method(
+        "ng_nf2_apple3",
+        "__namefor__",
+        [{"viewer", [index: 0, type: :entity]}, {"quantity", [index: 1, type: :int, default: 1]}],
+        namefor_code
+      )
+
+      script =
+        run("""
+        items = !ng_nf2_room!.contents
+        result = names.group(items, viewer=!ng_nf2_player!)
+        """)
 
       result = Script.get_variable_value(script, "result")
       assert result == ["3 apples"]
@@ -165,17 +184,25 @@ defmodule Pythelix.Scripting.Namespace.Module.NamesTest do
       Record.set_attribute("ng_nf1_apple2", "name", "apple")
 
       # __namefor__ with only 1 arg: returns a custom name
-      Record.set_method("ng_nf1_apple1", "__namefor__",
+      Record.set_method(
+        "ng_nf1_apple1",
+        "__namefor__",
         [{"viewer", [index: 0, type: :entity]}],
-        ~s(return "red apple"))
-      Record.set_method("ng_nf1_apple2", "__namefor__",
-        [{"viewer", [index: 0, type: :entity]}],
-        ~s(return "red apple"))
+        ~s(return "red apple")
+      )
 
-      script = run("""
-      items = !ng_nf1_room!.contents
-      result = names.group(items, viewer=!ng_nf1_player!)
-      """)
+      Record.set_method(
+        "ng_nf1_apple2",
+        "__namefor__",
+        [{"viewer", [index: 0, type: :entity]}],
+        ~s(return "red apple")
+      )
+
+      script =
+        run("""
+        items = !ng_nf1_room!.contents
+        result = names.group(items, viewer=!ng_nf1_player!)
+        """)
 
       result = Script.get_variable_value(script, "result")
       # Both apples have __namefor__ returning "red apple" with 1 arg.
@@ -189,19 +216,24 @@ defmodule Pythelix.Scripting.Namespace.Module.NamesTest do
       {:ok, _player} = Record.create_entity(key: "ng_nf_single_player")
       {:ok, _sword} = Record.create_entity(key: "ng_nf_single_sword", location: room)
       Record.set_attribute("ng_nf_single_sword", "name", "sword")
-      Record.set_method("ng_nf_single_sword", "__namefor__",
+
+      Record.set_method(
+        "ng_nf_single_sword",
+        "__namefor__",
         [{"viewer", [index: 0, type: :entity]}, {"quantity", [index: 1, type: :int, default: 1]}],
         """
         if quantity == 1:
             return self.name
         endif
         return f"{quantity} {self.name}s"
-        """)
+        """
+      )
 
-      script = run("""
-      items = !ng_nf_single_room!.contents
-      result = names.group(items, viewer=!ng_nf_single_player!)
-      """)
+      script =
+        run("""
+        items = !ng_nf_single_room!.contents
+        result = names.group(items, viewer=!ng_nf_single_player!)
+        """)
 
       result = Script.get_variable_value(script, "result")
       assert result == ["sword"]
@@ -217,17 +249,25 @@ defmodule Pythelix.Scripting.Namespace.Module.NamesTest do
       Record.set_attribute("ng_noview_apple2", "name", "apple")
 
       # Even with __namefor__ defined, it should not be called without viewer
-      Record.set_method("ng_noview_apple1", "__namefor__",
+      Record.set_method(
+        "ng_noview_apple1",
+        "__namefor__",
         [{"viewer", [index: 0, type: :entity]}],
-        ~s(return "custom name"))
-      Record.set_method("ng_noview_apple2", "__namefor__",
-        [{"viewer", [index: 0, type: :entity]}],
-        ~s(return "custom name"))
+        ~s(return "custom name")
+      )
 
-      script = run("""
-      items = !ng_noview_room!.contents
-      result = names.group(items)
-      """)
+      Record.set_method(
+        "ng_noview_apple2",
+        "__namefor__",
+        [{"viewer", [index: 0, type: :entity]}],
+        ~s(return "custom name")
+      )
+
+      script =
+        run("""
+        items = !ng_noview_room!.contents
+        result = names.group(items)
+        """)
 
       result = Script.get_variable_value(script, "result")
       # Without viewer, raw "apple" attribute is used, not "custom name"
@@ -245,10 +285,11 @@ defmodule Pythelix.Scripting.Namespace.Module.NamesTest do
       Record.set_attribute("ng_filter_sword1", "category", "weapon")
       Record.set_attribute("ng_filter_sword2", "category", "weapon")
 
-      script = run("""
-      items = !ng_filter_room!.contents
-      result = names.group(items, filter="category")
-      """)
+      script =
+        run("""
+        items = !ng_filter_room!.contents
+        result = names.group(items, filter="category")
+        """)
 
       result = Script.get_variable_value(script, "result")
       assert result == ["weapon"]
@@ -265,10 +306,11 @@ defmodule Pythelix.Scripting.Namespace.Module.NamesTest do
       Record.set_attribute("ng_sm_apple2", "name", "red apple")
       Record.set_attribute("ng_sm_sword", "name", "sword")
 
-      script = run("""
-      matches = search.match(!ng_sm_room!, "red")
-      result = names.group(matches)
-      """)
+      script =
+        run("""
+        matches = search.match(!ng_sm_room!, "red")
+        result = names.group(matches)
+        """)
 
       result = Script.get_variable_value(script, "result")
       assert result == ["red apple"]
@@ -282,20 +324,26 @@ defmodule Pythelix.Scripting.Namespace.Module.NamesTest do
       {:ok, _coin} = Record.create_entity(key: "ng_sqty_coin")
       Record.set_attribute("ng_sqty_coin", "stackable", true)
       Record.set_attribute("ng_sqty_coin", "name", "gold coin")
-      Record.set_method("ng_sqty_coin", "__namefor__",
+
+      Record.set_method(
+        "ng_sqty_coin",
+        "__namefor__",
         [{"viewer", [index: 0, type: :entity]}, {"quantity", [index: 1, type: :int, default: 1]}],
         """
         if quantity == 1:
             return "gold coin"
         endif
         return f"{quantity} gold coins"
-        """)
+        """
+      )
+
       Record.add_stackable(room, Record.get_entity("ng_sqty_coin"), 100)
 
-      script = run("""
-      items = !ng_sqty_room!.contents
-      result = names.group(items, viewer=!ng_sqty_player!)
-      """)
+      script =
+        run("""
+        items = !ng_sqty_room!.contents
+        result = names.group(items, viewer=!ng_sqty_player!)
+        """)
 
       result = Script.get_variable_value(script, "result")
       assert result == ["100 gold coins"]
@@ -308,9 +356,10 @@ defmodule Pythelix.Scripting.Namespace.Module.NamesTest do
       {:ok, _v} = Record.create_entity(key: "ne_viewer")
       Record.set_attribute("ne_entity", "name", "sword")
 
-      script = run_ok("""
-      result = names.eval(!ne_entity!, !ne_viewer!)
-      """)
+      script =
+        run_ok("""
+        result = names.eval(!ne_entity!, !ne_viewer!)
+        """)
 
       assert Script.get_variable_value(script, "result") == "sword"
     end
@@ -319,13 +368,18 @@ defmodule Pythelix.Scripting.Namespace.Module.NamesTest do
       {:ok, _e} = Record.create_entity(key: "ne_nf_entity")
       {:ok, _v} = Record.create_entity(key: "ne_nf_viewer")
       Record.set_attribute("ne_nf_entity", "name", "sword")
-      Record.set_method("ne_nf_entity", "__namefor__",
-        [{"viewer", [index: 0, type: :entity]}],
-        ~s(return "custom name"))
 
-      script = run_ok("""
-      result = names.eval(!ne_nf_entity!, !ne_nf_viewer!)
-      """)
+      Record.set_method(
+        "ne_nf_entity",
+        "__namefor__",
+        [{"viewer", [index: 0, type: :entity]}],
+        ~s(return "custom name")
+      )
+
+      script =
+        run_ok("""
+        result = names.eval(!ne_nf_entity!, !ne_nf_viewer!)
+        """)
 
       assert Script.get_variable_value(script, "result") == "custom name"
     end
@@ -334,18 +388,23 @@ defmodule Pythelix.Scripting.Namespace.Module.NamesTest do
       {:ok, _e} = Record.create_entity(key: "ne_qty_entity")
       {:ok, _v} = Record.create_entity(key: "ne_qty_viewer")
       Record.set_attribute("ne_qty_entity", "name", "apple")
-      Record.set_method("ne_qty_entity", "__namefor__",
+
+      Record.set_method(
+        "ne_qty_entity",
+        "__namefor__",
         [{"viewer", [index: 0, type: :entity]}, {"quantity", [index: 1, type: :int, default: 1]}],
         """
         if quantity == 1:
             return self.name
         endif
         return f"{quantity} {self.name}s"
-        """)
+        """
+      )
 
-      script = run_ok("""
-      result = names.eval(!ne_qty_entity!, !ne_qty_viewer!, quantity=3)
-      """)
+      script =
+        run_ok("""
+        result = names.eval(!ne_qty_entity!, !ne_qty_viewer!, quantity=3)
+        """)
 
       assert Script.get_variable_value(script, "result") == "3 apples"
     end
@@ -356,9 +415,13 @@ defmodule Pythelix.Scripting.Namespace.Module.NamesTest do
       {:ok, room} = Record.create_entity(key: "nn_room")
       {:ok, _char} = Record.create_entity(key: "nn_char", location: room)
       Record.set_attribute("nn_char", "name", "Alice")
-      Record.set_method("nn_char", "msg",
+
+      Record.set_method(
+        "nn_char",
+        "msg",
         [{"text", [index: 0, type: :str]}],
-        ~s(self.last_msg = text))
+        ~s(self.last_msg = text)
+      )
 
       run_ok("""
       names.notify(!nn_char!, "Hello there")
@@ -375,9 +438,12 @@ defmodule Pythelix.Scripting.Namespace.Module.NamesTest do
       Record.set_attribute("nn_fstr_receiver", "name", "Bob")
 
       # receiver gets a msg method that stores the text
-      Record.set_method("nn_fstr_receiver", "msg",
+      Record.set_method(
+        "nn_fstr_receiver",
+        "msg",
         [{"text", [index: 0, type: :str]}],
-        ~s(self.last_msg = text))
+        ~s(self.last_msg = text)
+      )
 
       run_ok("""
       giver = !nn_fstr_giver!
@@ -393,13 +459,20 @@ defmodule Pythelix.Scripting.Namespace.Module.NamesTest do
       {:ok, _actor} = Record.create_entity(key: "nn_nf_actor", location: room)
       {:ok, _viewer} = Record.create_entity(key: "nn_nf_viewer", location: room)
       Record.set_attribute("nn_nf_actor", "name", "Alice")
-      Record.set_method("nn_nf_actor", "__namefor__",
-        [{"viewer", [index: 0, type: :entity]}],
-        ~s(return "a mysterious figure"))
 
-      Record.set_method("nn_nf_viewer", "msg",
+      Record.set_method(
+        "nn_nf_actor",
+        "__namefor__",
+        [{"viewer", [index: 0, type: :entity]}],
+        ~s(return "a mysterious figure")
+      )
+
+      Record.set_method(
+        "nn_nf_viewer",
+        "msg",
         [{"text", [index: 0, type: :str]}],
-        ~s(self.last_msg = text))
+        ~s(self.last_msg = text)
+      )
 
       run_ok("""
       actor = !nn_nf_actor!
@@ -427,13 +500,19 @@ defmodule Pythelix.Scripting.Namespace.Module.NamesTest do
       Record.set_attribute("nn_vis_actor", "name", "Ghost")
 
       # Actor is invisible to viewer
-      Record.set_method("nn_vis_actor", "__visible__",
+      Record.set_method(
+        "nn_vis_actor",
+        "__visible__",
         [{"viewer", [index: 0, type: :entity]}],
-        ~s(return False))
+        ~s(return False)
+      )
 
-      Record.set_method("nn_vis_viewer", "msg",
+      Record.set_method(
+        "nn_vis_viewer",
+        "msg",
         [{"text", [index: 0, type: :str]}],
-        ~s(self.last_msg = text))
+        ~s(self.last_msg = text)
+      )
 
       run_ok("""
       actor = !nn_vis_actor!
@@ -450,13 +529,19 @@ defmodule Pythelix.Scripting.Namespace.Module.NamesTest do
       {:ok, _viewer} = Record.create_entity(key: "nn_novis_viewer", location: room)
       Record.set_attribute("nn_novis_actor", "name", "Ghost")
 
-      Record.set_method("nn_novis_actor", "__visible__",
+      Record.set_method(
+        "nn_novis_actor",
+        "__visible__",
         [{"viewer", [index: 0, type: :entity]}],
-        ~s(return False))
+        ~s(return False)
+      )
 
-      Record.set_method("nn_novis_viewer", "msg",
+      Record.set_method(
+        "nn_novis_viewer",
+        "msg",
         [{"text", [index: 0, type: :str]}],
-        ~s(self.last_msg = text))
+        ~s(self.last_msg = text)
+      )
 
       run_ok("""
       actor = !nn_novis_actor!
@@ -477,9 +562,12 @@ defmodule Pythelix.Scripting.Namespace.Module.NamesTest do
       Record.set_attribute("nb_char2", "name", "Bob")
 
       for key <- ["nb_char1", "nb_char2"] do
-        Record.set_method(key, "msg",
+        Record.set_method(
+          key,
+          "msg",
           [{"text", [index: 0, type: :str]}],
-          ~s(self.last_msg = text))
+          ~s(self.last_msg = text)
+        )
       end
 
       run_ok("""
@@ -498,9 +586,12 @@ defmodule Pythelix.Scripting.Namespace.Module.NamesTest do
       Record.set_attribute("nb_excl_listener", "name", "Bob")
 
       for key <- ["nb_excl_speaker", "nb_excl_listener"] do
-        Record.set_method(key, "msg",
+        Record.set_method(
+          key,
+          "msg",
           [{"text", [index: 0, type: :str]}],
-          ~s(self.last_msg = text))
+          ~s(self.last_msg = text)
+        )
       end
 
       run_ok("""
@@ -523,9 +614,12 @@ defmodule Pythelix.Scripting.Namespace.Module.NamesTest do
       Record.set_attribute("nb_noexcl_listener", "name", "Bob")
 
       for key <- ["nb_noexcl_speaker", "nb_noexcl_listener"] do
-        Record.set_method(key, "msg",
+        Record.set_method(
+          key,
+          "msg",
           [{"text", [index: 0, type: :str]}],
-          ~s(self.last_msg = text))
+          ~s(self.last_msg = text)
+        )
       end
 
       run_ok("""
@@ -546,9 +640,12 @@ defmodule Pythelix.Scripting.Namespace.Module.NamesTest do
       Record.set_attribute("nb_nomsg_char", "name", "Alice")
 
       # Only char has msg
-      Record.set_method("nb_nomsg_char", "msg",
+      Record.set_method(
+        "nb_nomsg_char",
+        "msg",
         [{"text", [index: 0, type: :str]}],
-        ~s(self.last_msg = text))
+        ~s(self.last_msg = text)
+      )
 
       run_ok("""
       names.broadcast(!nb_nomsg_room!, "A bell rings.")
@@ -556,7 +653,9 @@ defmodule Pythelix.Scripting.Namespace.Module.NamesTest do
 
       # Object has no msg, should be unaffected
       assert Record.get_attribute(Record.get_entity("nb_nomsg_obj"), "last_msg") == nil
-      assert Record.get_attribute(Record.get_entity("nb_nomsg_char"), "last_msg") == "A bell rings."
+
+      assert Record.get_attribute(Record.get_entity("nb_nomsg_char"), "last_msg") ==
+               "A bell rings."
     end
 
     test "uses __namefor__ per viewer in broadcast" do
@@ -570,19 +669,20 @@ defmodule Pythelix.Scripting.Namespace.Module.NamesTest do
       Record.set_attribute("nb_nf_player", "name", "Player")
 
       # Actor is seen differently by admins vs players
-      Record.set_method("nb_nf_actor", "__namefor__",
-        [{"viewer", [index: 0, type: :entity]}],
-        """
-        if viewer.is_admin:
-            return "Alice (disguised)"
-        endif
-        return "a masked figure"
-        """)
+      Record.set_method("nb_nf_actor", "__namefor__", [{"viewer", [index: 0, type: :entity]}], """
+      if viewer.is_admin:
+          return "Alice (disguised)"
+      endif
+      return "a masked figure"
+      """)
 
       for key <- ["nb_nf_admin", "nb_nf_player"] do
-        Record.set_method(key, "msg",
+        Record.set_method(
+          key,
+          "msg",
           [{"text", [index: 0, type: :str]}],
-          ~s(self.last_msg = text))
+          ~s(self.last_msg = text)
+        )
       end
 
       run_ok("""
@@ -593,6 +693,7 @@ defmodule Pythelix.Scripting.Namespace.Module.NamesTest do
       # Admin sees the real name
       assert Record.get_attribute(Record.get_entity("nb_nf_admin"), "last_msg") ==
                "Alice (disguised) waves."
+
       # Player sees the disguise
       assert Record.get_attribute(Record.get_entity("nb_nf_player"), "last_msg") ==
                "a masked figure waves."
@@ -608,9 +709,12 @@ defmodule Pythelix.Scripting.Namespace.Module.NamesTest do
       Record.set_attribute("nb_multi_observer", "name", "Eve")
 
       for key <- ["nb_multi_giver", "nb_multi_receiver", "nb_multi_observer"] do
-        Record.set_method(key, "msg",
+        Record.set_method(
+          key,
+          "msg",
           [{"text", [index: 0, type: :str]}],
-          ~s(self.last_msg = text))
+          ~s(self.last_msg = text)
+        )
       end
 
       run_ok("""
@@ -635,13 +739,19 @@ defmodule Pythelix.Scripting.Namespace.Module.NamesTest do
       Record.set_attribute("nb_invis_viewer", "name", "Bob")
 
       # Actor is invisible to everyone
-      Record.set_method("nb_invis_actor", "__visible__",
+      Record.set_method(
+        "nb_invis_actor",
+        "__visible__",
         [{"viewer", [index: 0, type: :entity]}],
-        ~s(return False))
+        ~s(return False)
+      )
 
-      Record.set_method("nb_invis_viewer", "msg",
+      Record.set_method(
+        "nb_invis_viewer",
+        "msg",
         [{"text", [index: 0, type: :str]}],
-        ~s(self.last_msg = text))
+        ~s(self.last_msg = text)
+      )
 
       run_ok("""
       actor = !nb_invis_actor!

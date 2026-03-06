@@ -61,9 +61,14 @@ defmodule Pythelix.Scripting.Entity.ParentageTest do
     test "virtual second level with branch, check children" do
       {:ok, parent} = Record.create_entity(virtual: true, key: "parent")
       {:ok, child1} = Record.create_entity(virtual: true, key: "child1", parent: parent)
-      {:ok, grand_child1} = Record.create_entity(virtual: true, key: "grand_child1", parent: child1)
+
+      {:ok, grand_child1} =
+        Record.create_entity(virtual: true, key: "grand_child1", parent: child1)
+
       {:ok, child2} = Record.create_entity(virtual: true, key: "child2", parent: parent)
-      {:ok, grand_child2} = Record.create_entity(virtual: true, key: "grand_child2", parent: child2)
+
+      {:ok, grand_child2} =
+        Record.create_entity(virtual: true, key: "grand_child2", parent: child2)
 
       assert Record.get_children(grand_child1) == []
       assert Record.get_children(grand_child2) == []
@@ -125,9 +130,14 @@ defmodule Pythelix.Scripting.Entity.ParentageTest do
     test "virtual second level with branch, check ancestors" do
       {:ok, parent} = Record.create_entity(virtual: true, key: "parent")
       {:ok, child1} = Record.create_entity(virtual: true, key: "child1", parent: parent)
-      {:ok, grand_child1} = Record.create_entity(virtual: true, key: "grand_child1", parent: child1)
+
+      {:ok, grand_child1} =
+        Record.create_entity(virtual: true, key: "grand_child1", parent: child1)
+
       {:ok, child2} = Record.create_entity(virtual: true, key: "child2", parent: parent)
-      {:ok, grand_child2} = Record.create_entity(virtual: true, key: "grand_child2", parent: child2)
+
+      {:ok, grand_child2} =
+        Record.create_entity(virtual: true, key: "grand_child2", parent: child2)
 
       assert Enum.sort(Record.get_ancestors(grand_child1)) == Enum.sort([child1, parent])
       assert Enum.sort(Record.get_ancestors(grand_child2)) == Enum.sort([child2, parent])
@@ -145,7 +155,11 @@ defmodule Pythelix.Scripting.Entity.ParentageTest do
       child = Record.set_attribute(child.id, "other", 5)
 
       assert Record.get_attributes(parent, raw_parents: true) == %{"test" => 3}
-      assert Record.get_attributes(child, raw_parents: true) == %{"other" => 5, "test" => {:parent, parent.id}}
+
+      assert Record.get_attributes(child, raw_parents: true) == %{
+               "other" => 5,
+               "test" => {:parent, parent.id}
+             }
     end
 
     test "virtual first level, check child attributes" do
@@ -155,7 +169,11 @@ defmodule Pythelix.Scripting.Entity.ParentageTest do
       child = Record.set_attribute(child.key, "other", 5)
 
       assert Record.get_attributes(parent, raw_parents: true) == %{"test" => 3}
-      assert Record.get_attributes(child, raw_parents: true) == %{"other" => 5, "test" => {:parent, parent.key}}
+
+      assert Record.get_attributes(child, raw_parents: true) == %{
+               "other" => 5,
+               "test" => {:parent, parent.key}
+             }
     end
 
     test "stored second level, check child attributes" do
@@ -166,8 +184,17 @@ defmodule Pythelix.Scripting.Entity.ParentageTest do
       {:ok, grand_child} = Record.create_entity(parent: child)
       grand_child = Record.set_attribute(grand_child.id, "attr3", 3)
 
-      assert Record.get_attributes(grand_child, raw_parents: true) == %{"attr1" => {:parent, parent.id}, "attr2" => {:parent, child.id}, "attr3" => 3}
-      assert Record.get_attributes(child, raw_parents: true) == %{"attr1" => {:parent, parent.id}, "attr2" => 2}
+      assert Record.get_attributes(grand_child, raw_parents: true) == %{
+               "attr1" => {:parent, parent.id},
+               "attr2" => {:parent, child.id},
+               "attr3" => 3
+             }
+
+      assert Record.get_attributes(child, raw_parents: true) == %{
+               "attr1" => {:parent, parent.id},
+               "attr2" => 2
+             }
+
       assert Record.get_attributes(parent, raw_parents: true) == %{"attr1" => 1}
     end
 
@@ -179,8 +206,17 @@ defmodule Pythelix.Scripting.Entity.ParentageTest do
       {:ok, grand_child} = Record.create_entity(virtual: true, parent: child, key: "grand_child")
       grand_child = Record.set_attribute(grand_child.key, "attr3", 3)
 
-      assert Record.get_attributes(grand_child, raw_parents: true) == %{"attr1" => {:parent, parent.key}, "attr2" => {:parent, child.key}, "attr3" => 3}
-      assert Record.get_attributes(child, raw_parents: true) == %{"attr1" => {:parent, parent.key}, "attr2" => 2}
+      assert Record.get_attributes(grand_child, raw_parents: true) == %{
+               "attr1" => {:parent, parent.key},
+               "attr2" => {:parent, child.key},
+               "attr3" => 3
+             }
+
+      assert Record.get_attributes(child, raw_parents: true) == %{
+               "attr1" => {:parent, parent.key},
+               "attr2" => 2
+             }
+
       assert Record.get_attributes(parent, raw_parents: true) == %{"attr1" => 1}
     end
 
@@ -196,10 +232,28 @@ defmodule Pythelix.Scripting.Entity.ParentageTest do
       {:ok, grand_child2} = Record.create_entity(parent: child2)
       grand_child2 = Record.set_attribute(grand_child2.id, "attr5", 5)
 
-      assert Record.get_attributes(grand_child1, raw_parents: true) == %{"attr1" => {:parent, parent.id}, "attr2" => {:parent, child1.id}, "attr3" => 3}
-      assert Record.get_attributes(child1, raw_parents: true) == %{"attr1" => {:parent, parent.id}, "attr2" => 2}
-      assert Record.get_attributes(grand_child2, raw_parents: true) == %{"attr1" => {:parent, parent.id}, "attr4" => {:parent, child2.id}, "attr5" => 5}
-      assert Record.get_attributes(child2, raw_parents: true) == %{"attr1" => {:parent, parent.id}, "attr4" => 4}
+      assert Record.get_attributes(grand_child1, raw_parents: true) == %{
+               "attr1" => {:parent, parent.id},
+               "attr2" => {:parent, child1.id},
+               "attr3" => 3
+             }
+
+      assert Record.get_attributes(child1, raw_parents: true) == %{
+               "attr1" => {:parent, parent.id},
+               "attr2" => 2
+             }
+
+      assert Record.get_attributes(grand_child2, raw_parents: true) == %{
+               "attr1" => {:parent, parent.id},
+               "attr4" => {:parent, child2.id},
+               "attr5" => 5
+             }
+
+      assert Record.get_attributes(child2, raw_parents: true) == %{
+               "attr1" => {:parent, parent.id},
+               "attr4" => 4
+             }
+
       assert Record.get_attributes(parent, raw_parents: true) == %{"attr1" => 1}
     end
 
@@ -208,17 +262,41 @@ defmodule Pythelix.Scripting.Entity.ParentageTest do
       parent = Record.set_attribute(parent.key, "attr1", 1)
       {:ok, child1} = Record.create_entity(virtual: true, key: "child1", parent: parent)
       child1 = Record.set_attribute(child1.key, "attr2", 2)
-      {:ok, grand_child1} = Record.create_entity(virtual: true, key: "grand_child1", parent: child1)
+
+      {:ok, grand_child1} =
+        Record.create_entity(virtual: true, key: "grand_child1", parent: child1)
+
       grand_child1 = Record.set_attribute(grand_child1.key, "attr3", 3)
       {:ok, child2} = Record.create_entity(virtual: true, key: "child2", parent: parent)
       child2 = Record.set_attribute(child2.key, "attr4", 4)
-      {:ok, grand_child2} = Record.create_entity(virtual: true, key: "grand_child2", parent: child2)
+
+      {:ok, grand_child2} =
+        Record.create_entity(virtual: true, key: "grand_child2", parent: child2)
+
       grand_child2 = Record.set_attribute(grand_child2.key, "attr5", 5)
 
-      assert Record.get_attributes(grand_child1, raw_parents: true) == %{"attr1" => {:parent, parent.key}, "attr2" => {:parent, child1.key}, "attr3" => 3}
-      assert Record.get_attributes(child1, raw_parents: true) == %{"attr1" => {:parent, parent.key}, "attr2" => 2}
-      assert Record.get_attributes(grand_child2, raw_parents: true) == %{"attr1" => {:parent, parent.key}, "attr4" => {:parent, child2.key}, "attr5" => 5}
-      assert Record.get_attributes(child2, raw_parents: true) == %{"attr1" => {:parent, parent.key}, "attr4" => 4}
+      assert Record.get_attributes(grand_child1, raw_parents: true) == %{
+               "attr1" => {:parent, parent.key},
+               "attr2" => {:parent, child1.key},
+               "attr3" => 3
+             }
+
+      assert Record.get_attributes(child1, raw_parents: true) == %{
+               "attr1" => {:parent, parent.key},
+               "attr2" => 2
+             }
+
+      assert Record.get_attributes(grand_child2, raw_parents: true) == %{
+               "attr1" => {:parent, parent.key},
+               "attr4" => {:parent, child2.key},
+               "attr5" => 5
+             }
+
+      assert Record.get_attributes(child2, raw_parents: true) == %{
+               "attr1" => {:parent, parent.key},
+               "attr4" => 4
+             }
+
       assert Record.get_attributes(parent, raw_parents: true) == %{"attr1" => 1}
     end
   end
@@ -232,7 +310,11 @@ defmodule Pythelix.Scripting.Entity.ParentageTest do
       child = Record.get_entity(child.id)
 
       assert Record.get_attributes(parent, raw_parents: true) == %{"test" => 3}
-      assert Record.get_attributes(child, raw_parents: true) == %{"other" => 5, "test" => {:parent, parent.id}}
+
+      assert Record.get_attributes(child, raw_parents: true) == %{
+               "other" => 5,
+               "test" => {:parent, parent.id}
+             }
     end
 
     test "virtual first level, check child attributes repercuted" do
@@ -243,7 +325,11 @@ defmodule Pythelix.Scripting.Entity.ParentageTest do
       child = Record.get_entity(child.key)
 
       assert Record.get_attributes(parent, raw_parents: true) == %{"test" => 3}
-      assert Record.get_attributes(child, raw_parents: true) == %{"other" => 5, "test" => {:parent, parent.key}}
+
+      assert Record.get_attributes(child, raw_parents: true) == %{
+               "other" => 5,
+               "test" => {:parent, parent.key}
+             }
     end
 
     test "stored second level, check child attributes repercuted" do
@@ -256,8 +342,17 @@ defmodule Pythelix.Scripting.Entity.ParentageTest do
       child = Record.get_entity(child.id)
       grand_child = Record.get_entity(grand_child.id)
 
-      assert Record.get_attributes(grand_child, raw_parents: true) == %{"attr1" => {:parent, parent.id}, "attr2" => {:parent, child.id}, "attr3" => 3}
-      assert Record.get_attributes(child, raw_parents: true) == %{"attr1" => {:parent, parent.id}, "attr2" => 2}
+      assert Record.get_attributes(grand_child, raw_parents: true) == %{
+               "attr1" => {:parent, parent.id},
+               "attr2" => {:parent, child.id},
+               "attr3" => 3
+             }
+
+      assert Record.get_attributes(child, raw_parents: true) == %{
+               "attr1" => {:parent, parent.id},
+               "attr2" => 2
+             }
+
       assert Record.get_attributes(parent, raw_parents: true) == %{"attr1" => 1}
     end
 
@@ -271,8 +366,17 @@ defmodule Pythelix.Scripting.Entity.ParentageTest do
       child = Record.get_entity(child.key)
       grand_child = Record.get_entity(grand_child.key)
 
-      assert Record.get_attributes(grand_child, raw_parents: true) == %{"attr1" => {:parent, parent.key}, "attr2" => {:parent, child.key}, "attr3" => 3}
-      assert Record.get_attributes(child, raw_parents: true) == %{"attr1" => {:parent, parent.key}, "attr2" => 2}
+      assert Record.get_attributes(grand_child, raw_parents: true) == %{
+               "attr1" => {:parent, parent.key},
+               "attr2" => {:parent, child.key},
+               "attr3" => 3
+             }
+
+      assert Record.get_attributes(child, raw_parents: true) == %{
+               "attr1" => {:parent, parent.key},
+               "attr2" => 2
+             }
+
       assert Record.get_attributes(parent, raw_parents: true) == %{"attr1" => 1}
     end
 
@@ -292,19 +396,43 @@ defmodule Pythelix.Scripting.Entity.ParentageTest do
       grand_child1 = Record.get_entity(grand_child1.id)
       grand_child2 = Record.get_entity(grand_child2.id)
 
-      assert Record.get_attributes(grand_child1, raw_parents: true) == %{"attr1" => {:parent, parent.id}, "attr2" => {:parent, child1.id}, "attr3" => 3}
-      assert Record.get_attributes(child1, raw_parents: true) == %{"attr1" => {:parent, parent.id}, "attr2" => 2}
-      assert Record.get_attributes(grand_child2, raw_parents: true) == %{"attr1" => {:parent, parent.id}, "attr4" => {:parent, child2.id}, "attr5" => 5}
-      assert Record.get_attributes(child2, raw_parents: true) == %{"attr1" => {:parent, parent.id}, "attr4" => 4}
+      assert Record.get_attributes(grand_child1, raw_parents: true) == %{
+               "attr1" => {:parent, parent.id},
+               "attr2" => {:parent, child1.id},
+               "attr3" => 3
+             }
+
+      assert Record.get_attributes(child1, raw_parents: true) == %{
+               "attr1" => {:parent, parent.id},
+               "attr2" => 2
+             }
+
+      assert Record.get_attributes(grand_child2, raw_parents: true) == %{
+               "attr1" => {:parent, parent.id},
+               "attr4" => {:parent, child2.id},
+               "attr5" => 5
+             }
+
+      assert Record.get_attributes(child2, raw_parents: true) == %{
+               "attr1" => {:parent, parent.id},
+               "attr4" => 4
+             }
+
       assert Record.get_attributes(parent, raw_parents: true) == %{"attr1" => 1}
     end
 
     test "virtual second level with branch, check child attributes repercuted" do
       {:ok, parent} = Record.create_entity(virtual: true, key: "parent")
       {:ok, child1} = Record.create_entity(virtual: true, key: "child1", parent: parent)
-      {:ok, grand_child1} = Record.create_entity(virtual: true, key: "grand_child1", parent: child1)
+
+      {:ok, grand_child1} =
+        Record.create_entity(virtual: true, key: "grand_child1", parent: child1)
+
       {:ok, child2} = Record.create_entity(virtual: true, key: "child2", parent: parent)
-      {:ok, grand_child2} = Record.create_entity(virtual: true, key: "grand_child2", parent: child2)
+
+      {:ok, grand_child2} =
+        Record.create_entity(virtual: true, key: "grand_child2", parent: child2)
+
       Record.set_attribute(grand_child1.key, "attr3", 3)
       Record.set_attribute(child1.key, "attr2", 2)
       Record.set_attribute(grand_child2.key, "attr5", 5)
@@ -315,10 +443,28 @@ defmodule Pythelix.Scripting.Entity.ParentageTest do
       child1 = Record.get_entity(child1.key)
       child2 = Record.get_entity(child2.key)
 
-      assert Record.get_attributes(grand_child1, raw_parents: true) == %{"attr1" => {:parent, parent.key}, "attr2" => {:parent, child1.key}, "attr3" => 3}
-      assert Record.get_attributes(child1, raw_parents: true) == %{"attr1" => {:parent, parent.key}, "attr2" => 2}
-      assert Record.get_attributes(grand_child2, raw_parents: true) == %{"attr1" => {:parent, parent.key}, "attr4" => {:parent, child2.key}, "attr5" => 5}
-      assert Record.get_attributes(child2, raw_parents: true) == %{"attr1" => {:parent, parent.key}, "attr4" => 4}
+      assert Record.get_attributes(grand_child1, raw_parents: true) == %{
+               "attr1" => {:parent, parent.key},
+               "attr2" => {:parent, child1.key},
+               "attr3" => 3
+             }
+
+      assert Record.get_attributes(child1, raw_parents: true) == %{
+               "attr1" => {:parent, parent.key},
+               "attr2" => 2
+             }
+
+      assert Record.get_attributes(grand_child2, raw_parents: true) == %{
+               "attr1" => {:parent, parent.key},
+               "attr4" => {:parent, child2.key},
+               "attr5" => 5
+             }
+
+      assert Record.get_attributes(child2, raw_parents: true) == %{
+               "attr1" => {:parent, parent.key},
+               "attr4" => 4
+             }
+
       assert Record.get_attributes(parent, raw_parents: true) == %{"attr1" => 1}
     end
   end
@@ -408,11 +554,17 @@ defmodule Pythelix.Scripting.Entity.ParentageTest do
       parent = Record.set_method(parent.key, "meth1", [], "i = 1 + 2")
       {:ok, child1} = Record.create_entity(virtual: true, key: "child1", parent: parent)
       child1 = Record.set_method(child1.key, "meth2", [], "i = 1 + 2")
-      {:ok, grand_child1} = Record.create_entity(virtual: true, key: "grand_child1", parent: child1)
+
+      {:ok, grand_child1} =
+        Record.create_entity(virtual: true, key: "grand_child1", parent: child1)
+
       grand_child1 = Record.set_method(grand_child1.key, "meth3", [], "i = 1 + 2")
       {:ok, child2} = Record.create_entity(virtual: true, key: "child2", parent: parent)
       child2 = Record.set_method(child2.key, "meth4", [], "i = 1 + 2")
-      {:ok, grand_child2} = Record.create_entity(virtual: true, key: "grand_child2", parent: child2)
+
+      {:ok, grand_child2} =
+        Record.create_entity(virtual: true, key: "grand_child2", parent: child2)
+
       grand_child2 = Record.set_method(grand_child2.key, "meth5", [], "i = 1 + 2")
 
       assert Record.get_methods(grand_child1, raw_parents: true)["meth1"] == {:parent, parent.key}
@@ -522,9 +674,15 @@ defmodule Pythelix.Scripting.Entity.ParentageTest do
     test "virtual second level with branch, check child methods repercuted" do
       {:ok, parent} = Record.create_entity(virtual: true, key: "parent")
       {:ok, child1} = Record.create_entity(virtual: true, key: "child1", parent: parent)
-      {:ok, grand_child1} = Record.create_entity(virtual: true, key: "grand_child1", parent: child1)
+
+      {:ok, grand_child1} =
+        Record.create_entity(virtual: true, key: "grand_child1", parent: child1)
+
       {:ok, child2} = Record.create_entity(virtual: true, key: "child2", parent: parent)
-      {:ok, grand_child2} = Record.create_entity(virtual: true, key: "grand_child2", parent: child2)
+
+      {:ok, grand_child2} =
+        Record.create_entity(virtual: true, key: "grand_child2", parent: child2)
+
       Record.set_method(grand_child1.key, "meth3", [], "i = 1 + 2")
       Record.set_method(child1.key, "meth2", [], "i = 1 + 2")
       Record.set_method(grand_child2.key, "meth5", [], "i = 1 + 2")
@@ -629,7 +787,10 @@ defmodule Pythelix.Scripting.Entity.ParentageTest do
 
       child = Record.change_parent(child, single)
 
-      assert Record.get_attributes(child, raw_parents: true) == %{"b" => 2, "c" => {:parent, single.id}}
+      assert Record.get_attributes(child, raw_parents: true) == %{
+               "b" => 2,
+               "c" => {:parent, single.id}
+             }
     end
 
     test "check that attributes are properly propagated when the parent changes on a second level" do
@@ -644,7 +805,10 @@ defmodule Pythelix.Scripting.Entity.ParentageTest do
 
       child = Record.change_parent(child, single)
 
-      assert Record.get_attributes(child, raw_parents: true) == %{"b" => 2, "d" => {:parent, single.id}}
+      assert Record.get_attributes(child, raw_parents: true) == %{
+               "b" => 2,
+               "d" => {:parent, single.id}
+             }
     end
 
     test "check that attributes are properly propagated when the parent changes on a second level, reversed" do
@@ -659,7 +823,11 @@ defmodule Pythelix.Scripting.Entity.ParentageTest do
 
       child = Record.change_parent(child, grand_child)
 
-      assert Record.get_attributes(child, raw_parents: true) == %{"a" => {:parent, parent.id}, "b" => 2, "c" => {:parent, grand_child.id}}
+      assert Record.get_attributes(child, raw_parents: true) == %{
+               "a" => {:parent, parent.id},
+               "b" => 2,
+               "c" => {:parent, grand_child.id}
+             }
     end
   end
 end

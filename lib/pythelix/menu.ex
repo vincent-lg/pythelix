@@ -24,6 +24,6 @@ defmodule Pythelix.Menu do
   @spec get_prompt(Entity.t()) :: String.t()
   def get_prompt(menu) do
     Method.call_entity(menu, "get_prompt")
-    |> then(& (is_binary(&1) && &1) || "error")
+    |> then(&((is_binary(&1) && &1) || "error"))
   end
 end

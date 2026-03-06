@@ -19,7 +19,7 @@ defmodule Pythelix.Search do
     conditions =
       Enum.reduce(encoded_filters, false, fn
         {k, v}, false -> dynamic([a], a.name == ^k and a.value == ^v)
-        {k, v}, dyn -> dynamic([a], a.name == ^k and a.value == ^v or ^dyn)
+        {k, v}, dyn -> dynamic([a], (a.name == ^k and a.value == ^v) or ^dyn)
       end)
 
     # Subquery: filter attributes matching any (name, value) pair

@@ -26,12 +26,13 @@ defmodule Pythelix.Task.Apply do
     topologies = Application.get_env(:libcluster, :topologies)
 
     # Start libcluster manually
-    {:ok, _pid} = Supervisor.start_link(
-      [
-        {Cluster.Supervisor, [topologies, [name: __MODULE__.ClusterSupervisor]]}
-      ],
-      strategy: :one_for_one
-    )
+    {:ok, _pid} =
+      Supervisor.start_link(
+        [
+          {Cluster.Supervisor, [topologies, [name: __MODULE__.ClusterSupervisor]]}
+        ],
+        strategy: :one_for_one
+      )
 
     pid = Task.wait_for_global(Pythelix.Game.Ext)
 

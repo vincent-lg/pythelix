@@ -47,19 +47,20 @@ defmodule Pythelix.Game.Hub do
 
   # Init
   def init(opts) do
-    {:ok, :init, %{
-      job_pid: nil,
-      mon_ref: nil,
-      ticket: nil,
-      max_ms: Keyword.get(opts, :max_ms, 2_000),
-      clients_with_messages: MapSet.new()
-    }}
+    {:ok, :init,
+     %{
+       job_pid: nil,
+       mon_ref: nil,
+       ticket: nil,
+       max_ms: Keyword.get(opts, :max_ms, 2_000),
+       clients_with_messages: MapSet.new()
+     }}
   end
 
   # INIT state
   def init(:enter, _old_state, data) do
     init_world()
-    #{:next_state, :idle, data}
+    # {:next_state, :idle, data}
     {:keep_state, data, [{:state_timeout, 0, :go_idle}]}
   end
 
@@ -74,7 +75,8 @@ defmodule Pythelix.Game.Hub do
 
     {:ok, pid} =
       Task.Supervisor.start_child(Pythelix.Game.TaskSupervisor, fn ->
-        result = run_job(job)            # your MFA/fun wrapper
+        # your MFA/fun wrapper
+        result = run_job(job)
         send(server, {:job_ok, ticket, result})
       end)
 
@@ -166,6 +168,7 @@ defmodule Pythelix.Game.Hub do
           case menu do
             nil ->
               ""
+
             menu ->
               try do
                 Method.call_entity(menu, "get_prompt", [client])
@@ -192,6 +195,7 @@ defmodule Pythelix.Game.Hub do
     if Application.get_env(:pythelix, :worldlets) do
       result = World.init()
       init_elapsed = System.monotonic_time(:microsecond) - init_start_time
+
       if Application.get_env(:pythelix, :show_stats) do
         IO.puts("⏱️ World initialized in #{init_elapsed} µs")
       end
@@ -206,6 +210,7 @@ defmodule Pythelix.Game.Hub do
       Persistent.init()
       number = Persistent.load()
       tasks_elapsed = System.monotonic_time(:microsecond) - tasks_start_time
+
       if Application.get_env(:pythelix, :show_stats) do
         IO.puts("⏱️ #{number} tasks were loaded in #{tasks_elapsed} µs")
       end

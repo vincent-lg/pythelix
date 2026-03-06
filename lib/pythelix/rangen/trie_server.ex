@@ -11,8 +11,6 @@ defmodule Pythelix.Rangen.TrieServer do
 
   alias Pythelix.Rangen.Trie
 
-  # --- Supervision -----------------------------------------------------------
-
   @doc "Start a TrieServer for the given key with an initial trie."
   def start(key, trie \\ Trie.new()) do
     DynamicSupervisor.start_child(
@@ -25,8 +23,6 @@ defmodule Pythelix.Rangen.TrieServer do
   def start_link({key, trie}) do
     Agent.start_link(fn -> trie end, name: via(key))
   end
-
-  # --- Query -----------------------------------------------------------------
 
   @doc "Return true if an agent for this key is running."
   def alive?(key) do
@@ -43,8 +39,6 @@ defmodule Pythelix.Rangen.TrieServer do
     Agent.get(via(key), &Trie.count/1)
   end
 
-  # --- Mutation --------------------------------------------------------------
-
   @doc "Insert parts into the trie in-place."
   def insert(key, parts) do
     Agent.update(via(key), &Trie.insert(&1, parts))
@@ -59,8 +53,6 @@ defmodule Pythelix.Rangen.TrieServer do
   def reset(key) do
     Agent.update(via(key), fn _ -> Trie.new() end)
   end
-
-  # ---------------------------------------------------------------------------
 
   defp via(key), do: {:via, Registry, {Pythelix.Rangen.Registry, key}}
 end

@@ -11,6 +11,7 @@ defmodule Pythelix.Adapters.ClusterCtl do
       Node.start(String.to_atom("#{id}@127.0.0.1"))
       Node.set_cookie(:mycookie)
     end
+
     :ok
   end
 
@@ -21,6 +22,7 @@ defmodule Pythelix.Adapters.ClusterCtl do
   @spec start_cluster() :: {:ok, pid()} | {:error, term()}
   def start_cluster() do
     topologies = Application.get_env(:libcluster, :topologies)
+
     Supervisor.start_link(
       [{Cluster.Supervisor, [topologies, [name: __MODULE__.ClusterSupervisor]]}],
       strategy: :one_for_one

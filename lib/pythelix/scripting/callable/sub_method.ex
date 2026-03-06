@@ -32,7 +32,8 @@ defmodule Pythelix.Scripting.Callable.SubMethod do
         map when is_map(map) -> Dict.new(map)
         nil -> Dict.new()
       end
-      |> then(& Dict.put(&1, "self", method.sub))
+      |> then(&Dict.put(&1, "self", method.sub))
+
     Pythelix.Method.call(method.method, args, kwargs, name, opts)
   end
 end

@@ -78,7 +78,7 @@ defmodule Pythelix.Scripting.Namespace.Builtin do
 
   deffun dict(script, namespace), [
     {:iterable, index: 0, type: :dict, default: nil},
-    {:kwargs, kwargs: true},
+    {:kwargs, kwargs: true}
   ] do
     iterable = Store.get_value(namespace.iterable)
     kwargs = namespace.kwargs

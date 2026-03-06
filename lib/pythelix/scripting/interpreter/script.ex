@@ -87,7 +87,7 @@ defmodule Pythelix.Scripting.Interpreter.Script do
   @spec raise(t(), atom(), String.t()) :: t()
   def raise(script, exception, message, code \\ nil, owner \\ nil) do
     Traceback.raise(script, exception, message, code, owner)
-    |> then(& %{script | error: &1})
+    |> then(&%{script | error: &1})
   end
 
   @doc """
@@ -123,7 +123,12 @@ defmodule Pythelix.Scripting.Interpreter.Script do
     script
   end
 
-  defp run_next_bytecode(bytecode, %{error: %Traceback{} = traceback, handlers: [handler | rest]} = script, code, owner) do
+  defp run_next_bytecode(
+         bytecode,
+         %{error: %Traceback{} = traceback, handlers: [handler | rest]} = script,
+         code,
+         owner
+       ) do
     # Exception occurred but we have a handler — jump to except block
     variables =
       script.variables
@@ -131,19 +136,14 @@ defmodule Pythelix.Scripting.Interpreter.Script do
       |> Map.put("__exc_message__", traceback.message)
       |> Map.put("__traceback__", traceback)
 
-    script = %{script |
-      error: nil,
-      handlers: rest,
-      cursor: handler.target,
-      variables: variables
-    }
+    script = %{script | error: nil, handlers: rest, cursor: handler.target, variables: variables}
 
     run_next_bytecode(bytecode, script, code, owner)
   end
 
   defp run_next_bytecode(_, %{error: %Traceback{} = traceback} = script, code, owner) do
     Traceback.associate(traceback, code, owner)
-    |> then(& %{script | error: &1})
+    |> then(&%{script | error: &1})
   end
 
   defp run_next_bytecode(bytecode, %{cursor: cursor} = script, code, owner) do
@@ -193,7 +193,8 @@ defmodule Pythelix.Scripting.Interpreter.Script do
           (match?(%Reference{}, first) && Store.get_value(first, recursive: false)) || first
 
         :reference ->
-          (match?(%Reference{}, first) && {Store.get_value(first, recursive: false), first}) || {first, first}
+          (match?(%Reference{}, first) && {Store.get_value(first, recursive: false), first}) ||
+            {first, first}
       end
 
     script =
@@ -274,7 +275,8 @@ defmodule Pythelix.Scripting.Interpreter.Script do
   * args: additional arguments to pass to the function
   """
   @spec set_step(t(), atom(), atom(), list()) :: t()
-  def set_step(script, module, function, args \\ []) when is_atom(module) and is_atom(function) and is_list(args) do
+  def set_step(script, module, function, args \\ [])
+      when is_atom(module) and is_atom(function) and is_list(args) do
     %{script | step: {module, function, args}}
   end
 

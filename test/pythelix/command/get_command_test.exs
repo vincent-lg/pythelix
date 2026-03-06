@@ -14,18 +14,18 @@ defmodule Pythelix.Command.GetCommandTest do
 
   # Helper: define __namefor__ on an entity for pluralized display names.
   defp setup_namefor(entity_key) do
-    Record.set_method(entity_key, "__namefor__",
+    Record.set_method(
+      entity_key,
+      "__namefor__",
       [{"viewer", [index: 0, type: :entity]}, {"quantity", [index: 1, type: :int, default: 1]}],
       """
       if quantity == 1:
           return f"a {self.name}"
       endif
       return f"{quantity} {self.name}s"
-      """)
+      """
+    )
   end
-
-  # ---------------------------------------------------------------------------
-  # Search and move: regular entities
 
   describe "get command — regular entities" do
     test "finds and moves a single entity to character" do
@@ -68,14 +68,19 @@ defmodule Pythelix.Command.GetCommandTest do
 
     test "search returns empty when nothing matches" do
       {:ok, _room} = Record.create_entity(key: "gc_nomatch_room")
-      {:ok, _apple} = Record.create_entity(
-        key: "gc_nomatch_apple",
-        location: Record.get_entity("gc_nomatch_room"))
+
+      {:ok, _apple} =
+        Record.create_entity(
+          key: "gc_nomatch_apple",
+          location: Record.get_entity("gc_nomatch_room")
+        )
+
       Record.set_attribute("gc_nomatch_apple", "name", "apple")
 
-      script = run("""
-      to_pick = search.match(!gc_nomatch_room!, "banana")
-      """)
+      script =
+        run("""
+        to_pick = search.match(!gc_nomatch_room!, "banana")
+        """)
 
       to_pick = Script.get_variable_value(script, "to_pick")
       assert to_pick == []
@@ -100,9 +105,6 @@ defmodule Pythelix.Command.GetCommandTest do
       assert length(Record.get_contained(room)) == 1
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # Search and move: stackables
 
   describe "get command — stackables" do
     test "finds and moves full stackable quantity" do
@@ -226,9 +228,6 @@ defmodule Pythelix.Command.GetCommandTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # Mixed regular entities + stackables
-
   describe "get command — mixed content" do
     test "search finds both regular entities and stackables" do
       {:ok, room} = Record.create_entity(key: "gc_mix_room")
@@ -242,12 +241,13 @@ defmodule Pythelix.Command.GetCommandTest do
       Record.set_attribute("gc_mix_coin", "name", "gold coin")
       Record.add_stackable(room, Record.get_entity("gc_mix_coin"), 20)
 
-      script = run("""
-      to_pick = search.match(!gc_mix_room!, "gold")
-      for item in to_pick:
-          item.location = !gc_mix_char!
-      done
-      """)
+      script =
+        run("""
+        to_pick = search.match(!gc_mix_room!, "gold")
+        for item in to_pick:
+            item.location = !gc_mix_char!
+        done
+        """)
 
       to_pick = Script.get_variable_value(script, "to_pick")
       assert length(to_pick) == 2
@@ -258,9 +258,6 @@ defmodule Pythelix.Command.GetCommandTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # Display with names.group
-
   describe "get command — display with names.group" do
     test "groups same-name regular entities" do
       {:ok, room} = Record.create_entity(key: "gc_disp_room")
@@ -269,10 +266,11 @@ defmodule Pythelix.Command.GetCommandTest do
       Record.set_attribute("gc_disp_a1", "name", "apple")
       Record.set_attribute("gc_disp_a2", "name", "apple")
 
-      script = run("""
-      to_pick = search.match(!gc_disp_room!, "apple")
-      display = names.group(to_pick)
-      """)
+      script =
+        run("""
+        to_pick = search.match(!gc_disp_room!, "apple")
+        display = names.group(to_pick)
+        """)
 
       display = Script.get_variable_value(script, "display")
       assert display == ["apple"]
@@ -292,10 +290,11 @@ defmodule Pythelix.Command.GetCommandTest do
         setup_namefor(key)
       end
 
-      script = run("""
-      to_pick = search.match(!gc_plural_room!, "apple")
-      display = names.group(to_pick, viewer=!gc_plural_viewer!)
-      """)
+      script =
+        run("""
+        to_pick = search.match(!gc_plural_room!, "apple")
+        display = names.group(to_pick, viewer=!gc_plural_viewer!)
+        """)
 
       display = Script.get_variable_value(script, "display")
       assert display == ["3 apples"]
@@ -316,10 +315,11 @@ defmodule Pythelix.Command.GetCommandTest do
         setup_namefor(key)
       end
 
-      script = run("""
-      to_pick = search.match(!gc_diffdisp_room!, "apple")
-      display = names.group(to_pick, viewer=!gc_diffdisp_viewer!)
-      """)
+      script =
+        run("""
+        to_pick = search.match(!gc_diffdisp_room!, "apple")
+        display = names.group(to_pick, viewer=!gc_diffdisp_viewer!)
+        """)
 
       display = Script.get_variable_value(script, "display")
       assert length(display) == 2
@@ -333,20 +333,26 @@ defmodule Pythelix.Command.GetCommandTest do
       {:ok, _coin} = Record.create_entity(key: "gc_stdisp_coin")
       Record.set_attribute("gc_stdisp_coin", "stackable", true)
       Record.set_attribute("gc_stdisp_coin", "name", "gold coin")
-      Record.set_method("gc_stdisp_coin", "__namefor__",
+
+      Record.set_method(
+        "gc_stdisp_coin",
+        "__namefor__",
         [{"viewer", [index: 0, type: :entity]}, {"quantity", [index: 1, type: :int, default: 1]}],
         """
         if quantity == 1:
             return "a gold coin"
         endif
         return f"{quantity} gold coins"
-        """)
+        """
+      )
+
       Record.add_stackable(room, Record.get_entity("gc_stdisp_coin"), 100)
 
-      script = run("""
-      to_pick = search.match(!gc_stdisp_room!, "gold")
-      display = names.group(to_pick, viewer=!gc_stdisp_viewer!)
-      """)
+      script =
+        run("""
+        to_pick = search.match(!gc_stdisp_room!, "gold")
+        display = names.group(to_pick, viewer=!gc_stdisp_viewer!)
+        """)
 
       display = Script.get_variable_value(script, "display")
       assert display == ["100 gold coins"]
@@ -358,28 +364,31 @@ defmodule Pythelix.Command.GetCommandTest do
       {:ok, _coin} = Record.create_entity(key: "gc_limdisp_coin")
       Record.set_attribute("gc_limdisp_coin", "stackable", true)
       Record.set_attribute("gc_limdisp_coin", "name", "gold coin")
-      Record.set_method("gc_limdisp_coin", "__namefor__",
+
+      Record.set_method(
+        "gc_limdisp_coin",
+        "__namefor__",
         [{"viewer", [index: 0, type: :entity]}, {"quantity", [index: 1, type: :int, default: 1]}],
         """
         if quantity == 1:
             return "a gold coin"
         endif
         return f"{quantity} gold coins"
-        """)
+        """
+      )
+
       Record.add_stackable(room, Record.get_entity("gc_limdisp_coin"), 200)
 
-      script = run("""
-      to_pick = search.match(!gc_limdisp_room!, "gold", limit=30)
-      display = names.group(to_pick, viewer=!gc_limdisp_viewer!)
-      """)
+      script =
+        run("""
+        to_pick = search.match(!gc_limdisp_room!, "gold", limit=30)
+        display = names.group(to_pick, viewer=!gc_limdisp_viewer!)
+        """)
 
       display = Script.get_variable_value(script, "display")
       assert display == ["30 gold coins"]
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # Full pipeline: search → move → display
 
   describe "get command — full pipeline" do
     test "search, move, and display regular entities" do
@@ -395,14 +404,15 @@ defmodule Pythelix.Command.GetCommandTest do
         setup_namefor(key)
       end
 
-      script = run("""
-      character = !gc_full_char!
-      to_pick = search.match(!gc_full_room!, "apple")
-      for item in to_pick:
-          item.location = character
-      done
-      display = names.group(to_pick, viewer=character)
-      """)
+      script =
+        run("""
+        character = !gc_full_char!
+        to_pick = search.match(!gc_full_room!, "apple")
+        for item in to_pick:
+            item.location = character
+        done
+        display = names.group(to_pick, viewer=character)
+        """)
 
       display = Script.get_variable_value(script, "display")
       assert display == ["2 apples"]
@@ -418,24 +428,30 @@ defmodule Pythelix.Command.GetCommandTest do
       {:ok, _coin} = Record.create_entity(key: "gc_fullst_coin")
       Record.set_attribute("gc_fullst_coin", "stackable", true)
       Record.set_attribute("gc_fullst_coin", "name", "gold coin")
-      Record.set_method("gc_fullst_coin", "__namefor__",
+
+      Record.set_method(
+        "gc_fullst_coin",
+        "__namefor__",
         [{"viewer", [index: 0, type: :entity]}, {"quantity", [index: 1, type: :int, default: 1]}],
         """
         if quantity == 1:
             return "a gold coin"
         endif
         return f"{quantity} gold coins"
-        """)
+        """
+      )
+
       Record.add_stackable(room, Record.get_entity("gc_fullst_coin"), 200)
 
-      script = run("""
-      character = !gc_fullst_char!
-      to_pick = search.match(!gc_fullst_room!, "gold", limit=30)
-      for item in to_pick:
-          item.location = character
-      done
-      display = names.group(to_pick, viewer=character)
-      """)
+      script =
+        run("""
+        character = !gc_fullst_char!
+        to_pick = search.match(!gc_fullst_room!, "gold", limit=30)
+        for item in to_pick:
+            item.location = character
+        done
+        display = names.group(to_pick, viewer=character)
+        """)
 
       display = Script.get_variable_value(script, "display")
       assert display == ["30 gold coins"]
@@ -449,9 +465,10 @@ defmodule Pythelix.Command.GetCommandTest do
     test "no match: search returns empty list" do
       {:ok, _room} = Record.create_entity(key: "gc_noresult_room")
 
-      script = run("""
-      to_pick = search.match(!gc_noresult_room!, "sword")
-      """)
+      script =
+        run("""
+        to_pick = search.match(!gc_noresult_room!, "sword")
+        """)
 
       to_pick = Script.get_variable_value(script, "to_pick")
       assert to_pick == []
@@ -468,24 +485,30 @@ defmodule Pythelix.Command.GetCommandTest do
       {:ok, _coin} = Record.create_entity(key: "gc_fullmix_coin")
       Record.set_attribute("gc_fullmix_coin", "stackable", true)
       Record.set_attribute("gc_fullmix_coin", "name", "gold coin")
-      Record.set_method("gc_fullmix_coin", "__namefor__",
+
+      Record.set_method(
+        "gc_fullmix_coin",
+        "__namefor__",
         [{"viewer", [index: 0, type: :entity]}, {"quantity", [index: 1, type: :int, default: 1]}],
         """
         if quantity == 1:
             return "a gold coin"
         endif
         return f"{quantity} gold coins"
-        """)
+        """
+      )
+
       Record.add_stackable(room, Record.get_entity("gc_fullmix_coin"), 50)
 
-      script = run("""
-      character = !gc_fullmix_char!
-      to_pick = search.match(!gc_fullmix_room!, "gold")
-      for item in to_pick:
-          item.location = character
-      done
-      display = names.group(to_pick, viewer=character)
-      """)
+      script =
+        run("""
+        character = !gc_fullmix_char!
+        to_pick = search.match(!gc_fullmix_room!, "gold")
+        for item in to_pick:
+            item.location = character
+        done
+        display = names.group(to_pick, viewer=character)
+        """)
 
       display = Script.get_variable_value(script, "display")
       assert length(display) == 2
@@ -500,37 +523,48 @@ defmodule Pythelix.Command.GetCommandTest do
       {:ok, _ra} = Record.create_entity(key: "gc_diffst_ra")
       Record.set_attribute("gc_diffst_ra", "stackable", true)
       Record.set_attribute("gc_diffst_ra", "name", "red apple")
-      Record.set_method("gc_diffst_ra", "__namefor__",
+
+      Record.set_method(
+        "gc_diffst_ra",
+        "__namefor__",
         [{"viewer", [index: 0, type: :entity]}, {"quantity", [index: 1, type: :int, default: 1]}],
         """
         if quantity == 1:
             return "a red apple"
         endif
         return f"{quantity} red apples"
-        """)
+        """
+      )
+
       Record.add_stackable(room, Record.get_entity("gc_diffst_ra"), 5)
 
       {:ok, _ga} = Record.create_entity(key: "gc_diffst_ga")
       Record.set_attribute("gc_diffst_ga", "stackable", true)
       Record.set_attribute("gc_diffst_ga", "name", "green apple")
-      Record.set_method("gc_diffst_ga", "__namefor__",
+
+      Record.set_method(
+        "gc_diffst_ga",
+        "__namefor__",
         [{"viewer", [index: 0, type: :entity]}, {"quantity", [index: 1, type: :int, default: 1]}],
         """
         if quantity == 1:
             return "a green apple"
         endif
         return f"{quantity} green apples"
-        """)
+        """
+      )
+
       Record.add_stackable(room, Record.get_entity("gc_diffst_ga"), 3)
 
-      script = run("""
-      character = !gc_diffst_char!
-      to_pick = search.match(!gc_diffst_room!, "apple")
-      for item in to_pick:
-          item.location = character
-      done
-      display = names.group(to_pick, viewer=character)
-      """)
+      script =
+        run("""
+        character = !gc_diffst_char!
+        to_pick = search.match(!gc_diffst_room!, "apple")
+        for item in to_pick:
+            item.location = character
+        done
+        display = names.group(to_pick, viewer=character)
+        """)
 
       display = Script.get_variable_value(script, "display")
       assert length(display) == 2
@@ -554,37 +588,48 @@ defmodule Pythelix.Command.GetCommandTest do
       {:ok, _ra} = Record.create_entity(key: "gc_limdiff_ra")
       Record.set_attribute("gc_limdiff_ra", "stackable", true)
       Record.set_attribute("gc_limdiff_ra", "name", "red apple")
-      Record.set_method("gc_limdiff_ra", "__namefor__",
+
+      Record.set_method(
+        "gc_limdiff_ra",
+        "__namefor__",
         [{"viewer", [index: 0, type: :entity]}, {"quantity", [index: 1, type: :int, default: 1]}],
         """
         if quantity == 1:
             return "a red apple"
         endif
         return f"{quantity} red apples"
-        """)
+        """
+      )
+
       Record.add_stackable(room, Record.get_entity("gc_limdiff_ra"), 2)
 
       {:ok, _ga} = Record.create_entity(key: "gc_limdiff_ga")
       Record.set_attribute("gc_limdiff_ga", "stackable", true)
       Record.set_attribute("gc_limdiff_ga", "name", "green apple")
-      Record.set_method("gc_limdiff_ga", "__namefor__",
+
+      Record.set_method(
+        "gc_limdiff_ga",
+        "__namefor__",
         [{"viewer", [index: 0, type: :entity]}, {"quantity", [index: 1, type: :int, default: 1]}],
         """
         if quantity == 1:
             return "a green apple"
         endif
         return f"{quantity} green apples"
-        """)
+        """
+      )
+
       Record.add_stackable(room, Record.get_entity("gc_limdiff_ga"), 10)
 
-      script = run("""
-      character = !gc_limdiff_char!
-      to_pick = search.match(!gc_limdiff_room!, "apple", limit=3)
-      for item in to_pick:
-          item.location = character
-      done
-      display = names.group(to_pick, viewer=character)
-      """)
+      script =
+        run("""
+        character = !gc_limdiff_char!
+        to_pick = search.match(!gc_limdiff_room!, "apple", limit=3)
+        for item in to_pick:
+            item.location = character
+        done
+        display = names.group(to_pick, viewer=character)
+        """)
 
       display = Script.get_variable_value(script, "display")
       # Budget=3: ra (qty=2) consumes 2, ga gets remaining 1 → total 3
@@ -602,9 +647,6 @@ defmodule Pythelix.Command.GetCommandTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # User's example: 2 red apples + 3 green apples, "get 3 apple"
-
   describe "get command — documented example" do
     test "character.location used as search container" do
       {:ok, room} = Record.create_entity(key: "gc_loc_room")
@@ -612,10 +654,11 @@ defmodule Pythelix.Command.GetCommandTest do
       {:ok, _apple} = Record.create_entity(key: "gc_loc_apple", location: room)
       Record.set_attribute("gc_loc_apple", "name", "apple")
 
-      script = run("""
-      character = !gc_loc_char!
-      to_pick = search.match(character.location, "apple")
-      """)
+      script =
+        run("""
+        character = !gc_loc_char!
+        to_pick = search.match(character.location, "apple")
+        """)
 
       to_pick = Script.get_variable_value(script, "to_pick")
       assert length(to_pick) == 1
@@ -629,39 +672,50 @@ defmodule Pythelix.Command.GetCommandTest do
       {:ok, _ra} = Record.create_entity(key: "gc_ex_ra")
       Record.set_attribute("gc_ex_ra", "stackable", true)
       Record.set_attribute("gc_ex_ra", "name", "red apple")
-      Record.set_method("gc_ex_ra", "__namefor__",
+
+      Record.set_method(
+        "gc_ex_ra",
+        "__namefor__",
         [{"viewer", [index: 0, type: :entity]}, {"quantity", [index: 1, type: :int, default: 1]}],
         """
         if quantity == 1:
             return "a red apple"
         endif
         return f"{quantity} red apples"
-        """)
+        """
+      )
+
       Record.add_stackable(room, Record.get_entity("gc_ex_ra"), 2)
 
       {:ok, _ga} = Record.create_entity(key: "gc_ex_ga")
       Record.set_attribute("gc_ex_ga", "stackable", true)
       Record.set_attribute("gc_ex_ga", "name", "green apple")
-      Record.set_method("gc_ex_ga", "__namefor__",
+
+      Record.set_method(
+        "gc_ex_ga",
+        "__namefor__",
         [{"viewer", [index: 0, type: :entity]}, {"quantity", [index: 1, type: :int, default: 1]}],
         """
         if quantity == 1:
             return "a green apple"
         endif
         return f"{quantity} green apples"
-        """)
+        """
+      )
+
       Record.add_stackable(room, Record.get_entity("gc_ex_ga"), 3)
 
-      script = run("""
-      character = !gc_ex_char!
-      object = "apple"
-      number = 3
-      to_pick = search.match(character.location, object, limit=number)
-      for item in to_pick:
-          item.location = character
-      done
-      display = names.group(to_pick, viewer=character)
-      """)
+      script =
+        run("""
+        character = !gc_ex_char!
+        object = "apple"
+        number = 3
+        to_pick = search.match(character.location, object, limit=number)
+        for item in to_pick:
+            item.location = character
+        done
+        display = names.group(to_pick, viewer=character)
+        """)
 
       to_pick = Script.get_variable_value(script, "to_pick")
       display = Script.get_variable_value(script, "display")
@@ -689,37 +743,48 @@ defmodule Pythelix.Command.GetCommandTest do
       {:ok, _ra} = Record.create_entity(key: "gc_ex1_ra")
       Record.set_attribute("gc_ex1_ra", "stackable", true)
       Record.set_attribute("gc_ex1_ra", "name", "red apple")
-      Record.set_method("gc_ex1_ra", "__namefor__",
+
+      Record.set_method(
+        "gc_ex1_ra",
+        "__namefor__",
         [{"viewer", [index: 0, type: :entity]}, {"quantity", [index: 1, type: :int, default: 1]}],
         """
         if quantity == 1:
             return "a red apple"
         endif
         return f"{quantity} red apples"
-        """)
+        """
+      )
+
       Record.add_stackable(room, Record.get_entity("gc_ex1_ra"), 5)
 
       {:ok, _ga} = Record.create_entity(key: "gc_ex1_ga")
       Record.set_attribute("gc_ex1_ga", "stackable", true)
       Record.set_attribute("gc_ex1_ga", "name", "green apple")
-      Record.set_method("gc_ex1_ga", "__namefor__",
+
+      Record.set_method(
+        "gc_ex1_ga",
+        "__namefor__",
         [{"viewer", [index: 0, type: :entity]}, {"quantity", [index: 1, type: :int, default: 1]}],
         """
         if quantity == 1:
             return "a green apple"
         endif
         return f"{quantity} green apples"
-        """)
+        """
+      )
+
       Record.add_stackable(room, Record.get_entity("gc_ex1_ga"), 3)
 
-      script = run("""
-      character = !gc_ex1_char!
-      to_pick = search.match(character.location, "apple", limit=1)
-      for item in to_pick:
-          item.location = character
-      done
-      display = names.group(to_pick, viewer=character)
-      """)
+      script =
+        run("""
+        character = !gc_ex1_char!
+        to_pick = search.match(character.location, "apple", limit=1)
+        for item in to_pick:
+            item.location = character
+        done
+        display = names.group(to_pick, viewer=character)
+        """)
 
       display = Script.get_variable_value(script, "display")
       # Budget=1: ra (qty=5) consumes all 1, ga gets nothing
@@ -743,12 +808,13 @@ defmodule Pythelix.Command.GetCommandTest do
       Record.set_attribute("gc_exnf_apple", "name", "apple")
       Record.add_stackable(room, Record.get_entity("gc_exnf_apple"), 10)
 
-      script = run("""
-      character = !gc_exnf_char!
-      object = "banana"
-      number = 1
-      to_pick = search.match(character.location, object, limit=number)
-      """)
+      script =
+        run("""
+        character = !gc_exnf_char!
+        object = "banana"
+        number = 1
+        to_pick = search.match(character.location, object, limit=number)
+        """)
 
       to_pick = Script.get_variable_value(script, "to_pick")
       assert to_pick == []
@@ -760,10 +826,11 @@ defmodule Pythelix.Command.GetCommandTest do
       # Create the room first
       {:ok, _room} = Record.create_entity(key: "gc_truth_room")
 
-      script = run("""
-      to_pick = []
-      result = not to_pick
-      """)
+      script =
+        run("""
+        to_pick = []
+        result = not to_pick
+        """)
 
       result = Script.get_variable_value(script, "result")
       # With Python semantics: not [] == true ([] is falsy)
@@ -771,16 +838,14 @@ defmodule Pythelix.Command.GetCommandTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # Edge cases
-
   describe "get command — edge cases" do
     test "searching an empty container returns empty list" do
       {:ok, _room} = Record.create_entity(key: "gc_edge_empty_room")
 
-      script = run("""
-      to_pick = search.match(!gc_edge_empty_room!, "anything")
-      """)
+      script =
+        run("""
+        to_pick = search.match(!gc_edge_empty_room!, "anything")
+        """)
 
       assert Script.get_variable_value(script, "to_pick") == []
     end
@@ -790,9 +855,10 @@ defmodule Pythelix.Command.GetCommandTest do
       {:ok, _apple} = Record.create_entity(key: "gc_edge_case_apple", location: room)
       Record.set_attribute("gc_edge_case_apple", "name", "Red Apple")
 
-      script = run("""
-      to_pick = search.match(!gc_edge_case_room!, "red apple")
-      """)
+      script =
+        run("""
+        to_pick = search.match(!gc_edge_case_room!, "red apple")
+        """)
 
       to_pick = Script.get_variable_value(script, "to_pick")
       assert length(to_pick) == 1
@@ -803,9 +869,10 @@ defmodule Pythelix.Command.GetCommandTest do
       {:ok, _apple} = Record.create_entity(key: "gc_edge_partial_apple", location: room)
       Record.set_attribute("gc_edge_partial_apple", "name", "red apple")
 
-      script = run("""
-      to_pick = search.match(!gc_edge_partial_room!, "red")
-      """)
+      script =
+        run("""
+        to_pick = search.match(!gc_edge_partial_room!, "red")
+        """)
 
       to_pick = Script.get_variable_value(script, "to_pick")
       assert length(to_pick) == 1
@@ -817,24 +884,30 @@ defmodule Pythelix.Command.GetCommandTest do
       {:ok, _coin} = Record.create_entity(key: "gc_edge_preserve_coin")
       Record.set_attribute("gc_edge_preserve_coin", "stackable", true)
       Record.set_attribute("gc_edge_preserve_coin", "name", "gold coin")
-      Record.set_method("gc_edge_preserve_coin", "__namefor__",
+
+      Record.set_method(
+        "gc_edge_preserve_coin",
+        "__namefor__",
         [{"viewer", [index: 0, type: :entity]}, {"quantity", [index: 1, type: :int, default: 1]}],
         """
         if quantity == 1:
             return "a gold coin"
         endif
         return f"{quantity} gold coins"
-        """)
+        """
+      )
+
       Record.add_stackable(room, Record.get_entity("gc_edge_preserve_coin"), 100)
 
-      script = run("""
-      character = !gc_edge_preserve_char!
-      to_pick = search.match(!gc_edge_preserve_room!, "gold", limit=25)
-      for item in to_pick:
-          item.location = character
-      done
-      display = names.group(to_pick, viewer=character)
-      """)
+      script =
+        run("""
+        character = !gc_edge_preserve_char!
+        to_pick = search.match(!gc_edge_preserve_room!, "gold", limit=25)
+        for item in to_pick:
+            item.location = character
+        done
+        display = names.group(to_pick, viewer=character)
+        """)
 
       display = Script.get_variable_value(script, "display")
       assert display == ["25 gold coins"]

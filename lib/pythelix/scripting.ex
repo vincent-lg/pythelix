@@ -29,7 +29,7 @@ defmodule Pythelix.Scripting do
       case Parser.exec(code) do
         {:ok, ast} -> ast
         {:error, _} -> :error
-    end
+      end
 
     if show_ast, do: IO.inspect(ast, label: "ast")
 
@@ -38,7 +38,7 @@ defmodule Pythelix.Scripting do
         %Interpreter.Script{id: "error", bytecode: []}
         |> then(fn script ->
           script
-          |> then(& %{&1 | code: code, name: "<stdin>"})
+          |> then(&%{&1 | code: code, name: "<stdin>"})
           |> Interpreter.Script.raise(SyntaxError, "invalid syntax", code, "<stdin>")
         end)
       else

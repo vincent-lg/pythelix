@@ -52,12 +52,14 @@ defmodule Pythelix.Scripting.Interpreter.AST.Core do
 
   def read_ast(code, {:time, h, m, s}) do
     alias Pythelix.Scripting.Object.Time
+
     code
     |> add({:put, %Time{hour: h, minute: m, second: s}})
   end
 
   def read_ast(code, {:duration, map}) when is_map(map) do
     alias Pythelix.Scripting.Object.Duration
+
     code
     |> add({:put, struct(Duration, map)})
   end
@@ -162,7 +164,7 @@ defmodule Pythelix.Scripting.Interpreter.AST.Core do
   end
 
   def read_ast(code, {eq_op, _, _, _} = ast)
-       when eq_op in [:"+=", :"-=", :"*=", :"/="] do
+      when eq_op in [:"+=", :"-=", :"*=", :"/="] do
     Assignments.read_ast(code, ast)
   end
 

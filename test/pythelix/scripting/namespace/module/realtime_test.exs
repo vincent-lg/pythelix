@@ -57,14 +57,18 @@ defmodule Pythelix.Scripting.Namespace.Module.RealtimeTest do
       Record.set_attribute("game_epoch", "started_at", System.system_time(:second) - 3600)
       Epoch.init()
 
-      {:ok, _} = Record.create_entity(key: "rt_calendar", parent: Record.get_entity("generic/calendar"))
+      {:ok, _} =
+        Record.create_entity(key: "rt_calendar", parent: Record.get_entity("generic/calendar"))
+
       Record.set_attribute("rt_calendar", "type", "custom")
       Record.set_attribute("rt_calendar", "offset", 0)
+
       Record.set_attribute("rt_calendar", "units", %{
         "second" => %{"__name" => "base"},
         "minute" => %{"__base" => "second", "__factor" => 60, "__start" => 0},
-        "hour"   => %{"__base" => "minute", "__factor" => 60, "__start" => 0}
+        "hour" => %{"__base" => "minute", "__factor" => 60, "__start" => 0}
       })
+
       Epoch.cache_calendars()
       :ok
     end
@@ -73,11 +77,12 @@ defmodule Pythelix.Scripting.Namespace.Module.RealtimeTest do
       # With scale=1, game time == real time since started_at.
       # gametime.now() is at game epoch ~3600.
       # realtime.from_gametime(gametime.now()) should be close to realtime.now().
-      script = run("""
-      gt  = gametime.now(!rt_calendar!)
-      rdt = realtime.from_gametime(gt)
-      diff = realtime.clock - rdt.hour * 3600 - rdt.minute * 60 - rdt.second
-      """)
+      script =
+        run("""
+        gt  = gametime.now(!rt_calendar!)
+        rdt = realtime.from_gametime(gt)
+        diff = realtime.clock - rdt.hour * 3600 - rdt.minute * 60 - rdt.second
+        """)
 
       # rdt should be a RealDateTime
       value = expr_ok("realtime.from_gametime(gametime.now(!rt_calendar!))")
@@ -88,14 +93,15 @@ defmodule Pythelix.Scripting.Namespace.Module.RealtimeTest do
     test "from_gametime reflects projection — not just the current time" do
       # Project the game time forward by 1 hour, then convert to real time.
       # The result should be 3600 real seconds ahead of the non-projected conversion.
-      script = run("""
-      now      = gametime.now(!rt_calendar!)
-      later    = now.project(hour=1)
-      real_now = realtime.from_gametime(now)
-      real_later = realtime.from_gametime(later)
-      diff = real_later.hour * 3600 + real_later.minute * 60 + real_later.second -
-             (real_now.hour * 3600 + real_now.minute * 60 + real_now.second)
-      """)
+      script =
+        run("""
+        now      = gametime.now(!rt_calendar!)
+        later    = now.project(hour=1)
+        real_now = realtime.from_gametime(now)
+        real_later = realtime.from_gametime(later)
+        diff = real_later.hour * 3600 + real_later.minute * 60 + real_later.second -
+               (real_now.hour * 3600 + real_now.minute * 60 + real_now.second)
+        """)
 
       diff = Script.get_variable_value(script, "diff")
       # diff should be 3600 seconds (1 hour); allow ±1 for rounding

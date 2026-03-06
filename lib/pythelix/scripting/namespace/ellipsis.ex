@@ -19,6 +19,6 @@ defmodule Pythelix.Scripting.Namespace.Ellipsis do
 
   defp repr(script, _self) do
     "..."
-    |> then(& {script, &1})
+    |> then(&{script, &1})
   end
 end

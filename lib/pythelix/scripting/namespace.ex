@@ -109,7 +109,7 @@ defmodule Pythelix.Scripting.Namespace do
       @doc false
       def setattr(script, _, _, _) do
         Traceback.raise(script, AttributeError, "can't set attribute")
-        |> then(& {%{script | error: &1}, :none})
+        |> then(&{%{script | error: &1}, :none})
       end
 
       @doc false
@@ -120,7 +120,7 @@ defmodule Pythelix.Scripting.Namespace do
       @doc false
       def delattr(script, _, _) do
         Traceback.raise(script, AttributeError, "can't delete attribute")
-        |> then(& {%{script | error: &1}, :none})
+        |> then(&{%{script | error: &1}, :none})
       end
     end
   end
@@ -282,7 +282,7 @@ defmodule Pythelix.Scripting.Namespace do
           args
           |> Enum.sort_by(fn {key, _} -> key end)
           |> Enum.map(fn {_key, value} -> value end)
-          |> then(& [from_pos | &1])
+          |> then(&[from_pos | &1])
 
         {script, %{}, kwargs, args}
 
@@ -326,13 +326,13 @@ defmodule Pythelix.Scripting.Namespace do
         message = "argument #{name} expects #{message}"
 
         Traceback.raise(script, TypeError, message)
-        |> then(& {%{script | error: &1}, :error})
+        |> then(&{%{script | error: &1}, :error})
 
       :error ->
         message = "argument #{name} expects value of type #{inspect(type)}"
 
         Traceback.raise(script, TypeError, message)
-        |> then(& {%{script | error: &1}, :error})
+        |> then(&{%{script | error: &1}, :error})
 
       _ ->
         {script, ref}
@@ -342,7 +342,7 @@ defmodule Pythelix.Scripting.Namespace do
   defp check_arg_type(value, :any), do: value
   defp check_arg_type(%Format.String{} = value, :str), do: value
   defp check_arg_type(value, :str) when is_binary(value), do: value
-  defp check_arg_type( value, :int) when is_integer(value), do: value
+  defp check_arg_type(value, :int) when is_integer(value), do: value
   defp check_arg_type(value, :float) when is_float(value), do: value
   defp check_arg_type(true, :bool), do: true
   defp check_arg_type(false, :bool), do: false
@@ -358,7 +358,7 @@ defmodule Pythelix.Scripting.Namespace do
       %Entity{} ->
         ancestors = Record.get_ancestors(entity)
 
-        if Enum.any?(ancestors, & &1.key == parent_key) do
+        if Enum.any?(ancestors, &(&1.key == parent_key)) do
           entity
         else
           {:error, "an entity inhering from !#{parent_key}!"}
@@ -378,6 +378,7 @@ defmodule Pythelix.Scripting.Namespace do
 
   defp check_signature_positional_args(script, constraints, args, namespace) do
     all_args = Enum.any?(constraints, fn {_set, opts} -> opts[:args] end)
+
     map_constraints =
       constraints
       |> Stream.filter(fn {set, opts} -> opts[:index] && !opts[:args] && set != "self" end)
@@ -412,6 +413,7 @@ defmodule Pythelix.Scripting.Namespace do
 
   defp check_signature_keyword_args(%Script{error: nil} = script, constraints, kwargs, _namespace) do
     all_kwargs = Enum.any?(constraints, fn {_set, opts} -> opts[:kwargs] end)
+
     map_constraints =
       constraints
       |> Stream.filter(fn {_set, opts} -> opts[:keyword] && !opts[:kwargs] end)

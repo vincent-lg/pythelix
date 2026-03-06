@@ -47,7 +47,16 @@ defmodule Pythelix.Game.Modes.Handler do
       {:pipe, net_movement, remaining_input} when net_movement != 0 ->
         direction = if net_movement > 0, do: :next, else: :previous
         count = abs(net_movement)
-        handle_mode_switch(game_modes, client, direction, count, remaining_input, start_time, owner)
+
+        handle_mode_switch(
+          game_modes,
+          client,
+          direction,
+          count,
+          remaining_input,
+          start_time,
+          owner
+        )
 
       {:no_pipe, clean_input} ->
         # No pipe operators, process with current active mode
@@ -100,6 +109,7 @@ defmodule Pythelix.Game.Modes.Handler do
     case direction do
       :next ->
         rem(current + count, mode_count)
+
       :previous ->
         rem(current - count + mode_count, mode_count)
     end
@@ -119,10 +129,12 @@ defmodule Pythelix.Game.Modes.Handler do
   end
 
   defp get_pipe_config do
-    Application.get_env(:pythelix, Pythelix.Menu.Mode, symbols: [
-      next: [">"],
-      previous: ["<"]
-    ])[:symbols]
+    Application.get_env(:pythelix, Pythelix.Menu.Mode,
+      symbols: [
+        next: [">"],
+        previous: ["<"]
+      ]
+    )[:symbols]
   end
 
   defp extract_and_analyze_pipes(input, config) do

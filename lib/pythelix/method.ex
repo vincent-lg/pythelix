@@ -21,7 +21,7 @@ defmodule Pythelix.Method do
   @type t() :: %{
           args: :free | list(),
           code: binary(),
-          bytecode: list(),
+          bytecode: list()
         }
 
   def new(args, code, bytecode \\ nil) do
@@ -52,7 +52,8 @@ defmodule Pythelix.Method do
   @spec call(t(), list(), Dict.t(), String.t(), list()) :: term() | :ok | {:error, binary()}
   def call(method, args, kwargs, name, opts \\ []) do
     with script <- fetch_script(method, opts),
-         {%Script{error: nil} = script, namespace} <- check_args(script, method, args, kwargs, name),
+         {%Script{error: nil} = script, namespace} <-
+           check_args(script, method, args, kwargs, name),
          %Script{error: nil} = script <- maybe_run(script, method, namespace, name, opts) do
       (opts[:return] && script.last_raw) || script
     else
@@ -73,18 +74,20 @@ defmodule Pythelix.Method do
   Returns:
     The returned result of the method or :nomethod, :noresult, :traceback.
   """
-  @spec call_entity(Entity.t(), String.t(), list() | nil, Dict.t() | nil) :: term() | :nomethod | :noresult | :traceback
+  @spec call_entity(Entity.t(), String.t(), list() | nil, Dict.t() | nil) ::
+          term() | :nomethod | :noresult | :traceback
   def call_entity(entity, name, args \\ nil, kwargs \\ nil) do
     method_name = "#{inspect(entity)}, method #{name}"
 
     args = (args == nil && []) || args
+
     kwargs =
       case kwargs do
         %Dict{} -> kwargs
         map when is_map(map) -> Dict.new(map)
         nil -> Dict.new()
       end
-      |> then(& Dict.put(&1, "self", entity))
+      |> then(&Dict.put(&1, "self", entity))
 
     with %Method{} = method <- Record.get_method(entity, name),
          %Script{error: nil} = script <- Method.call(method, args, kwargs, method_name) do
@@ -93,6 +96,7 @@ defmodule Pythelix.Method do
           %Format.String{} = fstr -> Format.String.format(fstr)
           other -> other
         end
+
       Script.destroy(script)
       result
     else
@@ -107,7 +111,7 @@ defmodule Pythelix.Method do
   end
 
   def fetch_script(%Pythelix.Method{bytecode: bytecode}, opts \\ []) do
-    script = %Script{id: (opts[:owner] || Store.new_script), bytecode: bytecode}
+    script = %Script{id: opts[:owner] || Store.new_script(), bytecode: bytecode}
 
     script =
       case opts[:parent] do
@@ -119,9 +123,12 @@ defmodule Pythelix.Method do
       case opts[:step] do
         {module, function, args} when is_atom(module) and is_atom(function) and is_list(args) ->
           Script.set_step(script, module, function, args)
+
         {module, function} when is_atom(module) and is_atom(function) ->
           Script.set_step(script, module, function, [])
-        _ -> script
+
+        _ ->
+          script
       end
 
     script

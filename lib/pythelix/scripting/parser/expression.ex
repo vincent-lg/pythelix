@@ -39,7 +39,9 @@ defmodule Pythelix.Scripting.Parser.Expression do
 
   defp fold_infixr([first | rest]) do
     case rest do
-      [] -> first
+      [] ->
+        first
+
       [op, right | remaining] ->
         {op, [first, fold_infixr([right | remaining])]}
     end

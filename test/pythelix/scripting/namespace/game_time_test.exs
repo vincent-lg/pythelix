@@ -12,7 +12,9 @@ defmodule Pythelix.Scripting.Namespace.GameTimeTest do
     Record.set_attribute("game_epoch", "started_at", System.system_time(:second) - 100)
     Epoch.init()
 
-    {:ok, _} = Record.create_entity(key: "gt_ns_calendar", parent: Record.get_entity("generic/calendar"))
+    {:ok, _} =
+      Record.create_entity(key: "gt_ns_calendar", parent: Record.get_entity("generic/calendar"))
+
     Record.set_attribute("gt_ns_calendar", "type", "custom")
     Record.set_attribute("gt_ns_calendar", "offset", 0)
 
@@ -31,11 +33,12 @@ defmodule Pythelix.Scripting.Namespace.GameTimeTest do
 
   describe "GameTime attributes" do
     test "unit values are accessible as attributes" do
-      script = run("""
-      gt = gametime.now(!gt_ns_calendar!)
-      h = gt.hour
-      d = gt.day
-      """)
+      script =
+        run("""
+        gt = gametime.now(!gt_ns_calendar!)
+        h = gt.hour
+        d = gt.day
+        """)
 
       assert is_integer(Script.get_variable_value(script, "h"))
       assert Script.get_variable_value(script, "d") >= 1
@@ -50,10 +53,11 @@ defmodule Pythelix.Scripting.Namespace.GameTimeTest do
 
       Record.set_attribute("gt_ns_calendar", "properties", properties)
 
-      script = run("""
-      gt = gametime.now(!gt_ns_calendar!)
-      tod = gt.time_of_day
-      """)
+      script =
+        run("""
+        gt = gametime.now(!gt_ns_calendar!)
+        tod = gt.time_of_day
+        """)
 
       assert Script.get_variable_value(script, "tod") == "daytime"
     end
@@ -61,10 +65,11 @@ defmodule Pythelix.Scripting.Namespace.GameTimeTest do
 
   describe "str() and repr()" do
     test "str returns unit values as string" do
-      script = run("""
-      gt = gametime.now(!gt_ns_calendar!)
-      result = str(gt)
-      """)
+      script =
+        run("""
+        gt = gametime.now(!gt_ns_calendar!)
+        result = str(gt)
+        """)
 
       result = Script.get_variable_value(script, "result")
       assert is_binary(result)
@@ -72,10 +77,11 @@ defmodule Pythelix.Scripting.Namespace.GameTimeTest do
     end
 
     test "repr returns formatted representation" do
-      script = run("""
-      gt = gametime.now(!gt_ns_calendar!)
-      result = repr(gt)
-      """)
+      script =
+        run("""
+        gt = gametime.now(!gt_ns_calendar!)
+        result = repr(gt)
+        """)
 
       result = Script.get_variable_value(script, "result")
       assert String.starts_with?(result, "<GameTime ")

@@ -92,6 +92,6 @@ defmodule Pythelix.Scripting.Namespace.SubEntity do
 
   defp repr(script, self) do
     Store.get_value(self)
-    |> then(& {script, "#{&1.base.key}#{Display.repr(script, &1.data)}"})
+    |> then(&{script, "#{&1.base.key}#{Display.repr(script, &1.data)}"})
   end
 end

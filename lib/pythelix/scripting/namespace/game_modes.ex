@@ -23,6 +23,7 @@ defmodule Pythelix.Scripting.Namespace.GameModes do
     game_modes = Store.get_value(namespace.self)
     menu = Store.get_value(namespace.menu)
     owner = Store.get_value(namespace.owner)
+
     opts =
       if namespace.default do
         [default: true]
@@ -47,6 +48,7 @@ defmodule Pythelix.Scripting.Namespace.GameModes do
     case Modes.remove(game_modes, menu, owner) do
       :error ->
         message = "cannot remove the mode #{inspect(menu)} "
+
         ownership =
           if owner do
             "with owner #{inspect(owner)}"

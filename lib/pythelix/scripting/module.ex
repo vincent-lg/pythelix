@@ -3,8 +3,8 @@ defmodule Pythelix.Scripting.Module do
     quote do
       use Pythelix.Scripting.Namespace
 
-      Module.register_attribute __MODULE__, :pythello_module, persist: true
-      Module.register_attribute __MODULE__, :pythello_module_name, persist: true
+      Module.register_attribute(__MODULE__, :pythello_module, persist: true)
+      Module.register_attribute(__MODULE__, :pythello_module_name, persist: true)
 
       @pythello_module_name unquote(Keyword.fetch!(opts, :name))
 

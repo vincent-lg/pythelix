@@ -110,24 +110,23 @@ defmodule Pythelix.World do
 
   defp maybe_add_base_entities({:ok, entities}) do
     {:ok,
-      entities
-      |> add_sub_entity()
-      |> add_client_controls()
-      |> add_game_time_base_unit()
-      |> add_game_time_unit()
-      |> add_game_time_cyclic_unit()
-      |> add_game_time_boundary()
-      |> add_game_time_property()
-      |> add_game_time_default()
-      |> add_base_calendar_entity()
-      |> add_motd_menu_entity()
-      |> add_game_menu_entity()
-      |> add_base_menu_entity()
-      |> add_base_client_entity()
-      |> add_base_character_entity()
-      |> add_base_rangen_entity()
-      |> Command.add_base_command_entity()
-    }
+     entities
+     |> add_sub_entity()
+     |> add_client_controls()
+     |> add_game_time_base_unit()
+     |> add_game_time_unit()
+     |> add_game_time_cyclic_unit()
+     |> add_game_time_boundary()
+     |> add_game_time_property()
+     |> add_game_time_default()
+     |> add_base_calendar_entity()
+     |> add_motd_menu_entity()
+     |> add_game_menu_entity()
+     |> add_base_menu_entity()
+     |> add_base_client_entity()
+     |> add_base_character_entity()
+     |> add_base_rangen_entity()
+     |> Command.add_base_command_entity()}
   end
 
   defp add_sub_entity(entities) do
@@ -136,8 +135,9 @@ defmodule Pythelix.World do
         virtual: true,
         key: "SubEntity",
         attributes: %{},
-        methods: %{},
-      } | entities
+        methods: %{}
+      }
+      | entities
     ]
   end
 
@@ -167,9 +167,10 @@ defmodule Pythelix.World do
               {"entity", index: 0, type: :entity}
             ],
             "self.__controls.discard(entity.id or entity.key)"
-          },
-        },
-      } | entities
+          }
+        }
+      }
+      | entities
     ]
   end
 
@@ -186,8 +187,9 @@ defmodule Pythelix.World do
             ],
             "self.__name = 'base'"
           }
-        },
-      } | entities
+        }
+      }
+      | entities
     ]
   end
 
@@ -211,8 +213,9 @@ defmodule Pythelix.World do
             self.__start = start
             """
           }
-        },
-      } | entities
+        }
+      }
+      | entities
     ]
   end
 
@@ -239,8 +242,9 @@ defmodule Pythelix.World do
             self.__cyclic = True
             """
           }
-        },
-      } | entities
+        }
+      }
+      | entities
     ]
   end
 
@@ -266,8 +270,9 @@ defmodule Pythelix.World do
             self.__value = value
             """
           }
-        },
-      } | entities
+        }
+      }
+      | entities
     ]
   end
 
@@ -291,8 +296,9 @@ defmodule Pythelix.World do
             self.__value = value
             """
           }
-        },
-      } | entities
+        }
+      }
+      | entities
     ]
   end
 
@@ -313,8 +319,9 @@ defmodule Pythelix.World do
             self.__default = True
             """
           }
-        },
-      } | entities
+        }
+      }
+      | entities
     ]
   end
 
@@ -326,8 +333,9 @@ defmodule Pythelix.World do
           "offset" => 0,
           "type" => "\"custom\""
         },
-        methods: %{},
-      } | entities
+        methods: %{}
+      }
+      | entities
     ]
   end
 
@@ -339,10 +347,11 @@ defmodule Pythelix.World do
         attributes: %{
           "disconnect" => {:extended, Extended.Client, :m_disconnect},
           "msg" => {:extended, Extended.Client, :m_msg},
-          "controls" => "Controls()",
+          "controls" => "Controls()"
         },
-        methods: %{},
-      } | entities
+        methods: %{}
+      }
+      | entities
     ]
   end
 
@@ -353,8 +362,9 @@ defmodule Pythelix.World do
         attributes: %{
           "game_modes" => %Modes{}
         },
-        methods: %{},
-      } | entities
+        methods: %{}
+      }
+      | entities
     ]
   end
 
@@ -369,7 +379,7 @@ defmodule Pythelix.World do
           "add" => {:extended, Extended.Rangen, :m_add},
           "remove" => {:extended, Extended.Rangen, :m_remove},
           "clear" => {:extended, Extended.Rangen, :m_clear},
-          "count" => {:extended_property, Extended.Rangen, :count},
+          "count" => {:extended_property, Extended.Rangen, :count}
         },
         methods: %{
           "check" => {
@@ -378,9 +388,10 @@ defmodule Pythelix.World do
               {"text", index: 0, type: :str}
             ],
             "return True"
-          },
-        },
-      } | entities
+          }
+        }
+      }
+      | entities
     ]
   end
 
@@ -416,8 +427,9 @@ defmodule Pythelix.World do
             ],
             "client.msg('Invalid input')"
           }
-        },
-      } | entities
+        }
+      }
+      | entities
     ]
   end
 
@@ -427,8 +439,9 @@ defmodule Pythelix.World do
         virtual: true,
         key: @motd_menu,
         attributes: %{"parent" => "\"#{Generic.menu()}\""},
-        methods: %{},
-      } | entities
+        methods: %{}
+      }
+      | entities
     ]
   end
 
@@ -438,8 +451,9 @@ defmodule Pythelix.World do
         virtual: true,
         key: @game_menu,
         attributes: %{"parent" => "\"#{Generic.menu()}\""},
-        methods: %{},
-      } | entities
+        methods: %{}
+      }
+      | entities
     ]
   end
 
@@ -461,7 +475,9 @@ defmodule Pythelix.World do
               {:cont, {:ok, acc ++ [%{entity | attributes: attributes}]}}
 
             {:error, reason} ->
-              {:halt, {:error, "error evaluating parent '#{parent}' for entity '#{entity.key}': #{reason}"}}
+              {:halt,
+               {:error,
+                "error evaluating parent '#{parent}' for entity '#{entity.key}': #{reason}"}}
           end
       end
     end)
@@ -476,8 +492,10 @@ defmodule Pythelix.World do
           # Merge nested maps (like attributes and methods)
           {acc_map, entity_map} when is_map(acc_map) and is_map(entity_map) ->
             Map.merge(acc_map, entity_map)
+
           # For non-maps, the newer entity value takes precedence
-          _ -> entity_value
+          _ ->
+            entity_value
         end
       end)
     end)
@@ -496,11 +514,12 @@ defmodule Pythelix.World do
       end)
       |> Map.new()
 
-    graph = for entity <- entities, into: %{} do
-      parent_key = entity.attributes["parent"]
+    graph =
+      for entity <- entities, into: %{} do
+        parent_key = entity.attributes["parent"]
 
-      {entity.key, List.wrap(parent_key)}
-    end
+        {entity.key, List.wrap(parent_key)}
+      end
 
     case topo_sort(graph) do
       {:ok, sorted_keys} ->
@@ -516,7 +535,7 @@ defmodule Pythelix.World do
     %{
       key: key,
       attributes: %{},
-      methods: %{},
+      methods: %{}
     }
   end
 
@@ -524,8 +543,7 @@ defmodule Pythelix.World do
     try do
       {:ok,
        do_topo_sort(graph, [], MapSet.new(), MapSet.new())
-       |> Enum.uniq()
-    }
+       |> Enum.uniq()}
     catch
       :cycle -> {:error, :cyclic}
     end
@@ -574,7 +592,7 @@ defmodule Pythelix.World do
           (entity.key && entity.key =~ ~r/^\p{Lu}/u) || false
         end)
 
-      Enum.each(sub_entities, & create_entity(&1, sub_entity: true))
+      Enum.each(sub_entities, &create_entity(&1, sub_entity: true))
 
       entities
       |> Enum.map(&create_entity/1)
@@ -620,6 +638,7 @@ defmodule Pythelix.World do
     {parent, attributes} = Map.pop(entity.attributes, "parent")
     {location, attributes} = Map.pop(attributes, "location")
     parent = (parent && Record.get_entity(parent)) || nil
+
     location =
       if location do
         {:ok, location} = Scripting.eval(location)
@@ -640,6 +659,7 @@ defmodule Pythelix.World do
       end
 
     record = Record.get_entity(entity.key)
+
     record =
       if record == nil do
         {:ok, record} = Record.create_entity(opts)
@@ -653,7 +673,6 @@ defmodule Pythelix.World do
     end
 
     for {name, value} <- attributes do
-
       value =
         if is_binary(value) do
           {:ok, value} = Scripting.eval(value)
@@ -687,10 +706,10 @@ defmodule Pythelix.World do
       commands =
         menu
         |> Record.get_contained()
-        |> Enum.filter(& Record.has_parent?(&1, Generic.command()))
+        |> Enum.filter(&Record.has_parent?(&1, Generic.command()))
         |> tap(fn commands ->
           commands
-          |> Enum.map(& Command.build_syntax_pattern(&1.key))
+          |> Enum.map(&Command.build_syntax_pattern(&1.key))
         end)
         |> Enum.flat_map(fn command ->
           command.key

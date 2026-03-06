@@ -272,7 +272,8 @@ defmodule Pythelix.Scripting.TryExceptTest do
       raise Something("not an exception")
       """)
 
-    assert %Traceback{exception: TypeError, message: "exceptions must derive from BaseException"} = script.error
+    assert %Traceback{exception: TypeError, message: "exceptions must derive from BaseException"} =
+             script.error
   end
 
   test "raise unknown exception type caught by bare except" do

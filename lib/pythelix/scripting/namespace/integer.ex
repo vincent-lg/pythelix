@@ -19,6 +19,6 @@ defmodule Pythelix.Scripting.Namespace.Integer do
 
   defp repr(script, self) do
     to_string(self)
-    |> then(& {script, &1})
+    |> then(&{script, &1})
   end
 end

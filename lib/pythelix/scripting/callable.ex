@@ -49,7 +49,7 @@ defmodule Pythelix.Scripting.Callable do
     case Callable.Method.call(method, args, kwargs, owner: script.id) do
       %Script{error: %Traceback{chain: chain} = traceback} = _script ->
         %{traceback | chain: [{script, nil, nil} | chain]}
-        |> then(& {%{script | error: &1}, :none})
+        |> then(&{%{script | error: &1}, :none})
 
       %Script{pause: :immediately, last_raw: raw} ->
         {script, raw}
@@ -63,18 +63,20 @@ defmodule Pythelix.Scripting.Callable do
     kwargs = (kwargs == nil && Dict.new()) || kwargs
     name = "#{method.entity}m hetod #{method.name}"
     entity = Record.get_entity(method.entity)
-    inner_script = Method.fetch_script(method.method, owner: script.id)
-    |> Method.check_args(method.method, args, kwargs, name)
-    |> then(fn {method_script, namespace} ->
-      Method.write_arguments(method_script, Enum.to_list(namespace))
-    end)
-    |> Script.write_variable("self", entity)
-    |> Script.set_parent(script)
-    |> then(& %{&1 | id: script.id})
+
+    inner_script =
+      Method.fetch_script(method.method, owner: script.id)
+      |> Method.check_args(method.method, args, kwargs, name)
+      |> then(fn {method_script, namespace} ->
+        Method.write_arguments(method_script, Enum.to_list(namespace))
+      end)
+      |> Script.write_variable("self", entity)
+      |> Script.set_parent(script)
+      |> then(&%{&1 | id: script.id})
 
     Runner.run(inner_script, method.method.code, name, sync: true)
 
-    #case Callable.Method.call(method, args, kwargs, owner: script.id, parent: script) do
+    # case Callable.Method.call(method, args, kwargs, owner: script.id, parent: script) do
     #  %Script{error: %Traceback{chain: chain} = traceback} = _script ->
     #    %{traceback | chain: [{script, nil, nil} | chain]}
     #    |> then(& {%{script | error: &1}, :none})
@@ -84,7 +86,7 @@ defmodule Pythelix.Scripting.Callable do
 
     #  _script ->
     #    {script, :none}
-    #end
+    # end
     {%{script | pause: :wait_child}, :none}
   end
 
@@ -94,7 +96,7 @@ defmodule Pythelix.Scripting.Callable do
     case Callable.SubMethod.call(method, args, kwargs, owner: script.id, parent: script) do
       %Script{error: %Traceback{chain: chain} = traceback} = _script ->
         %{traceback | chain: [{script, nil, nil} | chain]}
-        |> then(& {%{script | error: &1}, :none})
+        |> then(&{%{script | error: &1}, :none})
 
       %Script{pause: :immediately, last_raw: raw} ->
         {script, raw}

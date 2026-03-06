@@ -26,7 +26,8 @@ defmodule Pythelix.Scripting.Interpreter.AST.Assignments do
     Enum.reduce(Enum.with_index(names), code, fn
       {[{:getitem, [expr | items]}], index}, code when index == length(names) - 1 ->
         Enum.reduce(Enum.with_index(items), AST.Core.read_ast(code, expr), fn
-          {item, i_index}, code when length(items) - 1 == i_index and length(names) - 1 == index ->
+          {item, i_index}, code
+          when length(items) - 1 == i_index and length(names) - 1 == index ->
             code
             |> add({:getattr, "__setitem__"})
             |> add({:dict, :no_reference})
@@ -84,7 +85,7 @@ defmodule Pythelix.Scripting.Interpreter.AST.Assignments do
   end
 
   def read_ast(code, {eq_op, names, value, {line, _}})
-       when eq_op in [:"+=", :"-=", :"*=", :"/="] do
+      when eq_op in [:"+=", :"-=", :"*=", :"/="] do
     op = Map.get(@eq_op, eq_op)
 
     before = make_ref()
@@ -126,7 +127,8 @@ defmodule Pythelix.Scripting.Interpreter.AST.Assignments do
     Enum.reduce(Enum.with_index(names), code, fn
       {[{:getitem, [expr | items]}], index}, code when index == length(names) - 1 ->
         Enum.reduce(Enum.with_index(items), AST.Core.read_ast(code, expr), fn
-          {item, i_index}, code when length(items) - 1 == i_index and length(names) - 1 == index ->
+          {item, i_index}, code
+          when length(items) - 1 == i_index and length(names) - 1 == index ->
             code
             |> add({:getattr, "__setitem__"})
             |> add({:dict, :no_reference})

@@ -218,7 +218,7 @@ defmodule Pythelix.Record.Diff do
   defp return_and_increment(entry) do
     Cachex.get(:px_diff, entry)
     |> then(fn {:ok, value} -> value end)
-    |> tap(& Cachex.put(:px_diff, entry, &1 + 1))
+    |> tap(&Cachex.put(:px_diff, entry, &1 + 1))
   end
 
   defp add_diff(:update, {gen_id, field, value}) do
@@ -229,7 +229,7 @@ defmodule Pythelix.Record.Diff do
       map ->
         map
         |> Map.put(field, value)
-        |> then(& {:commit, &1})
+        |> then(&{:commit, &1})
     end)
   end
 
@@ -241,7 +241,7 @@ defmodule Pythelix.Record.Diff do
       updates ->
         updates
         |> Map.merge(%{name: name, value: value})
-        |> then(& {:commit, &1})
+        |> then(&{:commit, &1})
     end)
   end
 
@@ -318,6 +318,7 @@ defmodule Pythelix.Record.Diff do
 
   defp build_bulk_update_queries(changes, table, key_field \\ :gen_id) when is_map(changes) do
     now = DateTime.utc_now() |> DateTime.truncate(:second)
+
     fields =
       changes
       |> Enum.map(fn {_, map} -> Map.put(map, :updated_at, now) end)
@@ -343,6 +344,7 @@ defmodule Pythelix.Record.Diff do
           case_clauses
           |> Enum.map(fn {sql, _} -> sql end)
           |> Enum.join(" ")
+
         params = Enum.flat_map(case_clauses, fn {_, values} -> values end)
 
         ids = Enum.map(mods_for_field, fn {id, _} -> id end)

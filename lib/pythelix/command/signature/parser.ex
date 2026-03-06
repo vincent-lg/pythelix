@@ -11,17 +11,11 @@ defmodule Pythelix.Command.Signature.Parser do
 
   defparsec(
     :entity,
-    ignore(
-      string("Entity") |> isolate()
-    )
-    |> ignore(
-      string("[") |> isolate(check: false)
-    )
+    ignore(string("Entity") |> isolate())
+    |> ignore(string("[") |> isolate(check: false))
     |> parsec({Pythelix.Scripting.Parser.Value, :string})
-    #|> isolate()
-    |> ignore(
-      string("]") |> isolate(check: false)
-    )
+    # |> isolate()
+    |> ignore(string("]") |> isolate(check: false))
     |> unwrap_and_tag(:entity)
   )
 
@@ -38,16 +32,12 @@ defmodule Pythelix.Command.Signature.Parser do
     :arg,
     id()
     |> optional(
-      ignore(
-        string(":") |> isolate()
-      )
+      ignore(string(":") |> isolate())
       |> parsec(:hint)
       |> unwrap_and_tag(:hint)
     )
     |> optional(
-      ignore(
-        string("=") |> isolate(check: false)
-      )
+      ignore(string("=") |> isolate(check: false))
       |> parsec({Pythelix.Scripting.Parser.Expression, :expr})
       |> unwrap_and_tag(:default)
     )

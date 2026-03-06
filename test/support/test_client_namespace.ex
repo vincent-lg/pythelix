@@ -49,7 +49,11 @@ defmodule Pythelix.Test.TestClientNamespace do
         {script, :none}
 
       _ ->
-        {Pythelix.Scripting.Interpreter.Script.raise(script, TypeError, "owner should be an entity"), :none}
+        {Pythelix.Scripting.Interpreter.Script.raise(
+           script,
+           TypeError,
+           "owner should be an entity"
+         ), :none}
     end
   end
 end

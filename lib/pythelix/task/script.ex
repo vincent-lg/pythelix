@@ -27,6 +27,7 @@ defmodule Pythelix.Task.Script do
 
   defp repl(id, pid, console, variables \\ nil, buffer \\ nil) do
     variables = variables || %{}
+
     input =
       case console.gets((buffer && "... ") || ">>> ") do
         nil ->
@@ -44,6 +45,7 @@ defmodule Pythelix.Task.Script do
   end
 
   def handle_input(_, _, _, :stop, _, _), do: :ok
+
   def handle_input(id, pid, console, input, buffer, variables) do
     input =
       if buffer do
@@ -72,6 +74,7 @@ defmodule Pythelix.Task.Script do
           if result do
             console.puts(result)
           end
+
           repl(id, pid, console, variables)
 
         {:error, traceback, variables} ->
@@ -86,7 +89,7 @@ defmodule Pythelix.Task.Script do
   def execute(process, input, variables) do
     script =
       Scripting.run(input, call: false)
-      |> then(& %{&1 | variables: variables})
+      |> then(&%{&1 | variables: variables})
 
     step = {__MODULE__, :handle_result, [process]}
     Runner.run(script, input, "<stdin>", step: step, sync: true)

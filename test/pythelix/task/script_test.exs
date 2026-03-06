@@ -29,7 +29,7 @@ defmodule Pythelix.Task.ScriptTest do
       output = @console.outputs()
       assert length(output) == 4
       assert "5" in output
-      assert Enum.count(output, & &1 == ">>> ") == 2
+      assert Enum.count(output, &(&1 == ">>> ")) == 2
     end
 
     test "a list, an object with references" do
@@ -38,7 +38,7 @@ defmodule Pythelix.Task.ScriptTest do
       output = @console.outputs()
       assert length(output) == 4
       assert "[1, 2, 3]" in output
-      assert Enum.count(output, & &1 == ">>> ") == 2
+      assert Enum.count(output, &(&1 == ">>> ")) == 2
     end
 
     test "a syntax error raising a traceback" do
@@ -46,10 +46,11 @@ defmodule Pythelix.Task.ScriptTest do
       Script.run(@console, @cluster)
       output = @console.outputs()
       assert length(output) == 4
-      assert Enum.count(output, & &1 == ">>> ") == 2
+      assert Enum.count(output, &(&1 == ">>> ")) == 2
+
       assert Enum.any?(output, fn line ->
-        String.starts_with?(line, "Traceback most recent call last:")
-      end)
+               String.starts_with?(line, "Traceback most recent call last:")
+             end)
     end
 
     test "a name error error raising a traceback" do
@@ -57,10 +58,11 @@ defmodule Pythelix.Task.ScriptTest do
       Script.run(@console, @cluster)
       output = @console.outputs()
       assert length(output) == 4
-      assert Enum.count(output, & &1 == ">>> ") == 2
+      assert Enum.count(output, &(&1 == ">>> ")) == 2
+
       assert Enum.any?(output, fn line ->
-        String.starts_with?(line, "Traceback most recent call last:")
-      end)
+               String.starts_with?(line, "Traceback most recent call last:")
+             end)
     end
 
     test "a valid list expression spread on several lines" do
@@ -70,8 +72,8 @@ defmodule Pythelix.Task.ScriptTest do
       output = @console.outputs()
       assert length(output) == 5
       assert "[1, 2, 5]" in output
-      assert Enum.count(output, & &1 == "... ") == 1
-      assert Enum.count(output, & &1 == ">>> ") == 2
+      assert Enum.count(output, &(&1 == "... ")) == 1
+      assert Enum.count(output, &(&1 == ">>> ")) == 2
     end
 
     test "a valid mathematical expression spread on several lines" do
@@ -82,8 +84,8 @@ defmodule Pythelix.Task.ScriptTest do
       output = @console.outputs()
       assert length(output) == 6
       assert "5" in output
-      assert Enum.count(output, & &1 == "... ") == 2
-      assert Enum.count(output, & &1 == ">>> ") == 2
+      assert Enum.count(output, &(&1 == "... ")) == 2
+      assert Enum.count(output, &(&1 == ">>> ")) == 2
     end
 
     test "two instructions with a variable" do
@@ -93,8 +95,8 @@ defmodule Pythelix.Task.ScriptTest do
       output = @console.outputs()
       assert length(output) == 5
       assert "10" in output
-      assert Enum.count(output, & &1 == "... ") == 0
-      assert Enum.count(output, & &1 == ">>> ") == 3
+      assert Enum.count(output, &(&1 == "... ")) == 0
+      assert Enum.count(output, &(&1 == ">>> ")) == 3
     end
   end
 end

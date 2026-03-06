@@ -87,20 +87,33 @@ defmodule Pythelix.Scripting.Namespace.Tuple do
     %Tuple{elements: elements} = Store.get_value(namespace.self, recursive: false)
     tuple_size = length(elements)
 
-    start_index = if namespace.start < 0, do: max(0, tuple_size + namespace.start), else: namespace.start
-    stop_index = case namespace.stop do
-      :end -> tuple_size
-      val when val < 0 -> max(0, tuple_size + val)
-      val -> min(val, tuple_size)
-    end
+    start_index =
+      if namespace.start < 0, do: max(0, tuple_size + namespace.start), else: namespace.start
+
+    stop_index =
+      case namespace.stop do
+        :end -> tuple_size
+        val when val < 0 -> max(0, tuple_size + val)
+        val -> min(val, tuple_size)
+      end
 
     if start_index >= stop_index do
-      {Script.raise(script, ValueError, "#{Display.repr(script, namespace.value)} is not in tuple"), :none}
+      {Script.raise(
+         script,
+         ValueError,
+         "#{Display.repr(script, namespace.value)} is not in tuple"
+       ), :none}
     else
       search_list = Enum.slice(elements, start_index, stop_index - start_index)
+
       case Enum.find_index(search_list, fn item -> item == namespace.value end) do
         nil ->
-          {Script.raise(script, ValueError, "#{Display.repr(script, namespace.value)} is not in tuple"), :none}
+          {Script.raise(
+             script,
+             ValueError,
+             "#{Display.repr(script, namespace.value)} is not in tuple"
+           ), :none}
+
         found_index ->
           {script, start_index + found_index}
       end

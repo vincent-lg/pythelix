@@ -104,6 +104,7 @@ defmodule Pythelix.Scripting.Namespace.Dict do
 
   defmet items(script, namespace), [] do
     dict = Store.get_value(namespace.self)
+
     items =
       dict
       |> Dict.items()
@@ -137,6 +138,7 @@ defmodule Pythelix.Scripting.Namespace.Dict do
 
   defmet popitem(script, namespace), [] do
     dict = Store.get_value(namespace.self)
+
     case Dict.popitem(dict) do
       :empty ->
         message = "popitem(): dictionary is empty"
@@ -197,7 +199,7 @@ defmodule Pythelix.Scripting.Namespace.Dict do
 
         script
     end
-    |> then(& {&1, :none})
+    |> then(&{&1, :none})
   end
 
   defmet values(script, namespace), [] do

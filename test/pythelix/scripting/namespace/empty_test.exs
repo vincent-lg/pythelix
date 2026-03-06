@@ -10,6 +10,7 @@ defmodule Pythelix.Scripting.Namespace.EmptyTest do
   describe "__repr__" do
     test "iterate over empty namespaces to repr them" do
       expected = @expected ++ ["\"ok\""]
+
       for str_value <- expected do
         result = expr_ok("v = #{str_value}\nv.__repr__()")
         assert result == str_value
@@ -19,8 +20,8 @@ defmodule Pythelix.Scripting.Namespace.EmptyTest do
     test "iterate over empty namespaces to str them" do
       expected =
         @expected
-        |> Enum.map(& {&1, &1})
-        |> then(& &1 ++ [{"\"ok\"", "ok"}])
+        |> Enum.map(&{&1, &1})
+        |> then(&(&1 ++ [{"\"ok\"", "ok"}]))
 
       for {expression, str_value} <- expected do
         result = expr_ok("v = #{expression}\nv.__str__()")
@@ -30,6 +31,7 @@ defmodule Pythelix.Scripting.Namespace.EmptyTest do
 
     test "iterate over empty namespaces to builtin-repr them" do
       expected = @expected ++ ["\"ok\""]
+
       for str_value <- expected do
         result = expr_ok("v = #{str_value}\nrepr(v)")
         assert result == str_value
@@ -39,8 +41,8 @@ defmodule Pythelix.Scripting.Namespace.EmptyTest do
     test "iterate over empty namespaces to builtin-str them" do
       expected =
         @expected
-        |> Enum.map(& {&1, &1})
-        |> then(& &1 ++ [{"\"ok\"", "ok"}])
+        |> Enum.map(&{&1, &1})
+        |> then(&(&1 ++ [{"\"ok\"", "ok"}]))
 
       for {expression, str_value} <- expected do
         result = expr_ok("v = #{expression}\nstr(v)")

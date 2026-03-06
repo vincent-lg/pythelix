@@ -32,7 +32,9 @@ defmodule Pythelix.Scripting.Interpreter.AST.Statements do
         |> add({:unset, next_except})
         |> read_asts(body)
         |> add({:unset, finally_target})
-        |> replace({:unset, next_except}, fn code -> {:check_exc, {exc_atom, length_code(code)}} end)
+        |> replace({:unset, next_except}, fn code ->
+          {:check_exc, {exc_atom, length_code(code)}}
+        end)
       end)
 
     # Reraise if no handler matched
@@ -198,13 +200,14 @@ defmodule Pythelix.Scripting.Interpreter.AST.Statements do
       |> add({:line, line})
       |> AST.Core.read_ast(expr)
 
-    code = Enum.reduce(intermediates, code, fn item, code ->
-      code
-      |> add({:getattr, "__getitem__"})
-      |> add({:dict, :no_reference})
-      |> AST.Core.read_ast(item)
-      |> add({:call, 1})
-    end)
+    code =
+      Enum.reduce(intermediates, code, fn item, code ->
+        code
+        |> add({:getattr, "__getitem__"})
+        |> add({:dict, :no_reference})
+        |> AST.Core.read_ast(item)
+        |> add({:call, 1})
+      end)
 
     code
     |> add({:getattr, "__delitem__"})
@@ -222,45 +225,48 @@ defmodule Pythelix.Scripting.Interpreter.AST.Statements do
       code
       |> add({:line, line})
 
-    code = case first do
-      [{:getitem, [expr | items]}] ->
-        Enum.reduce(items, AST.Core.read_ast(code, expr), fn item, code ->
-          code
-          |> add({:getattr, "__getitem__"})
-          |> add({:dict, :no_reference})
-          |> AST.Core.read_ast(item)
-          |> add({:call, 1})
-        end)
+    code =
+      case first do
+        [{:getitem, [expr | items]}] ->
+          Enum.reduce(items, AST.Core.read_ast(code, expr), fn item, code ->
+            code
+            |> add({:getattr, "__getitem__"})
+            |> add({:dict, :no_reference})
+            |> AST.Core.read_ast(item)
+            |> add({:call, 1})
+          end)
 
-      name when is_binary(name) ->
-        add(code, {:read, name})
-    end
+        name when is_binary(name) ->
+          add(code, {:read, name})
+      end
 
-    code = Enum.reduce(intermediates, code, fn
-      [{:getitem, [expr | items]}], code ->
-        Enum.reduce(items, AST.Core.read_ast(code, expr), fn item, code ->
-          code
-          |> add({:getattr, "__getitem__"})
-          |> add({:dict, :no_reference})
-          |> AST.Core.read_ast(item)
-          |> add({:call, 1})
-        end)
+    code =
+      Enum.reduce(intermediates, code, fn
+        [{:getitem, [expr | items]}], code ->
+          Enum.reduce(items, AST.Core.read_ast(code, expr), fn item, code ->
+            code
+            |> add({:getattr, "__getitem__"})
+            |> add({:dict, :no_reference})
+            |> AST.Core.read_ast(item)
+            |> add({:call, 1})
+          end)
 
-      name, code when is_binary(name) ->
-        add(code, {:getattr, name})
-    end)
+        name, code when is_binary(name) ->
+          add(code, {:getattr, name})
+      end)
 
     case last do
       [{:getitem, [expr | items]}] ->
         {item_intermediates, [last_item]} = Enum.split(items, -1)
 
-        code = Enum.reduce(item_intermediates, AST.Core.read_ast(code, expr), fn item, code ->
-          code
-          |> add({:getattr, "__getitem__"})
-          |> add({:dict, :no_reference})
-          |> AST.Core.read_ast(item)
-          |> add({:call, 1})
-        end)
+        code =
+          Enum.reduce(item_intermediates, AST.Core.read_ast(code, expr), fn item, code ->
+            code
+            |> add({:getattr, "__getitem__"})
+            |> add({:dict, :no_reference})
+            |> AST.Core.read_ast(item)
+            |> add({:call, 1})
+          end)
 
         code
         |> add({:getattr, "__delitem__"})

@@ -55,7 +55,7 @@ defmodule Pythelix.Network.TCP.Client do
         (prompt && Enum.concat(messages, [prompt])) || messages
       end)
       |> Enum.join("\n")
-      |> then(& (!String.ends_with?(&1, "\n") && &1 <> "\n") || &1)
+      |> then(&((!String.ends_with?(&1, "\n") && &1 <> "\n") || &1))
       |> String.replace("\n", "\r\n")
 
     :gen_tcp.send(socket, text)
@@ -67,7 +67,7 @@ defmodule Pythelix.Network.TCP.Client do
       messages
       |> Enum.reverse()
       |> Enum.join("\n")
-      |> then(& (!String.ends_with?(&1, "\n") && &1 <> "\n") || &1)
+      |> then(&((!String.ends_with?(&1, "\n") && &1 <> "\n") || &1))
       |> String.replace("\n", "\r\n")
 
     :gen_tcp.send(socket, text)
@@ -111,15 +111,18 @@ defmodule Pythelix.Network.TCP.Client do
 
     # Connect the client to the default menu (MOTD) like the old menu connector did
     default_menu_key = Application.get_env(:pythelix, :default_menu, "menu/motd")
+
     case Record.get_entity(default_menu_key) do
-      nil -> :ok
+      nil ->
+        :ok
+
       menu ->
         client_entity = Record.get_entity(key)
         Record.change_location(client_entity, menu)
 
         # Send the menu text as welcome message and prompt (mimicking old behavior)
-        #menu_text = Record.get_attribute(menu, "text", "")
-        #if menu_text != "" do
+        # menu_text = Record.get_attribute(menu, "text", "")
+        # if menu_text != "" do
         #  Kernel.send(pid, {:message, menu_text})
 
         #  # Get and send the menu prompt to complete the welcome
@@ -130,7 +133,7 @@ defmodule Pythelix.Network.TCP.Client do
         #  end
 
         #  Kernel.send(pid, {:full, prompt})
-        #end
+        # end
     end
   end
 

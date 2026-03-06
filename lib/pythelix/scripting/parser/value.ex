@@ -116,13 +116,15 @@ defmodule Pythelix.Scripting.Parser.Value do
     {:duration, map}
   end
 
-  defcombinator :string,
+  defcombinator(
+    :string,
     choice([
       Parser.String.quoted("'''", multiline: true, label: "triple-quote with ticks"),
       Parser.String.quoted(~s/"""/, multiline: true, label: "triple-quote with double quotes"),
       Parser.String.quoted("'", label: "single quote"),
       Parser.String.quoted(~s/"/, label: "double quote")
     ])
+  )
 
   def escape(chars) do
     chars
@@ -190,7 +192,8 @@ defmodule Pythelix.Scripting.Parser.Value do
     |> isolate(allow_newline: true)
   )
 
-  defcombinator :getitem,
+  defcombinator(
+    :getitem,
     choice([
       parsec(:formatted_string),
       parsec(:string) |> isolate(),
@@ -204,6 +207,7 @@ defmodule Pythelix.Scripting.Parser.Value do
       min: 1
     )
     |> tag(:getitem)
+  )
 
   defcombinator(
     :nested_values,

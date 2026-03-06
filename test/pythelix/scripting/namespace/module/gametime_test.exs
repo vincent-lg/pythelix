@@ -15,7 +15,9 @@ defmodule Pythelix.Scripting.Namespace.Module.GametimeTest do
     Epoch.init()
 
     # Create a test calendar with basic units
-    {:ok, _} = Record.create_entity(key: "test_gt_calendar", parent: Record.get_entity("generic/calendar"))
+    {:ok, _} =
+      Record.create_entity(key: "test_gt_calendar", parent: Record.get_entity("generic/calendar"))
+
     Record.set_attribute("test_gt_calendar", "type", "custom")
     Record.set_attribute("test_gt_calendar", "offset", 0)
 
@@ -84,11 +86,12 @@ defmodule Pythelix.Scripting.Namespace.Module.GametimeTest do
 
       Epoch.cache_calendars()
 
-      script = run("""
-      now = gametime.now(!se_calendar2!)
-      future = now.project(hour=2)
-      diff = future.hour - now.hour
-      """)
+      script =
+        run("""
+        now = gametime.now(!se_calendar2!)
+        future = now.project(hour=2)
+        diff = future.hour - now.hour
+        """)
 
       diff = Script.get_variable_value(script, "diff")
       assert diff == 2 or (diff < 0 and diff + 24 == 2)
@@ -120,11 +123,12 @@ defmodule Pythelix.Scripting.Namespace.Module.GametimeTest do
 
   describe "gt.project()" do
     test "projects with hour adjustment" do
-      script = run("""
-      now = gametime.now(!test_gt_calendar!)
-      future = now.project(hour=2)
-      diff = future.hour - now.hour
-      """)
+      script =
+        run("""
+        now = gametime.now(!test_gt_calendar!)
+        future = now.project(hour=2)
+        diff = future.hour - now.hour
+        """)
 
       diff = Script.get_variable_value(script, "diff")
       # Projected 2 hours ahead
@@ -185,11 +189,12 @@ defmodule Pythelix.Scripting.Namespace.Module.GametimeTest do
 
       Epoch.cache_calendars()
 
-      script = run("""
-      now = gametime.now(!cyclic_cal2!)
-      future = now.project(weekday=2)
-      diff = future.day - now.day
-      """)
+      script =
+        run("""
+        now = gametime.now(!cyclic_cal2!)
+        future = now.project(weekday=2)
+        diff = future.day - now.day
+        """)
 
       diff = Script.get_variable_value(script, "diff")
       assert diff == 2 or (diff < 0 and diff + 24 == 2)
@@ -223,14 +228,28 @@ defmodule Pythelix.Scripting.Namespace.Module.GametimeTest do
       Epoch.cache_calendars()
 
       value = expr_ok("gametime.now(!cyclic_cal3!).day_name")
-      assert value in ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+
+      assert value in [
+               "Monday",
+               "Tuesday",
+               "Wednesday",
+               "Thursday",
+               "Friday",
+               "Saturday",
+               "Sunday"
+             ]
     end
   end
 
   describe "error handling" do
     test "error when no calendar and multiple exist" do
       # Create a second calendar
-      {:ok, _} = Record.create_entity(key: "test_gt_calendar2", parent: Record.get_entity("generic/calendar"))
+      {:ok, _} =
+        Record.create_entity(
+          key: "test_gt_calendar2",
+          parent: Record.get_entity("generic/calendar")
+        )
+
       Record.set_attribute("test_gt_calendar2", "type", "custom")
       Epoch.cache_calendars()
 

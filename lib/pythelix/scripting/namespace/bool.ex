@@ -20,6 +20,6 @@ defmodule Pythelix.Scripting.Namespace.Bool do
   defp repr(script, self) do
     to_string(self)
     |> String.capitalize()
-    |> then(& {script, &1})
+    |> then(&{script, &1})
   end
 end

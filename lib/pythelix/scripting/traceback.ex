@@ -47,10 +47,14 @@ defmodule Pythelix.Scripting.Traceback do
   """
   def build_from_bottom(traceback) do
     start = %Traceback{exception: traceback.exception, message: traceback.message}
+
     get_parents = fn script ->
       rec = fn
-        parents, %Script{parent: %Script{} = parent} = script, fun -> [script | fun.(parents, parent, fun)]
-        parents, script, _fun -> [script | parents]
+        parents, %Script{parent: %Script{} = parent} = script, fun ->
+          [script | fun.(parents, parent, fun)]
+
+        parents, script, _fun ->
+          [script | parents]
       end
 
       rec.([], script, rec)
@@ -89,7 +93,7 @@ defmodule Pythelix.Scripting.Traceback do
   def introspect(traceback) do
     traceback.chain
     |> Enum.reject(fn {_, code, owner} ->
-      (code == nil) || (owner == nil)
+      code == nil || owner == nil
     end)
     |> Enum.map(fn {script, _code, owner} = chain ->
       {owner, script.line, format_code(chain)}
@@ -108,7 +112,7 @@ defmodule Pythelix.Scripting.Traceback do
     chain =
       traceback.chain
       |> Enum.reject(fn {_, code, owner} ->
-        (code == nil) || (owner == nil)
+        code == nil || owner == nil
       end)
       |> Enum.flat_map(fn chain ->
         ["  " <> format_call(chain), "    " <> format_code(chain)]

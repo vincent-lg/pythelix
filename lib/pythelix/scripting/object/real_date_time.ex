@@ -27,7 +27,7 @@ defmodule Pythelix.Scripting.Object.RealDateTime do
     {{uy, um, ud}, {uh, umin, us}} = :calendar.universal_time()
 
     local_secs = :calendar.datetime_to_gregorian_seconds({{ly, lm, ld}, {lh, lmin, ls}})
-    utc_secs   = :calendar.datetime_to_gregorian_seconds({{uy, um, ud}, {uh, umin, us}})
+    utc_secs = :calendar.datetime_to_gregorian_seconds({{uy, um, ud}, {uh, umin, us}})
     offset_seconds = local_secs - utc_secs
 
     sign = if offset_seconds >= 0, do: "+", else: "-"

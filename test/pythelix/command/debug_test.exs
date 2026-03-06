@@ -19,7 +19,13 @@ defmodule Pythelix.Command.DebugTest do
       nil ->
         {:ok, _} =
           Record.create_entity(key: "generic/client", virtual: true)
-          Record.set_attribute("generic/client", "msg", {:extended, Pythelix.Test.TestClientNamespace, :m_msg})
+
+        Record.set_attribute(
+          "generic/client",
+          "msg",
+          {:extended, Pythelix.Test.TestClientNamespace, :m_msg}
+        )
+
         :ok
 
       _ ->
@@ -40,11 +46,13 @@ defmodule Pythelix.Command.DebugTest do
     receive do
       {:message, msg} ->
         assert msg == "Direct network test!"
+
       other ->
         flunk("Unexpected message: #{inspect(other)}")
-    after 2000 ->
-      Process.info(self(), :messages)
-      flunk("No network message received")
+    after
+      2000 ->
+        Process.info(self(), :messages)
+        flunk("No network message received")
     end
   end
 
@@ -58,6 +66,7 @@ defmodule Pythelix.Command.DebugTest do
 
     # Create a test menu entity
     {:ok, menu} = Record.create_entity(key: "menu/test", virtual: true)
+
     Record.set_attribute("menu/test", "commands", %{
       "debug" => "command/debug"
     })
@@ -78,12 +87,14 @@ defmodule Pythelix.Command.DebugTest do
     receive do
       {:message, msg} ->
         assert msg == "Debug message!"
+
       other ->
         flunk("Unexpected message: #{inspect(other)}")
-    after 2000 ->
-      # Check mailbox
-      Process.info(self(), :messages)
-      flunk("No message received after 2000ms")
+    after
+      2000 ->
+        # Check mailbox
+        Process.info(self(), :messages)
+        flunk("No message received after 2000ms")
     end
   end
 end

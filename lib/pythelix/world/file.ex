@@ -45,7 +45,10 @@ defmodule Pythelix.World.File do
 
   defp parse_lines([], state), do: state
 
-  defp parse_lines([{line, index} | rest], state = %{multiline_key: key, current: current, need_more: true})
+  defp parse_lines(
+         [{line, index} | rest],
+         state = %{multiline_key: key, current: current, need_more: true}
+       )
        when key != nil do
     text =
       [line | current.attributes[key]]
@@ -67,7 +70,10 @@ defmodule Pythelix.World.File do
     end
   end
 
-  defp parse_lines([{line, index} | rest], state = %{current: current, method_name: method, need_more: need_more}) do
+  defp parse_lines(
+         [{line, index} | rest],
+         state = %{current: current, method_name: method, need_more: need_more}
+       ) do
     cond do
       need_more && (current != nil and method != nil) ->
         state = parse_method_content(state, {line, index})
@@ -128,7 +134,7 @@ defmodule Pythelix.World.File do
         case Pythelix.Command.Signature.constraints(method_name) do
           {name, constraints} when is_binary(name) ->
             put_in(current.methods[name], {constraints, []})
-            |> then(& %{state | method_name: name, current: &1, need_more: true})
+            |> then(&%{state | method_name: name, current: &1, need_more: true})
 
           error ->
             put_error(state, {line, index}, "Signature error: #{inspect(error)}")
@@ -136,7 +142,7 @@ defmodule Pythelix.World.File do
 
       true ->
         put_in(current.methods[method_name], {:free, []})
-        |> then(& %{state | method_name: method_name, current: &1, need_more: true})
+        |> then(&%{state | method_name: method_name, current: &1, need_more: true})
     end
   end
 

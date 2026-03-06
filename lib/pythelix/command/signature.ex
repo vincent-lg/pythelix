@@ -43,7 +43,7 @@ defmodule Pythelix.Command.Signature do
       {:arg, [{:var, arg}, {:default, default}]} ->
         {arg, [keyword: arg, default: default]}
 
-      {:arg, [{:var, arg}, {:hint, hint},]} ->
+      {:arg, [{:var, arg}, {:hint, hint}]} ->
         {arg, [keyword: arg, type: hint]}
 
       {:arg, [{:var, arg}]} ->

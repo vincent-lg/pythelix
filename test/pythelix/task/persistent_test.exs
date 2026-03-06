@@ -37,6 +37,7 @@ defmodule Pythelix.Task.PersistentTest do
       Record.set_method("sched_mark", "mark", :free, "self.was_called = True")
 
       task_id = System.unique_integer([:positive])
+
       Cachex.put(:px_tasks, task_id, %Task{
         id: task_id,
         expire_at: DateTime.utc_now(),
@@ -55,6 +56,7 @@ defmodule Pythelix.Task.PersistentTest do
       Record.set_method("sched_cleanup", "noop", :free, "")
 
       task_id = System.unique_integer([:positive])
+
       Cachex.put(:px_tasks, task_id, %Task{
         id: task_id,
         expire_at: DateTime.utc_now(),
@@ -70,6 +72,7 @@ defmodule Pythelix.Task.PersistentTest do
 
     test "logs a warning and does not crash when the entity no longer exists" do
       task_id = System.unique_integer([:positive])
+
       Cachex.put(:px_tasks, task_id, %Task{
         id: task_id,
         expire_at: DateTime.utc_now(),
@@ -91,7 +94,13 @@ defmodule Pythelix.Task.PersistentTest do
 
       # A past expire_at makes Task.Persistent schedule the timer at 0 ms.
       expire_at = DateTime.add(DateTime.utc_now(), -1, :second)
-      Task.add_entity_method(expire_at, "test:sched_pipeline:trigger", "sched_pipeline", "trigger")
+
+      Task.add_entity_method(
+        expire_at,
+        "test:sched_pipeline:trigger",
+        "sched_pipeline",
+        "trigger"
+      )
 
       # Give the 0 ms timer a moment to fire and enqueue the job on the Hub
       # before we enqueue our own sentinel.

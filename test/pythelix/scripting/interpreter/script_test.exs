@@ -47,7 +47,11 @@ defmodule Pythelix.Scripting.Interpreter.ScriptTest do
     end
 
     test "gets step correctly" do
-      script = %Script{id: "test_script", bytecode: [], step: {TestModule, :test_function, [:arg1]}}
+      script = %Script{
+        id: "test_script",
+        bytecode: [],
+        step: {TestModule, :test_function, [:arg1]}
+      }
 
       assert Script.get_step(script) == {TestModule, :test_function, [:arg1]}
     end
@@ -110,10 +114,11 @@ defmodule Pythelix.Scripting.Interpreter.ScriptTest do
       # Capture log output
       import ExUnit.CaptureLog
 
-      log = capture_log(fn ->
-        result = Script.execute_step(script, :ok)
-        assert match?({:error, _}, result)
-      end)
+      log =
+        capture_log(fn ->
+          result = Script.execute_step(script, :ok)
+          assert match?({:error, _}, result)
+        end)
 
       assert log =~ "Failed to execute step"
       assert log =~ "test_step_raise"
@@ -123,6 +128,7 @@ defmodule Pythelix.Scripting.Interpreter.ScriptTest do
   describe "script serialization compatibility" do
     test "script structure can be serialized and deserialized" do
       parent = %Script{id: "parent", bytecode: [:parent_op]}
+
       script = %Script{
         id: "test_script_123",
         bytecode: [:some, :opcodes],

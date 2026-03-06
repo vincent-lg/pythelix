@@ -66,6 +66,7 @@ defmodule Pythelix.Game.Modes do
   @spec remove(t(), Entity.t(), nil | Entity.t()) :: {:ok, t()} | :error
   def remove(%Modes{} = mode, %Entity{} = menu, owner) do
     menu_id_or_key = Entity.get_id_or_key(menu)
+
     filter =
       case owner do
         nil ->

@@ -130,7 +130,13 @@ defmodule Pythelix.Scripting.Parser.Statement do
     {:if, condition, then, [], nil, {line, offset}}
   end
 
-  def reduce_if([{[:if], {line, offset}}, condition, {:stmt_list, then}, {:stmt_list, otherwise}, :endif]) do
+  def reduce_if([
+        {[:if], {line, offset}},
+        condition,
+        {:stmt_list, then},
+        {:stmt_list, otherwise},
+        :endif
+      ]) do
     {:if, condition, then, [], otherwise, {line, offset}}
   end
 
@@ -233,6 +239,7 @@ defmodule Pythelix.Scripting.Parser.Statement do
   end
 
   defp extract_excepts(items), do: extract_excepts(items, [])
+
   defp extract_excepts([{:except_clause, clause} | rest], acc) do
     parsed =
       case clause do
@@ -242,6 +249,7 @@ defmodule Pythelix.Scripting.Parser.Statement do
 
     extract_excepts(rest, [parsed | acc])
   end
+
   defp extract_excepts(rest, acc), do: {Enum.reverse(acc), rest}
 
   defp extract_tagged([{tag, {:stmt_list, body}} | rest], tag), do: {body, rest}

@@ -9,7 +9,7 @@ defmodule Mix.Tasks.Pumpkin do
 
     config = [
       database: Path.expand("../pythelix_features.db", __DIR__),
-      #database: ":memory:",
+      # database: ":memory:",
       pool_size: 5,
       pool: Ecto.Adapters.SQL.Sandbox
     ]
@@ -17,8 +17,8 @@ defmodule Mix.Tasks.Pumpkin do
     # Dynamically reconfigure the Repo
     Application.put_env(:pythelix, Pythelix.Repo, config)
     Application.put_env(:pythelix, :worldlets, false)
-    #Application.put_env(:libcluster, :topologies, nil)
-    #Application.put_env(:logger, :level, :warning)
+    # Application.put_env(:libcluster, :topologies, nil)
+    # Application.put_env(:logger, :level, :warning)
 
     # start your app (so Repo, ETS, etc. are up)
     Mix.Task.run("ecto.create", [])
@@ -26,7 +26,7 @@ defmodule Mix.Tasks.Pumpkin do
     {:ok, _} = Application.ensure_all_started(:pythelix)
     Enum.each(Path.wildcard("features/helpers/**/*.ex"), &Code.eval_file/1)
     Enum.each(Path.wildcard("features/steps/**/*.ex"), &Code.eval_file/1)
-    #Code.eval_file("features/steps/test.ex")
+    # Code.eval_file("features/steps/test.ex")
     Pumpkin.Runner.run()
   end
 end

@@ -169,6 +169,7 @@ defmodule Pythelix.Scripting.Namespace.Set do
         Store.update_reference(namespace.self, updated)
 
         {script, value}
+
       [] ->
         {Script.raise(script, KeyError, "pop from an empty set"), :none}
     end
@@ -249,6 +250,7 @@ defmodule Pythelix.Scripting.Namespace.Set do
 
   defp repr(script, self) do
     self = Store.get_value(self)
+
     MapSet.to_list(self)
     |> Enum.map(fn
       :ellipsis -> "{...}"

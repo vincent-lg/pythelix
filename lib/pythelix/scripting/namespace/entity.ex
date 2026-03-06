@@ -109,13 +109,13 @@ defmodule Pythelix.Scripting.Namespace.Entity do
     case to_value do
       :none ->
         Record.change_parent(entity, nil)
-        |> then(& Store.update_reference(self, &1))
+        |> then(&Store.update_reference(self, &1))
 
         {script, to_ref}
 
       %Entity{} = parent ->
         Record.change_parent(entity, parent)
-        |> then(& Store.update_reference(self, &1))
+        |> then(&Store.update_reference(self, &1))
 
         {script, to_ref}
 
@@ -131,13 +131,13 @@ defmodule Pythelix.Scripting.Namespace.Entity do
     case to_value do
       :none ->
         Record.change_location(entity, nil)
-        |> then(& Store.update_reference(self, &1))
+        |> then(&Store.update_reference(self, &1))
 
         {script, to_ref}
 
       %Entity{} = location ->
         Record.change_location(entity, location)
-        |> then(& Store.update_reference(self, &1))
+        |> then(&Store.update_reference(self, &1))
 
         {script, to_ref}
 
@@ -268,6 +268,6 @@ defmodule Pythelix.Scripting.Namespace.Entity do
 
   defp repr(script, self) do
     Store.get_value(self)
-    |> then(& {script, inspect(&1)})
+    |> then(&{script, inspect(&1)})
   end
 end

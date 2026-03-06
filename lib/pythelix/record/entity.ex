@@ -6,12 +6,16 @@ defmodule Pythelix.Record.Entity do
   @primary_key {:gen_id, :integer, []}
 
   schema "entities" do
-    #field :gen_id, :integer, primary_key: true
+    # field :gen_id, :integer, primary_key: true
     field :key, :string
     field :methods, :binary
     belongs_to :location, Entity, foreign_key: :location_id
     belongs_to :parent, Entity, foreign_key: :parent_id
-    has_many :attributes, Pythelix.Record.Attribute, foreign_key: :entity_gen_id, references: :gen_id
+
+    has_many :attributes, Pythelix.Record.Attribute,
+      foreign_key: :entity_gen_id,
+      references: :gen_id
+
     timestamps(type: :utc_datetime)
   end
 
@@ -28,6 +32,7 @@ defmodule Pythelix.Record.Entity do
   end
 
   def get_methods(%__MODULE__{methods: nil}), do: %{}
+
   def get_methods(%__MODULE__{methods: binary}) do
     :erlang.binary_to_term(binary)
   end

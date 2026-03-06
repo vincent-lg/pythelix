@@ -172,6 +172,7 @@ defmodule Pythelix.Record do
   @spec has_parent?(Entity.t(), Entity.t() | String.t() | integer()) :: boolean()
   def has_parent?(nil, _menu), do: false
   def has_parent?(_entity, nil), do: false
+
   def has_parent?(%Entity{} = entity, %Entity{} = parent) do
     has_parent?(entity, Entity.get_id_or_key(parent))
   end
@@ -292,7 +293,8 @@ defmodule Pythelix.Record do
           _ -> create_virtual_entity(opts)
         end
 
-      other -> other
+      other ->
+        other
     end)
     |> maybe_build_entity()
   end
@@ -382,7 +384,9 @@ defmodule Pythelix.Record do
     id_or_key = Entity.get_id_or_key(entity)
 
     case Cache.get_children_id_or_key(id_or_key) do
-      [] -> false
+      [] ->
+        false
+
       children ->
         Enum.any?(children, fn child_id ->
           child_id == target_id_or_key or
@@ -418,7 +422,7 @@ defmodule Pythelix.Record do
   * entity (Entity): the entity to move.
   * location (Entity): the new location.
   """
-  @spec change_location(Entity.t(), Entity.t() | nil) :: Entity.t() | {:error, String.tOP}
+  @spec change_location(Entity.t(), Entity.t() | nil) :: Entity.t() | {:error, String.tOP()}
   def change_location(%Entity{} = entity, new_location) do
     entity
     |> can_move_to_location?(new_location)
@@ -454,10 +458,10 @@ defmodule Pythelix.Record do
     end
 
     entity
-    |> tap(& handle_changed_location(&1, new_location))
+    |> tap(&handle_changed_location(&1, new_location))
     |> Cache.change_location(new_location)
     |> Cache.cache_entity()
-    |> tap(& handle_new_location(&1, new_location))
+    |> tap(&handle_new_location(&1, new_location))
   end
 
   defp handle_changed_location(%{location_id: old_id} = entity, location) do
@@ -467,6 +471,7 @@ defmodule Pythelix.Record do
       if has_parent?(entity, Generic.client()) && has_parent?(old_location, Generic.menu()) do
         owner = get_attribute(entity, "owner", nil)
         owner = owner || entity
+
         try do
           Runner.run_method({old_location, "leave"}, [owner], nil, sync: true)
         rescue
@@ -492,11 +497,11 @@ defmodule Pythelix.Record do
 
       owner = get_attribute(entity, "owner", nil)
       owner = owner || entity
-      #try do
-        Runner.run_method({location, "enter"}, [owner], nil, sync: true)
-      #rescue
+      # try do
+      Runner.run_method({location, "enter"}, [owner], nil, sync: true)
+      # rescue
       #  _ -> nil
-      #end
+      # end
     end
   end
 
@@ -551,7 +556,8 @@ defmodule Pythelix.Record do
   * `:cache`: just cache the attribute (never store it into the database).
 
   """
-  @spec set_attribute(integer() | binary(), String.t(), any(), [atom()]) :: Entity.t() | :invalid_entity
+  @spec set_attribute(integer() | binary(), String.t(), any(), [atom()]) ::
+          Entity.t() | :invalid_entity
   def set_attribute(id_or_key, name, value, opts \\ []) do
     case get_entity(id_or_key) do
       nil ->
@@ -613,10 +619,13 @@ defmodule Pythelix.Record do
   * `:new`: only set the method if it doesn't exist.
   * `:cache`: just cache the method (never store it into the database).
   """
-  @spec set_method(integer() | binary(), list(), binary(), binary(), [atom()]) :: Entity.t() | :invalid_entity
+  @spec set_method(integer() | binary(), list(), binary(), binary(), [atom()]) ::
+          Entity.t() | :invalid_entity
   def set_method(id_or_key, name, args, code, opts \\ []) do
     case get_entity(id_or_key) do
-      nil -> :invalid_entity
+      nil ->
+        :invalid_entity
+
       entity ->
         set_entity_method(entity, name, args, code, opts)
         |> set_child_method(name, args)
@@ -780,6 +789,7 @@ defmodule Pythelix.Record do
 
       gen_id = Diff.get_attribute_id()
       Diff.add({:addattr, entity.id, gen_id, name, serialized})
+
       attribute = %{
         gen_id: gen_id,
         name: name,
@@ -816,6 +826,7 @@ defmodule Pythelix.Record do
             Diff.add({:setattr, attribute_id, name, serialized})
           end
         end
+
         Cache.cache_entity_attribute(Entity.get_id_or_key(entity), name, value)
 
         entity
@@ -829,8 +840,11 @@ defmodule Pythelix.Record do
       child_id_or_key = Entity.get_id_or_key(child)
 
       case value do
-        {:parent, other} -> set_attribute(child_id_or_key, name, {:parent, other}, new: true, cache: true)
-        _ -> set_attribute(child_id_or_key, name, {:parent, id_or_key}, new: true, cache: true)
+        {:parent, other} ->
+          set_attribute(child_id_or_key, name, {:parent, other}, new: true, cache: true)
+
+        _ ->
+          set_attribute(child_id_or_key, name, {:parent, id_or_key}, new: true, cache: true)
       end
     end
 
@@ -867,6 +881,7 @@ defmodule Pythelix.Record do
 
   defp set_entity_method_code(%Entity{} = entity, name, args, code, _opts) do
     id_or_key = Entity.get_id_or_key(entity)
+
     method =
       if code == nil do
         args
@@ -882,7 +897,7 @@ defmodule Pythelix.Record do
         {_, {:parent, _}} -> nil
         {name, method} -> {name, {method.args, method.code, method.bytecode}}
       end)
-      |> Enum.reject(& &1 == nil)
+      |> Enum.reject(&(&1 == nil))
       |> Map.new()
 
     Diff.add({:update, entity.id, :methods, :erlang.term_to_binary(to_store)})
@@ -897,8 +912,11 @@ defmodule Pythelix.Record do
       child_id_or_key = Entity.get_id_or_key(child)
 
       case args do
-        {:parent, other} -> set_method(child_id_or_key, name, {:parent, other}, nil, new: true, cache: true)
-        _ -> set_method(child_id_or_key, name, {:parent, id_or_key}, nil, new: true, cache: true)
+        {:parent, other} ->
+          set_method(child_id_or_key, name, {:parent, other}, nil, new: true, cache: true)
+
+        _ ->
+          set_method(child_id_or_key, name, {:parent, id_or_key}, nil, new: true, cache: true)
       end
     end
 

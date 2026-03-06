@@ -260,6 +260,7 @@ defmodule Pythelix.Scripting.Namespace.Module.Search do
   defp compute_many(parent, filters) do
     parent = Store.get_value(parent)
     filters = Enum.map(filters, &Store.get_value/1)
+
     find_many(filters)
     |> Enum.filter(fn result ->
       Record.get_ancestors(result)

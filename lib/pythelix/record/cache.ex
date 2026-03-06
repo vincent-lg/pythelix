@@ -240,9 +240,10 @@ defmodule Pythelix.Record.Cache do
 
     Cachex.del(:px_cache, {:attribute, id_or_key, name})
     Cachex.del(:px_cache, {:attribute_id, id_or_key, name})
+
     Cachex.get_and_update(:px_cache, {:attributes, id_or_key}, fn
       nil -> {:ignore, []}
-      names -> {:commit, Enum.reject(names, & &1 == name)}
+      names -> {:commit, Enum.reject(names, &(&1 == name))}
     end)
   end
 
@@ -258,9 +259,10 @@ defmodule Pythelix.Record.Cache do
     id_or_key = Entity.get_id_or_key(entity)
 
     Cachex.del(:px_cache, {:method, id_or_key, name})
+
     Cachex.get_and_update(:px_cache, {:methods, id_or_key}, fn
       nil -> {:ignore, []}
-      names -> {:commit, Enum.reject(names, & &1 == name)}
+      names -> {:commit, Enum.reject(names, &(&1 == name))}
     end)
   end
 
@@ -378,7 +380,7 @@ defmodule Pythelix.Record.Cache do
       {:ok, contents} ->
         contents
         |> Enum.flat_map(&get_recursive_contents/1)
-        |> then(& Enum.concat(contents, &1))
+        |> then(&Enum.concat(contents, &1))
     end
   end
 
@@ -392,7 +394,7 @@ defmodule Pythelix.Record.Cache do
   """
   @spec cache_stored_entity_attributes(map()) :: map()
   def cache_stored_entity_attributes(%Record.Entity{attributes: attributes} = entity)
-       when is_list(attributes) do
+      when is_list(attributes) do
     for attribute <- attributes do
       value = :erlang.binary_to_term(attribute.value)
       cache_stored_entity_attribute(entity.gen_id, attribute, value)
@@ -410,6 +412,7 @@ defmodule Pythelix.Record.Cache do
 
   def cache_entity_attribute(id_or_key, name, value) do
     Cachex.put(:px_cache, {:attribute, id_or_key, name}, value)
+
     Cachex.get_and_update(:px_cache, {:attributes, id_or_key}, fn
       nil -> {:commit, [name]}
       names -> {:commit, [name | names]}
@@ -425,7 +428,7 @@ defmodule Pythelix.Record.Cache do
 
       {:ok, names} ->
         names
-        |> Enum.map(& {&1, get_cached_entity_attribute(entity, &1, nil, opts)})
+        |> Enum.map(&{&1, get_cached_entity_attribute(entity, &1, nil, opts)})
         |> Map.new()
     end
   end
@@ -477,6 +480,7 @@ defmodule Pythelix.Record.Cache do
 
   def cache_entity_method(id_or_key, name, method) do
     Cachex.put(:px_cache, {:method, id_or_key, name}, method)
+
     Cachex.get_and_update(:px_cache, {:methods, id_or_key}, fn
       nil -> {:commit, [name]}
       names -> {:commit, [name | names]}
@@ -492,7 +496,7 @@ defmodule Pythelix.Record.Cache do
 
       {:ok, names} ->
         names
-        |> Enum.map(& {&1, get_cached_entity_method(entity, &1, opts)})
+        |> Enum.map(&{&1, get_cached_entity_method(entity, &1, opts)})
         |> Map.new()
     end
   end
@@ -505,7 +509,7 @@ defmodule Pythelix.Record.Cache do
       {:ok, nil} ->
         :nomethod
 
-      {:ok, {:parent, parent_id_or_key}} when raw_parents == nil->
+      {:ok, {:parent, parent_id_or_key}} when raw_parents == nil ->
         parent = Record.get_entity(parent_id_or_key)
         get_cached_entity_method(parent, name)
 
@@ -617,15 +621,17 @@ defmodule Pythelix.Record.Cache do
 
       contents ->
         case Enum.find_index(contents, fn
-          {:stackable, ^entity_id_or_key, _} -> true
-          _ -> false
-        end) do
+               {:stackable, ^entity_id_or_key, _} -> true
+               _ -> false
+             end) do
           nil ->
             {:commit, contents ++ [{:stackable, entity_id_or_key, quantity}]}
 
           index ->
             {:stackable, ^entity_id_or_key, old_qty} = Enum.at(contents, index)
-            {:commit, List.replace_at(contents, index, {:stackable, entity_id_or_key, old_qty + quantity})}
+
+            {:commit,
+             List.replace_at(contents, index, {:stackable, entity_id_or_key, old_qty + quantity})}
         end
     end)
   end
@@ -641,9 +647,9 @@ defmodule Pythelix.Record.Cache do
 
       contents ->
         case Enum.find_index(contents, fn
-          {:stackable, ^entity_id_or_key, _} -> true
-          _ -> false
-        end) do
+               {:stackable, ^entity_id_or_key, _} -> true
+               _ -> false
+             end) do
           nil ->
             {:commit, contents}
 
@@ -671,9 +677,9 @@ defmodule Pythelix.Record.Cache do
 
       {:ok, contents} ->
         case Enum.find(contents, fn
-          {:stackable, ^entity_id_or_key, _} -> true
-          _ -> false
-        end) do
+               {:stackable, ^entity_id_or_key, _} -> true
+               _ -> false
+             end) do
           {:stackable, ^entity_id_or_key, qty} -> qty
           nil -> 0
         end

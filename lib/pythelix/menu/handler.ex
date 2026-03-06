@@ -59,7 +59,10 @@ defmodule Pythelix.Menu.Handler do
       input_method ->
         # Execute input method with step to handle its result
         script = create_input_script(menu, client, input, input_method, owner_entity, "input")
-        step = {__MODULE__, :handle_input_completion, [menu, client, input, start_time, owner_entity]}
+
+        step =
+          {__MODULE__, :handle_input_completion, [menu, client, input, start_time, owner_entity]}
+
         method_name = "#{inspect(menu)}, method input"
         Runner.run(script, input_method.code, method_name, step: step, sync: true)
     end
@@ -93,7 +96,13 @@ defmodule Pythelix.Menu.Handler do
   def try_command_processing(menu, client, input, start_time, owner_entity) do
     case parse_command_from_input(input, menu) do
       {:command, command_key, args} ->
-        CommandHandler.start_command_execution(command_key, args, client, start_time, owner_entity)
+        CommandHandler.start_command_execution(
+          command_key,
+          args,
+          client,
+          start_time,
+          owner_entity
+        )
 
       :no_command ->
         handle_unknown_input(menu, client, input, start_time, owner_entity)
@@ -111,7 +120,16 @@ defmodule Pythelix.Menu.Handler do
 
       unknown_input_method ->
         # Execute unknown_input method asynchronously
-        script = create_input_script(menu, client, input, unknown_input_method, owner_entity, "unknown_input")
+        script =
+          create_input_script(
+            menu,
+            client,
+            input,
+            unknown_input_method,
+            owner_entity,
+            "unknown_input"
+          )
+
         step = {__MODULE__, :handle_unknown_input_completion, [start_time]}
         method_name = "#{inspect(menu)}, method unknown_input"
         Runner.run(script, unknown_input_method.code, method_name, step: step, sync: true)
@@ -142,7 +160,16 @@ defmodule Pythelix.Menu.Handler do
 
       invalid_input_method ->
         # Execute invalid_input method asynchronously
-        script = create_input_script(menu, client, input, invalid_input_method, owner_entity, "invalid_input")
+        script =
+          create_input_script(
+            menu,
+            client,
+            input,
+            invalid_input_method,
+            owner_entity,
+            "invalid_input"
+          )
+
         step = {__MODULE__, :handle_invalid_input_completion, [start_time]}
         method_name = "#{inspect(menu)}, method invalid_input"
         Runner.run(script, invalid_input_method.code, method_name, step: step, sync: true)
@@ -162,7 +189,12 @@ defmodule Pythelix.Menu.Handler do
 
   defp create_input_script(menu, client, input, method, owner_entity, method_name) do
     Method.fetch_script(method)
-    |> Method.check_args(method, [owner_entity || client, input], Dict.new(), "#{inspect(menu)}, method #{method_name}")
+    |> Method.check_args(
+      method,
+      [owner_entity || client, input],
+      Dict.new(),
+      "#{inspect(menu)}, method #{method_name}"
+    )
     |> then(fn {method_script, namespace} ->
       Method.write_arguments(method_script, Enum.to_list(namespace))
     end)
@@ -181,6 +213,7 @@ defmodule Pythelix.Menu.Handler do
 
   defp check_command_exists(menu, command_name, args) do
     commands = Record.get_attribute(menu, "commands", %{})
+
     case Map.get(commands, command_name) do
       nil -> :no_command
       command_key -> {:command, command_key, args}

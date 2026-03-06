@@ -146,7 +146,6 @@ defmodule Pythelix.Scripting.Store do
 
   def get_value(other, _opts), do: other
 
-
   @doc """
   Return the list of script IDs.
   """
@@ -234,6 +233,7 @@ defmodule Pythelix.Scripting.Store do
   def get_bound_entity_attribute(%Entity{} = entity, name) do
     attribute = %Attribute{entity: entity, attribute: name}
     match_spec = [{{:"$1", :"$2", :"$3", attribute}, [], [:"$1"]}]
+
     case :ets.select(:reference_store, match_spec) do
       [reference] -> %Reference{value: reference}
       _ -> nil
@@ -252,6 +252,7 @@ defmodule Pythelix.Scripting.Store do
         # Table doesn't exist, which is fine during cleanup
         :ok
     end
+
     :ok
   end
 
@@ -345,7 +346,7 @@ defmodule Pythelix.Scripting.Store do
     end
   end
 
-  defp reference_to_value(%SubEntity {} = sub_entity, references) do
+  defp reference_to_value(%SubEntity{} = sub_entity, references) do
     {data, references} = reference_to_value(sub_entity.data, references)
     {%{sub_entity | data: data}, references}
   end
@@ -387,7 +388,7 @@ defmodule Pythelix.Scripting.Store do
 
   defp update_child_references(ref, value) do
     ChildReferences.children(value)
-    |> Enum.each(& update_reference_parent(&1, ref))
+    |> Enum.each(&update_reference_parent(&1, ref))
   end
 
   defp generate_new_reference(%Reference{} = ref, owner, parent) do

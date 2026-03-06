@@ -27,23 +27,43 @@ defmodule Pythelix.Command.IntegrationTest do
       nil ->
         {:ok, _} = Record.create_entity(key: "test_generic/client", virtual: true)
         :ok
+
       _ ->
         :ok
     end
 
     # Create a test client entity with proper parent
     test_generic_client = Record.get_entity("test_generic/client")
-    Record.set_attribute("test_generic/client", "msg", {:extended, Pythelix.Test.TestClientNamespace, :m_msg})
-    Record.set_attribute("test_generic/client", "disconnect", {:extended, Pythelix.Test.TestClientNamespace, :m_disconnect})
-    Record.set_attribute("test_generic/client", "owner", {:extended_property, Pythelix.Test.TestClientNamespace, :owner})
 
-    {:ok, client} = Record.create_entity(key: "test_client", virtual: true, parent: test_generic_client)
-    Record.set_attribute("test_client", "client_id", 999)  # Test client ID
+    Record.set_attribute(
+      "test_generic/client",
+      "msg",
+      {:extended, Pythelix.Test.TestClientNamespace, :m_msg}
+    )
+
+    Record.set_attribute(
+      "test_generic/client",
+      "disconnect",
+      {:extended, Pythelix.Test.TestClientNamespace, :m_disconnect}
+    )
+
+    Record.set_attribute(
+      "test_generic/client",
+      "owner",
+      {:extended_property, Pythelix.Test.TestClientNamespace, :owner}
+    )
+
+    {:ok, client} =
+      Record.create_entity(key: "test_client", virtual: true, parent: test_generic_client)
+
+    # Test client ID
+    Record.set_attribute("test_client", "client_id", 999)
     Record.set_attribute("test_client", "pid", self())
     Record.set_attribute("test_client", "location", "menu/test")
 
     # Create a test menu entity
     {:ok, menu} = Record.create_entity(key: "menu/test", virtual: true)
+
     Record.set_attribute("menu/test", "commands", %{
       "shout" => "command/shout",
       "get" => "command/get",
@@ -58,7 +78,7 @@ defmodule Pythelix.Command.IntegrationTest do
     Handler.handle(command_input, client, menu, System.monotonic_time(:microsecond))
 
     # Give the async system some time to process
-    #Process.sleep(100)
+    # Process.sleep(100)
   end
 
   describe "simple command execution" do
@@ -81,8 +101,7 @@ defmodule Pythelix.Command.IntegrationTest do
 
       {:ok, _command} = Record.create_entity(key: "command/shout", virtual: true)
       {_, args} = Signature.constraints("run(client, message)")
-      Record.set_method("command/shout", "run", args,
-        "client.msg(f'You shout: {message}')")
+      Record.set_method("command/shout", "run", args, "client.msg(f'You shout: {message}')")
 
       # Set syntax pattern attribute
       Record.set_attribute("command/shout", "syntax_pattern", syntax_pattern)
@@ -101,10 +120,8 @@ defmodule Pythelix.Command.IntegrationTest do
 
       {_, args} = Signature.constraints("refine(client, message)")
       {:ok, _command} = Record.create_entity(key: "command/shout", virtual: true)
-      Record.set_method("command/shout", "refine", args,
-        "message = message.upper()")
-      Record.set_method("command/shout", "run", args,
-        "client.msg(f'You shout: {message}')")
+      Record.set_method("command/shout", "refine", args, "message = message.upper()")
+      Record.set_method("command/shout", "run", args, "client.msg(f'You shout: {message}')")
 
       Record.set_attribute("command/shout", "syntax_pattern", syntax_pattern)
 
@@ -124,8 +141,13 @@ defmodule Pythelix.Command.IntegrationTest do
 
       {:ok, _command} = Record.create_entity(key: "command/get", virtual: true)
       {_, args} = Signature.constraints("run(client, object, container=None)")
-      Record.set_method("command/get", "run", args,
-        "client.msg(f'You take {object} from {container}.')")
+
+      Record.set_method(
+        "command/get",
+        "run",
+        args,
+        "client.msg(f'You take {object} from {container}.')"
+      )
 
       Record.set_attribute("command/get", "syntax_pattern", syntax_pattern)
 
@@ -144,14 +166,14 @@ defmodule Pythelix.Command.IntegrationTest do
 
       {:ok, _command} = Record.create_entity(key: "command/get", virtual: true)
       {_, args} = Signature.constraints("run(client, object, container=None)")
-      Record.set_method("command/get", "run", args,
-        """
-        if container:
-            client.msg(f'You take {object} from {container}.')
-        else:
-            client.msg(f'You take {object} from the ground.')
-        endif
-        """)
+
+      Record.set_method("command/get", "run", args, """
+      if container:
+          client.msg(f'You take {object} from {container}.')
+      else:
+          client.msg(f'You take {object} from the ground.')
+      endif
+      """)
 
       Record.set_attribute("command/get", "syntax_pattern", syntax_pattern)
 
@@ -162,14 +184,15 @@ defmodule Pythelix.Command.IntegrationTest do
 
       # Test without container
       {:ok, _command} = Record.create_entity(key: "command/get2", virtual: true)
-      Record.set_method("command/get2", "run", args,
-        """
-        if container:
-            client.msg(f'You take {object} from {container}.')
-        else:
-            client.msg(f'You take {object} from the ground.')
-        endif
-        """)
+
+      Record.set_method("command/get2", "run", args, """
+      if container:
+          client.msg(f'You take {object} from {container}.')
+      else:
+          client.msg(f'You take {object} from the ground.')
+      endif
+      """)
+
       Record.set_attribute("command/get2", "syntax_pattern", syntax_pattern)
 
       # Update menu commands to include get2
@@ -188,11 +211,15 @@ defmodule Pythelix.Command.IntegrationTest do
 
       {:ok, _} = Record.create_entity(key: "command/get", virtual: true)
       {_, args} = Signature.constraints("run(client, object, container=None)")
-      Record.set_method("command/get", "run", args,
-        "client.msg('Success!')")
+      Record.set_method("command/get", "run", args, "client.msg('Success!')")
       {_, args} = Signature.constraints("error(client, args)")
-      Record.set_method("command/get", "parse_error", args,
-        "client.msg('Usage: get <object> from <container>')")
+
+      Record.set_method(
+        "command/get",
+        "parse_error",
+        args,
+        "client.msg('Usage: get <object> from <container>')"
+      )
 
       Record.set_attribute("command/get", "syntax_pattern", syntax_pattern)
 
@@ -210,12 +237,12 @@ defmodule Pythelix.Command.IntegrationTest do
       # Create command with pause
       {:ok, _command} = Record.create_entity(key: "command/pause_test", virtual: true)
       {_, args} = Signature.constraints("run(client)")
-      Record.set_method("command/pause_test", "run", args,
-        """
-        client.msg('Before pause')
-        wait 1
-        client.msg('After pause')
-        """)
+
+      Record.set_method("command/pause_test", "run", args, """
+      client.msg('Before pause')
+      wait 1
+      client.msg('After pause')
+      """)
 
       # Execute command
       run_command_via_handler(client, menu, "pause_test")
@@ -231,14 +258,14 @@ defmodule Pythelix.Command.IntegrationTest do
       # Create command with multiple pauses
       {:ok, _command} = Record.create_entity(key: "command/pause_test2", virtual: true)
       {_, args} = Signature.constraints("run(client)")
-      Record.set_method("command/pause_test2", "run", args,
-        """
-        client.msg('Step 1')
-        wait 1
-        client.msg('Step 2')
-        wait 1
-        client.msg('Step 3')
-        """)
+
+      Record.set_method("command/pause_test2", "run", args, """
+      client.msg('Step 1')
+      wait 1
+      client.msg('Step 2')
+      wait 1
+      client.msg('Step 3')
+      """)
 
       # Update menu commands to include pause_test2
       existing_commands = Record.get_attribute(menu, "commands")
@@ -260,13 +287,13 @@ defmodule Pythelix.Command.IntegrationTest do
 
       {:ok, _} = Record.create_entity(key: "command/pause_test3", virtual: true)
       {_, args} = Signature.constraints("refine(client, message)")
-      Record.set_method("command/pause_test3", "refine", args,
-        """
-        wait 1
-        message = message.upper()
-        """)
-      Record.set_method("command/pause_test3", "run", args,
-        "client.msg(f'Message: {message}')")
+
+      Record.set_method("command/pause_test3", "refine", args, """
+      wait 1
+      message = message.upper()
+      """)
+
+      Record.set_method("command/pause_test3", "run", args, "client.msg(f'Message: {message}')")
 
       Record.set_attribute("command/pause_test3", "syntax_pattern", syntax_pattern)
 
@@ -284,7 +311,6 @@ defmodule Pythelix.Command.IntegrationTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # Get command with search.match, location assignment, and names.group
   # Uses owner_entity pattern: a character entity owns the client and is
   # placed in the room. The character (not the client) is used as the
@@ -297,28 +323,35 @@ defmodule Pythelix.Command.IntegrationTest do
       Record.set_attribute("command/get", "syntax_pattern", syntax_pattern)
 
       {_, refine_args} = Signature.constraints("refine(client, object, number=1)")
-      Record.set_method("command/get", "refine", refine_args,
-        """
-        to_pick = search.match(client.location, object, limit=number)
-        """)
+
+      Record.set_method("command/get", "refine", refine_args, """
+      to_pick = search.match(client.location, object, limit=number)
+      """)
 
       {_, run_args} = Signature.constraints("run(client, to_pick)")
-      Record.set_method("command/get", "run", run_args,
-        """
-        for item in to_pick:
-            item.location = client
-        done
-        for name in names.group(to_pick):
-            client.msg(f"You pick up {name}.")
-        done
-        """)
+
+      Record.set_method("command/get", "run", run_args, """
+      for item in to_pick:
+          item.location = client
+      done
+      for name in names.group(to_pick):
+          client.msg(f"You pick up {name}.")
+      done
+      """)
     end
 
     defp setup_character_in_room(room_key, char_key) do
       {:ok, room} = Record.create_entity(key: room_key, virtual: true)
       test_generic_client = Record.get_entity("test_generic/client")
-      {:ok, character} = Record.create_entity(
-        key: char_key, virtual: true, parent: test_generic_client, location: room)
+
+      {:ok, character} =
+        Record.create_entity(
+          key: char_key,
+          virtual: true,
+          parent: test_generic_client,
+          location: room
+        )
+
       Record.set_attribute(char_key, "pid", self())
       {room, character}
     end
@@ -336,8 +369,12 @@ defmodule Pythelix.Command.IntegrationTest do
 
       # Execute via handler with owner_entity (character)
       Handler.start_command_execution(
-        "command/get", "10 gold coin", client,
-        System.monotonic_time(:microsecond), character)
+        "command/get",
+        "10 gold coin",
+        client,
+        System.monotonic_time(:microsecond),
+        character
+      )
 
       assert_receive {:message, msg}, 2000
       assert String.contains?(msg, "You pick up")
@@ -357,8 +394,12 @@ defmodule Pythelix.Command.IntegrationTest do
       # Execute: "get sword" in an empty room — to_pick will be []
       # The run method's for loop over to_pick produces no iterations, so no messages.
       Handler.start_command_execution(
-        "command/get", "sword", client,
-        System.monotonic_time(:microsecond), character)
+        "command/get",
+        "sword",
+        client,
+        System.monotonic_time(:microsecond),
+        character
+      )
 
       refute_receive {:message, _}, 500
     end
@@ -370,16 +411,25 @@ defmodule Pythelix.Command.IntegrationTest do
       # A regular (non-stackable) apple placed in the room.
       # limit has no practical effect here since there is only one entity, but the
       # refine method signature default number=1 must be applied correctly.
-      {:ok, apple} = Record.create_entity(
-        key: "get_def_apple", virtual: true, location: room)
+      {:ok, apple} =
+        Record.create_entity(
+          key: "get_def_apple",
+          virtual: true,
+          location: room
+        )
+
       Record.set_attribute("get_def_apple", "name", "apple")
 
       setup_get_command()
 
       # Execute: "get apple" (no number, defaults to 1 via method signature)
       Handler.start_command_execution(
-        "command/get", "apple", client,
-        System.monotonic_time(:microsecond), character)
+        "command/get",
+        "apple",
+        client,
+        System.monotonic_time(:microsecond),
+        character
+      )
 
       assert_receive {:message, msg}, 2000
       assert String.contains?(msg, "You pick up")
@@ -416,13 +466,17 @@ defmodule Pythelix.Command.IntegrationTest do
 
       {:ok, _} = Record.create_entity(key: "command/shout_error", virtual: true)
       {_, args} = Signature.constraints("refine(client, message)")
-      Record.set_method("command/shout_error", "refine", args,
-        "unknown_variable")
+      Record.set_method("command/shout_error", "refine", args, "unknown_variable")
       {_, e_args} = Signature.constraints("refine_error(client, args)")
-      Record.set_method("command/shout_error", "refine_error", e_args,
-        "client.msg(f'Refine failed for: args')")
-      Record.set_method("command/shout_error", "run", args,
-        "client.msg('Success')")
+
+      Record.set_method(
+        "command/shout_error",
+        "refine_error",
+        e_args,
+        "client.msg(f'Refine failed for: args')"
+      )
+
+      Record.set_method("command/shout_error", "run", args, "client.msg('Success')")
 
       Record.set_attribute("command/shout_error", "syntax_pattern", syntax_pattern)
 
@@ -447,14 +501,14 @@ defmodule Pythelix.Command.IntegrationTest do
 
       {:ok, _} = Record.create_entity(key: "command/shout_repeat", virtual: true)
       {_, args} = Signature.constraints("run(client, times, message)")
-      Record.set_method("command/shout_repeat", "run", args,
-        """
-        i = 0
-        while i < times:
-            client.msg(f'{i + 1}: {message}')
-            i = i + 1
-        done
-        """)
+
+      Record.set_method("command/shout_repeat", "run", args, """
+      i = 0
+      while i < times:
+          client.msg(f'{i + 1}: {message}')
+          i = i + 1
+      done
+      """)
 
       Record.set_attribute("command/shout_repeat", "syntax_pattern", syntax_pattern)
 

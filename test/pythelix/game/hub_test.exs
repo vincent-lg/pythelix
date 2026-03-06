@@ -1,5 +1,6 @@
 defmodule Pythelix.Game.HubFastTest do
-  use Pythelix.DataCase, async: false  # Hub spawns processes that need DB access
+  # Hub spawns processes that need DB access
+  use Pythelix.DataCase, async: false
 
   @moduletag capture_log: true
 
@@ -38,10 +39,12 @@ defmodule Pythelix.Game.HubFastTest do
       ref = make_ref()
       # include our pid so the test can ack us directly
       send(test_pid, {:done, id, ref, self()})
+
       receive do
         {:ack, ^ref} -> :ok
       after
-        1_000 -> :ok  # fail-safe so a broken test won’t deadlock forever
+        # fail-safe so a broken test won’t deadlock forever
+        1_000 -> :ok
       end
     end
   end
@@ -78,7 +81,7 @@ defmodule Pythelix.Game.HubFastTest do
     send(slow_pid, {:ack, ref})
 
     assert_receive {:started, :next}, 200
-    assert_receive {:done,    :next, next_ref, next_pid}, 300
+    assert_receive {:done, :next, next_ref, next_pid}, 300
     # tidy up the barrier for the 'next' job too
     send(next_pid, {:ack, next_ref})
   end
@@ -98,7 +101,12 @@ defmodule Pythelix.Game.HubFastTest do
 
   test "timeout frees slot; next job runs", %{srv: srv} do
     p = self()
-    slow = fn -> send(p, {:started, :slow}); :timer.sleep(5_000) end
+
+    slow = fn ->
+      send(p, {:started, :slow})
+      :timer.sleep(5_000)
+    end
+
     fast = mk_job(p, :fast, 5)
 
     Hub.run(slow, srv)
@@ -116,16 +124,18 @@ defmodule Pythelix.Game.HubFastTest do
     Hub.run(mk_job(p, :next, 10), srv)
 
     assert_receive {:started, :crash}, 80
-    assert_receive {:started, :next},  200
-    assert_receive {:done,    :next},  200
-    refute_receive {:done, :crash},    50
+    assert_receive {:started, :next}, 200
+    assert_receive {:done, :next}, 200
+    refute_receive {:done, :crash}, 50
   end
 
   test "crash storm still lets successes through", %{srv: srv} do
     p = self()
+
     for i <- 1..10 do
-      if rem(i, 2) == 0, do: Hub.run(mk_job(p, {:ok, i}, 5), srv),
-                        else: Hub.run(crash_job(p, {:crash, i}), srv)
+      if rem(i, 2) == 0,
+        do: Hub.run(mk_job(p, {:ok, i}, 5), srv),
+        else: Hub.run(crash_job(p, {:crash, i}), srv)
     end
 
     got =

@@ -38,7 +38,8 @@ defmodule Pythelix.Scripting.Interpreter.VM.Op do
               %Callable{module: Namespace.Builtin, object: nil, name: name}
           end
 
-        other -> other
+        other ->
+          other
       end)
       |> then(fn
         :no_var ->

@@ -8,6 +8,7 @@ defmodule Pythelix.Scripting.Parser.String do
       |> concat(utf8_string([{:not, ?\n}], 1))
 
     allowed = (opts[:multiline] && []) || [{:not, ?\n}]
+
     but_not =
       if opts[:multiline] do
         string(delimiter)
@@ -19,10 +20,12 @@ defmodule Pythelix.Scripting.Parser.String do
       lookahead_not(but_not)
       |> utf8_string(allowed, 1)
 
-    ignore(string(delimiter))                # open delim
+    # open delim
+    ignore(string(delimiter))
     |> repeat(choice([escaped, normal]))
     |> reduce({Pythelix.Scripting.Parser.Value, :escape, []})
-    |> ignore(string(delimiter))             # close delim
-    |> label(opts[:label] || "quoted(#{inspect delimiter})")
+    # close delim
+    |> ignore(string(delimiter))
+    |> label(opts[:label] || "quoted(#{inspect(delimiter)})")
   end
 end

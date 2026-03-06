@@ -33,7 +33,7 @@ defmodule Pythelix.Scripting.Namespace.Module.Clients do
       owner == entity
     end)
     |> Enum.at(0, :none)
-    |> then(& {script, &1})
+    |> then(&{script, &1})
   end
 
   def active do

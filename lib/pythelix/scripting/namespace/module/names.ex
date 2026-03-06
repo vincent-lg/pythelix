@@ -42,15 +42,17 @@ defmodule Pythelix.Scripting.Namespace.Module.Names do
     viewer = Store.get_value(namespace.viewer)
     quantity = namespace.quantity
 
-    result = case Search.call_namefor(entity, viewer, quantity) do
-      nil ->
-        case Record.get_attribute(entity, "name") do
-          name when is_binary(name) -> name
-          _ -> inspect(entity)
-        end
+    result =
+      case Search.call_namefor(entity, viewer, quantity) do
+        nil ->
+          case Record.get_attribute(entity, "name") do
+            name when is_binary(name) -> name
+            _ -> inspect(entity)
+          end
 
-      name -> name
-    end
+        name ->
+          name
+      end
 
     {script, result}
   end
@@ -67,7 +69,8 @@ defmodule Pythelix.Scripting.Namespace.Module.Names do
       %Method{} ->
         do_notify(entity, text, namespace.only_visible)
 
-      _ -> nil
+      _ ->
+        nil
     end
 
     {script, :none}
@@ -102,7 +105,8 @@ defmodule Pythelix.Scripting.Namespace.Module.Names do
             do_notify(entity, text, only_visible)
           end
 
-        _ -> nil
+        _ ->
+          nil
       end
     end
 

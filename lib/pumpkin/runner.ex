@@ -8,6 +8,7 @@ defmodule Pumpkin.Runner do
 
   def run do
     stats = %{passed: 0, failed: 0}
+
     Parser.load_all()
     |> Enum.reduce(stats, &run_feature/2)
     |> print_summary()
@@ -15,6 +16,7 @@ defmodule Pumpkin.Runner do
 
   defp run_feature(%Gherkin.Elements.Feature{file: path} = feature, stats) do
     IO.puts("\nFeature: #{feature.name} (#{path})")
+
     Enum.reduce(feature.scenarios, stats, fn
       %Gherkin.Elements.Scenario{} = scenario, acc -> run_scenario(scenario, acc)
       _other, acc -> acc
@@ -24,7 +26,7 @@ defmodule Pumpkin.Runner do
   defp run_scenario(%Gherkin.Elements.Scenario{name: name, steps: steps}, stats) do
     IO.write("  Scenario: #{name} ... ")
 
-    #Pythelix.Record.Cache.clear()
+    # Pythelix.Record.Cache.clear()
     ctx = %{}
     caller = self()
 
@@ -74,17 +76,17 @@ defmodule Pumpkin.Runner do
   end
 
   defp step_type("Given"), do: :given
-  defp step_type("When"),  do: :when
-  defp step_type("Then"),  do: :then
-  defp step_type(_),       do: :given
+  defp step_type("When"), do: :when
+  defp step_type("Then"), do: :then
+  defp step_type(_), do: :given
 
   defp find_match(type, text) do
     StepRegistry.all()
     |> Enum.find(fn {t, regex, _} -> t == type and Regex.match?(regex, text) end)
     |> case do
-         {_, regex, handler} -> {regex, handler}
-         nil -> nil
-       end
+      {_, regex, handler} -> {regex, handler}
+      nil -> nil
+    end
   end
 
   defp print_summary(%{passed: p, failed: f}) do

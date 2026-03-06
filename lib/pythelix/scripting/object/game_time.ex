@@ -9,11 +9,11 @@ defmodule Pythelix.Scripting.Object.GameTime do
   defstruct [:calendar, :epoch, units: %{}, properties: %{}]
 
   @type t :: %GameTime{
-    calendar: any(),
-    epoch: integer(),
-    units: map(),
-    properties: map()
-  }
+          calendar: any(),
+          epoch: integer(),
+          units: map(),
+          properties: map()
+        }
 
   defimpl Inspect do
     import Inspect.Algebra

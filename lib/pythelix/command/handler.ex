@@ -60,14 +60,25 @@ defmodule Pythelix.Command.Handler do
 
                 refine_script =
                   Method.fetch_script(refine_method, owner: script.id)
-                  |> Method.check_args(refine_method, entity_positional_args(refine_method, owner_entity || client), Dict.new(relevant_vars), "#{command_key}, method refine")
+                  |> Method.check_args(
+                    refine_method,
+                    entity_positional_args(refine_method, owner_entity || client),
+                    Dict.new(relevant_vars),
+                    "#{command_key}, method refine"
+                  )
                   |> then(fn {method_script, namespace} ->
                     Method.write_arguments(method_script, Enum.to_list(namespace))
                   end)
                   |> Script.write_variable("self", command)
 
-                step = {__MODULE__, :handle_refine_completion, [command, client, start_time, owner_entity]}
-                Runner.run(refine_script, refine_method.code, "#{command_key}, method refine", step: step, sync: true)
+                step =
+                  {__MODULE__, :handle_refine_completion,
+                   [command, client, start_time, owner_entity]}
+
+                Runner.run(refine_script, refine_method.code, "#{command_key}, method refine",
+                  step: step,
+                  sync: true
+                )
             end
 
           {:error, reason} ->
@@ -100,22 +111,31 @@ defmodule Pythelix.Command.Handler do
         end
 
       method ->
-        step = case method_name do
-          "run" -> {__MODULE__, :handle_run_completion, [client, start_time]}
-          _ -> nil
-        end
+        step =
+          case method_name do
+            "run" -> {__MODULE__, :handle_run_completion, [client, start_time]}
+            _ -> nil
+          end
 
         relevant_vars = relevant_method_vars(script.variables, method)
 
         script =
           Method.fetch_script(method, owner: script.id)
-          |> Method.check_args(method, entity_positional_args(method, owner_entity || client), Dict.new(relevant_vars), "#{command.key}, method #{method_name}")
+          |> Method.check_args(
+            method,
+            entity_positional_args(method, owner_entity || client),
+            Dict.new(relevant_vars),
+            "#{command.key}, method #{method_name}"
+          )
           |> then(fn {method_script, namespace} ->
             Method.write_arguments(method_script, Enum.to_list(namespace))
           end)
           |> Script.write_variable("self", command)
 
-        Runner.run(script, method.code, "#{command.key}, method #{method_name}", step: step, sync: true)
+        Runner.run(script, method.code, "#{command.key}, method #{method_name}",
+          step: step,
+          sync: true
+        )
     end
   end
 
@@ -157,7 +177,8 @@ defmodule Pythelix.Command.Handler do
 
   defp get_command_syntax(command) do
     case Record.get_attribute(command, "syntax_pattern") do
-      nil -> {:ok, []}  # No syntax pattern means no arguments
+      # No syntax pattern means no arguments
+      nil -> {:ok, []}
       pattern -> {:ok, pattern}
     end
   end
@@ -171,7 +192,7 @@ defmodule Pythelix.Command.Handler do
   end
 
   defp create_command_script(_command, args) do
-    script = %Script{id: Store.new_script, bytecode: []}
+    script = %Script{id: Store.new_script(), bytecode: []}
 
     # Write arguments to script
     script = write_arguments_to_script(script, args)
@@ -201,6 +222,7 @@ defmodule Pythelix.Command.Handler do
 
   defp handle_parse_error(command, args, client, owner_entity) do
     entity_for_script = owner_entity || client
+
     case Record.get_method(command, "parse_error") do
       :nomethod ->
         pid = Record.get_attribute(client, "pid")
@@ -208,7 +230,7 @@ defmodule Pythelix.Command.Handler do
 
       method ->
         # Execute parse_error method asynchronously
-        %Script{id: Store.new_script, bytecode: method.bytecode}
+        %Script{id: Store.new_script(), bytecode: method.bytecode}
         |> Script.write_variable("client", entity_for_script)
         |> Script.write_variable("args", args)
         |> Runner.run(method.code, "parse_error", sync: true)
@@ -217,6 +239,7 @@ defmodule Pythelix.Command.Handler do
 
   defp handle_refine_error(command, args, client, owner_entity) do
     entity_for_script = owner_entity || client
+
     case Record.get_method(command, "refine_error") do
       :nomethod ->
         pid = Record.get_attribute(client, "pid")
@@ -224,7 +247,7 @@ defmodule Pythelix.Command.Handler do
 
       method ->
         # Execute refine_error method asynchronously
-        %Script{id: Store.new_script, bytecode: method.bytecode}
+        %Script{id: Store.new_script(), bytecode: method.bytecode}
         |> Script.write_variable("client", entity_for_script)
         |> Script.write_variable("args", args)
         |> Runner.run(method.code, "refine_error", sync: true)
@@ -233,6 +256,7 @@ defmodule Pythelix.Command.Handler do
 
   defp handle_run_error(command, args, client, owner_entity) do
     entity_for_script = owner_entity || client
+
     case Record.get_method(command, "run") do
       :nomethod ->
         pid = Record.get_attribute(client, "pid")
@@ -246,7 +270,7 @@ defmodule Pythelix.Command.Handler do
 
           error_method ->
             # Execute run_error method asynchronously
-            %Script{id: Store.new_script, bytecode: error_method.bytecode}
+            %Script{id: Store.new_script(), bytecode: error_method.bytecode}
             |> Script.write_variable("client", entity_for_script)
             |> Script.write_variable("args", args)
             |> Runner.run(error_method.code, "run_error", sync: true)
@@ -263,6 +287,7 @@ defmodule Pythelix.Command.Handler do
   # This prevents extra variables (e.g., from refine) from causing "unexpected keyword
   # argument" errors when check_args validates the run method's signature.
   defp relevant_method_vars(variables, %Method{args: :free}), do: variables
+
   defp relevant_method_vars(variables, %Method{args: constraints}) do
     Map.take(variables, Enum.map(constraints, fn {name, _} -> name end))
   end
@@ -271,6 +296,7 @@ defmodule Pythelix.Command.Handler do
   # positional arg only if the method declares a positional parameter (index 0).
   # Methods with :free or empty constraints get no positional args.
   defp entity_positional_args(%Method{args: :free}, _entity), do: []
+
   defp entity_positional_args(%Method{args: constraints}, entity) do
     if Enum.any?(constraints, fn {_name, opts} -> opts[:index] == 0 end) do
       [entity]

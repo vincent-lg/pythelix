@@ -22,10 +22,11 @@ defmodule Pythelix.Game.Modes.Config do
   """
   @spec get_symbols() :: [next: [String.t()], previous: [String.t()]]
   def get_symbols do
-    Application.get_env(:pythelix, __MODULE__, [])[:symbols] || [
-      next: [">"],
-      previous: ["<"]
-    ]
+    Application.get_env(:pythelix, __MODULE__, [])[:symbols] ||
+      [
+        next: [">"],
+        previous: ["<"]
+      ]
   end
 
   @doc """

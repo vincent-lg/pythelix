@@ -41,7 +41,7 @@ defmodule Pythelix.Scripting.RunnerTest do
       code = "return !ent2!.test2() + 5"
       Record.set_method("ent1", "test1", :free, code)
       Record.create_entity(key: "ent2")
-      Record.set_method("ent2", "test2", :free, "return 2 * 4" )
+      Record.set_method("ent2", "test2", :free, "return 2 * 4")
       script = Scripting.run(code, call: false)
       Runner.run(script, code, "unknown", step: {__MODULE__, :self_send})
       assert_receive {:result, 13}, 1000
@@ -52,7 +52,7 @@ defmodule Pythelix.Scripting.RunnerTest do
       code = "return !ent2!.test2() + 5"
       Record.set_method("ent1", "test1", :free, code)
       Record.create_entity(key: "ent2")
-      Record.set_method("ent2", "test2", :free, "wait 1\nreturn 2 * 4" )
+      Record.set_method("ent2", "test2", :free, "wait 1\nreturn 2 * 4")
       script = Scripting.run(code, call: false)
       Runner.run(script, code, "unknown", step: {__MODULE__, :self_send, [self()]})
       assert_receive {:result, 13}, 1200
@@ -63,7 +63,14 @@ defmodule Pythelix.Scripting.RunnerTest do
       code = "return !ent2!.test2() * 4"
       Record.set_method("ent1", "test1", :free, code)
       Record.create_entity(key: "ent2")
-      Record.set_method("ent2", "test2", :free, "wait 0.1\nnum = !ent3!.test3() + 5\nwait 0.1\nreturn num")
+
+      Record.set_method(
+        "ent2",
+        "test2",
+        :free,
+        "wait 0.1\nnum = !ent3!.test3() + 5\nwait 0.1\nreturn num"
+      )
+
       Record.create_entity(key: "ent3")
       Record.set_method("ent3", "test3", :free, "wait 0.2\nreturn 5")
       script = Scripting.run(code, call: false)
@@ -124,7 +131,14 @@ defmodule Pythelix.Scripting.RunnerTest do
       code = "return !ent2!.test2() + 5"
       Record.set_method("ent1", "test1", :free, code)
       Record.create_entity(key: "ent2")
-      Record.set_method("ent2", "test2", :free, "wait 0.1\nnum = !ent3!.test3()\nwait 0.1\nreturn num")
+
+      Record.set_method(
+        "ent2",
+        "test2",
+        :free,
+        "wait 0.1\nnum = !ent3!.test3()\nwait 0.1\nreturn num"
+      )
+
       Record.create_entity(key: "ent3")
       Record.set_method("ent3", "test3", :free, "wait 0.1\nreturn 2 + X")
       script = Scripting.run(code, call: false)

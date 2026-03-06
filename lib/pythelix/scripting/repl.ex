@@ -56,7 +56,10 @@ defmodule Pythelix.Scripting.REPL do
   defp tabulate_result({[{:tic, _}], :maybe_3_tic}), do: :complete
   defp tabulate_result({[{:quote, _}], :maybe_3_quote}), do: :complete
   defp tabulate_result({[], :normal}), do: :complete
-  defp tabulate_result({_, :maybe_close_2_tic}), do: {:need_more, "still inside a multi-line string"}
+
+  defp tabulate_result({_, :maybe_close_2_tic}),
+    do: {:need_more, "still inside a multi-line string"}
+
   defp tabulate_result({_, :multistring}), do: {:need_more, "still inside a multi-line string"}
   defp tabulate_result({_, :string}), do: {:need_more, "still inside a string"}
 

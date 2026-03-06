@@ -13,8 +13,9 @@ defmodule Pythelix.Command do
         virtual: true,
         key: Generic.command(),
         attributes: %{},
-        methods: %{},
-      } | entities
+        methods: %{}
+      }
+      | entities
     ]
   end
 

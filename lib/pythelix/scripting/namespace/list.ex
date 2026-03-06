@@ -64,7 +64,7 @@ defmodule Pythelix.Scripting.Namespace.List do
         list = List.replace_at(list, namespace.item, namespace.value)
         Store.update_reference(namespace.self, list)
         {script, :none}
-      end
+    end
   end
 
   defmet __delitem__(script, namespace), [
@@ -148,20 +148,33 @@ defmodule Pythelix.Scripting.Namespace.List do
     list = Store.get_value(namespace.self, recursive: false)
     list_size = length(list)
 
-    start_index = if namespace.start < 0, do: max(0, list_size + namespace.start), else: namespace.start
-    stop_index = case namespace.stop do
-      :end -> list_size
-      val when val < 0 -> max(0, list_size + val)
-      val -> min(val, list_size)
-    end
+    start_index =
+      if namespace.start < 0, do: max(0, list_size + namespace.start), else: namespace.start
+
+    stop_index =
+      case namespace.stop do
+        :end -> list_size
+        val when val < 0 -> max(0, list_size + val)
+        val -> min(val, list_size)
+      end
 
     if start_index >= stop_index do
-      {Script.raise(script, ValueError, "#{Display.repr(script, namespace.value)} is not in list"), :none}
+      {Script.raise(
+         script,
+         ValueError,
+         "#{Display.repr(script, namespace.value)} is not in list"
+       ), :none}
     else
       search_list = Enum.slice(list, start_index, stop_index - start_index)
+
       case Enum.find_index(search_list, fn item -> item == namespace.value end) do
         nil ->
-          {Script.raise(script, ValueError, "#{Display.repr(script, namespace.value)} is not in list"), :none}
+          {Script.raise(
+             script,
+             ValueError,
+             "#{Display.repr(script, namespace.value)} is not in list"
+           ), :none}
+
         found_index ->
           {script, start_index + found_index}
       end
@@ -175,11 +188,12 @@ defmodule Pythelix.Scripting.Namespace.List do
     list = Store.get_value(namespace.self, recursive: false)
     list_size = length(list)
 
-    insert_index = cond do
-      namespace.index < 0 -> max(0, list_size + namespace.index)
-      namespace.index > list_size -> list_size
-      true -> namespace.index
-    end
+    insert_index =
+      cond do
+        namespace.index < 0 -> max(0, list_size + namespace.index)
+        namespace.index > list_size -> list_size
+        true -> namespace.index
+      end
 
     Store.update_reference(namespace.self, List.insert_at(list, insert_index, namespace.value))
     {script, :none}
@@ -194,11 +208,12 @@ defmodule Pythelix.Scripting.Namespace.List do
     if list_size == 0 do
       {Script.raise(script, IndexError, "pop from empty list"), :none}
     else
-      pop_index = if namespace.index < 0 do
-        list_size + namespace.index
-      else
-        namespace.index
-      end
+      pop_index =
+        if namespace.index < 0 do
+          list_size + namespace.index
+        else
+          namespace.index
+        end
 
       if pop_index < 0 or pop_index >= list_size do
         {Script.raise(script, IndexError, "pop index out of range"), :none}
@@ -218,6 +233,7 @@ defmodule Pythelix.Scripting.Namespace.List do
     case Enum.find_index(list, fn item -> item == namespace.value end) do
       nil ->
         {Script.raise(script, ValueError, "list.remove(x): x not in list"), :none}
+
       found_index ->
         {_removed, updated_list} = List.pop_at(list, found_index)
         Store.update_reference(namespace.self, updated_list)
@@ -237,17 +253,22 @@ defmodule Pythelix.Scripting.Namespace.List do
     list = Store.get_value(namespace.self, recursive: false)
 
     try do
-      sorted_list = if namespace.reverse do
-        Enum.sort(list, :desc)
-      else
-        Enum.sort(list)
-      end
+      sorted_list =
+        if namespace.reverse do
+          Enum.sort(list, :desc)
+        else
+          Enum.sort(list)
+        end
 
       Store.update_reference(namespace.self, sorted_list)
       {script, :none}
     rescue
       _ ->
-        {Script.raise(script, TypeError, "'<' not supported between instances of different types"), :none}
+        {Script.raise(
+           script,
+           TypeError,
+           "'<' not supported between instances of different types"
+         ), :none}
     end
   end
 

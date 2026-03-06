@@ -23,24 +23,25 @@ defmodule Pythelix.Scripting.Namespace.GameModesTest do
 
   describe "check" do
     test "the character game modes should always contain one entry" do
-      modes = expr_ok(
-        """
+      modes =
+        expr_ok("""
         char = !generic/character!
         char.game_modes
-        """
-      )
+        """)
+
       assert match?(%Modes{}, modes)
       assert length(modes.game_modes) == 1
     end
 
     test "the character game modes should point to the menu/game menu" do
       character = Record.get_entity("generic/character")
-      modes = expr_ok(
-        """
+
+      modes =
+        expr_ok("""
         char = !generic/character!
         char.game_modes
-        """
-      )
+        """)
+
       {menu, owned} = Modes.get_active(modes, character)
       assert menu.key == "menu/game"
       assert owned == character

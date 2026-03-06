@@ -40,7 +40,9 @@ defmodule Pythelix.Scripting.Format.String do
     |> maybe_format(script)
   end
 
-  defp do_split([], acc, buffer, :text), do: {:ok, Enum.reverse([buffer | acc]) |> Enum.reject(&(&1 == ""))}
+  defp do_split([], acc, buffer, :text),
+    do: {:ok, Enum.reverse([buffer | acc]) |> Enum.reject(&(&1 == ""))}
+
   defp do_split([], _acc, _buffer, :brace), do: {:error, :unmatched_brace}
 
   defp do_split(["{" | rest], acc, buffer, :text) do
@@ -153,7 +155,9 @@ defmodule Pythelix.Scripting.Format.String do
 
   defp resolve_entity_name(entity, viewer) do
     case Method.call_entity(entity, "__namefor__", [viewer]) do
-      result when is_binary(result) -> result
+      result when is_binary(result) ->
+        result
+
       _ ->
         case Record.get_attribute(entity, "name") do
           name when is_binary(name) -> name

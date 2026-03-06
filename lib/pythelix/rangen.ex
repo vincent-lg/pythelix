@@ -81,8 +81,9 @@ defmodule Pythelix.Rangen do
 
   @doc "Remove an entry from both the DB and the trie."
   def remove_entry(key, value, parts) do
-    query = from e in RangenEntry,
-      where: e.generator_key == ^key and e.value == ^value
+    query =
+      from e in RangenEntry,
+        where: e.generator_key == ^key and e.value == ^value
 
     Repo.delete_all(query)
     TrieServer.remove(key, parts)
@@ -132,8 +133,6 @@ defmodule Pythelix.Rangen do
     end)
     |> elem(0)
   end
-
-  # ---------------------------------------------------------------------------
 
   defp build_trie_from_raw(values, parsed_patterns) do
     Enum.reduce(values, Trie.new(), fn value, trie ->

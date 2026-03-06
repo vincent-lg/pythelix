@@ -16,7 +16,7 @@ defmodule Pythelix.Scripting.Interpreter.AST do
       |> Enum.reduce(:queue.new(), &process_ast/2)
       |> :queue.to_list()
 
-    %Script{id: (opts[:id] || Store.new_script()), bytecode: bytecode}
+    %Script{id: opts[:id] || Store.new_script(), bytecode: bytecode}
   end
 
   defp process_ast(ast, code) do

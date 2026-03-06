@@ -25,9 +25,10 @@ defmodule Pythelix.Scripting.IntegrationTest do
       }
 
       # Create child script with parent and step
-      child_script = %Script{id: "child_script", bytecode: []}
-      |> Script.set_parent(parent_script)
-      |> Script.set_step(TestModule, :test_callback, [:arg1, :arg2])
+      child_script =
+        %Script{id: "child_script", bytecode: []}
+        |> Script.set_parent(parent_script)
+        |> Script.set_step(TestModule, :test_callback, [:arg1, :arg2])
 
       # Verify parent is set correctly
       assert Script.get_parent(child_script) == parent_script
@@ -40,7 +41,14 @@ defmodule Pythelix.Scripting.IntegrationTest do
     test "script serialization preserves parent and step information" do
       # Create a complex script hierarchy
       grandparent = %Script{id: "grandparent", bytecode: [], variables: %{"level" => "grand"}}
-      parent = %Script{id: "parent", bytecode: [], parent: grandparent, variables: %{"level" => "parent"}}
+
+      parent = %Script{
+        id: "parent",
+        bytecode: [],
+        parent: grandparent,
+        variables: %{"level" => "parent"}
+      }
+
       child = %Script{
         id: "child",
         bytecode: [],

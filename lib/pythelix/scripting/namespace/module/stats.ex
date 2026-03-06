@@ -67,6 +67,7 @@ defmodule Pythelix.Scripting.Namespace.Module.Stats do
 
   defp human_size(size, unit_idx) when size < 1024 or unit_idx == length(@units) - 1 do
     unit = Enum.at(@units, unit_idx)
+
     display =
       if size < 5 and unit_idx > 0 do
         Float.round(size, 1)

@@ -128,6 +128,7 @@ defmodule Pythelix.Scripting.Namespace.RealDateTime do
   defp pad(n), do: String.pad_leading(to_string(n), 2, "0")
 
   defp format_offset(0), do: "Z"
+
   defp format_offset(seconds) do
     sign = if seconds >= 0, do: "+", else: "-"
     total = abs(seconds)

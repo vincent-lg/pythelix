@@ -20,17 +20,41 @@ defmodule Pythelix.TestNamespace do
     case Record.get_entity("test_generic/client") do
       nil ->
         {:ok, _} = Record.create_entity(key: "test_generic/client", virtual: true)
-        Record.set_attribute("test_generic/client", "msg", {:extended, Pythelix.Test.TestClientNamespace, :m_msg})
-        Record.set_attribute("test_generic/client", "disconnect", {:extended, Pythelix.Test.TestClientNamespace, :m_disconnect})
-        Record.set_attribute("test_generic/client", "owner", {:extended_property, Pythelix.Test.TestClientNamespace, :owner})
+
+        Record.set_attribute(
+          "test_generic/client",
+          "msg",
+          {:extended, Pythelix.Test.TestClientNamespace, :m_msg}
+        )
+
+        Record.set_attribute(
+          "test_generic/client",
+          "disconnect",
+          {:extended, Pythelix.Test.TestClientNamespace, :m_disconnect}
+        )
+
+        Record.set_attribute(
+          "test_generic/client",
+          "owner",
+          {:extended_property, Pythelix.Test.TestClientNamespace, :owner}
+        )
+
         :ok
+
       _ ->
         :ok
     end
 
     # Create a test client entity with proper parent
     test_generic_client = Record.get_entity("test_generic/client")
-    {:ok, client} = Record.create_entity(key: "test_namespace_client", virtual: true, parent: test_generic_client)
+
+    {:ok, client} =
+      Record.create_entity(
+        key: "test_namespace_client",
+        virtual: true,
+        parent: test_generic_client
+      )
+
     Record.set_attribute("test_namespace_client", "client_id", 998)
     Record.set_attribute("test_namespace_client", "pid", self())
 

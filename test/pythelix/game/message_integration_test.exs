@@ -9,7 +9,8 @@ defmodule Pythelix.Game.MessageIntegrationTest do
   alias Pythelix.Network.TCP.Server
   alias Pythelix.Record
 
-  @test_port 4000  # Use the default port from the server
+  # Use the default port from the server
+  @test_port 4000
 
   setup_all do
     # Start the Game Hub
@@ -19,7 +20,10 @@ defmodule Pythelix.Game.MessageIntegrationTest do
     end
 
     # Start the TCP Client Supervisor (required by server)
-    case DynamicSupervisor.start_link(strategy: :one_for_one, name: Pythelix.Network.TCP.ClientSupervisor) do
+    case DynamicSupervisor.start_link(
+           strategy: :one_for_one,
+           name: Pythelix.Network.TCP.ClientSupervisor
+         ) do
       {:ok, _pid} -> :ok
       {:error, {:already_started, _pid}} -> :ok
     end
@@ -56,18 +60,29 @@ defmodule Pythelix.Game.MessageIntegrationTest do
     case Record.get_entity("generic/client") do
       nil ->
         {:ok, _} = Record.create_entity(key: "generic/client", virtual: true)
+
       _ ->
         :ok
     end
 
     # Set up extended client methods to use our Game Hub system
-    Record.set_attribute("generic/client", "msg", {:extended, Pythelix.Scripting.Namespace.Extended.Client, :m_msg})
-    Record.set_attribute("generic/client", "disconnect", {:extended, Pythelix.Scripting.Namespace.Extended.Client, :m_disconnect})
+    Record.set_attribute(
+      "generic/client",
+      "msg",
+      {:extended, Pythelix.Scripting.Namespace.Extended.Client, :m_msg}
+    )
+
+    Record.set_attribute(
+      "generic/client",
+      "disconnect",
+      {:extended, Pythelix.Scripting.Namespace.Extended.Client, :m_disconnect}
+    )
 
     # Create generic/menu if needed
     case Record.get_entity("generic/menu") do
       nil ->
         {:ok, _} = Record.create_entity(key: "generic/menu", virtual: true)
+
       _ ->
         :ok
     end
@@ -76,6 +91,7 @@ defmodule Pythelix.Game.MessageIntegrationTest do
     case Record.get_entity("generic/command") do
       nil ->
         {:ok, _} = Record.create_entity(key: "generic/command", virtual: true)
+
       _ ->
         :ok
     end
@@ -84,16 +100,24 @@ defmodule Pythelix.Game.MessageIntegrationTest do
     case Record.get_entity("SubEntity") do
       nil ->
         {:ok, _} = Record.create_entity(key: "SubEntity", virtual: true)
+
       _ ->
         :ok
     end
 
     case Record.get_entity("Controls") do
       nil ->
-        {:ok, _} = Record.create_entity(key: "Controls", virtual: true, parent: Record.get_entity("SubEntity"))
+        {:ok, _} =
+          Record.create_entity(
+            key: "Controls",
+            virtual: true,
+            parent: Record.get_entity("SubEntity")
+          )
+
         # Add basic __init__ method for Controls
         {_, args} = Signature.constraints("__init__()")
         Record.set_method("Controls", "__init__", args, "")
+
       _ ->
         :ok
     end
@@ -101,7 +125,7 @@ defmodule Pythelix.Game.MessageIntegrationTest do
 
   defp setup_test_menus do
     # Create MOTD menu that clients connect to initially
-    #{:ok, _} = Record.create_entity(key: "menu/motd", virtual: true, parent: Record.get_entity("generic/menu"))
+    # {:ok, _} = Record.create_entity(key: "menu/motd", virtual: true, parent: Record.get_entity("generic/menu"))
     Record.set_attribute("menu/motd", "text", "Welcome to Test MUD!")
 
     # Set up get_prompt method
@@ -109,41 +133,53 @@ defmodule Pythelix.Game.MessageIntegrationTest do
     Record.set_method("menu/motd", "get_prompt", args, "return '[MOTD] > '")
 
     # Create a game menu with different prompt
-    #{:ok, _} = Record.create_entity(key: "menu/game", virtual: true, parent: Record.get_entity("generic/menu"))
+    # {:ok, _} = Record.create_entity(key: "menu/game", virtual: true, parent: Record.get_entity("generic/menu"))
     Record.set_attribute("menu/game", "text", "You are now in the game!")
     Record.set_method("menu/game", "get_prompt", args, "return '[Game] > '")
   end
 
   defp setup_test_commands do
     # Create a test command that sends multiple messages
-    {:ok, command} = Record.create_entity(key: "command/test", virtual: true, parent: Record.get_entity("generic/command"))
+    {:ok, command} =
+      Record.create_entity(
+        key: "command/test",
+        virtual: true,
+        parent: Record.get_entity("generic/command")
+      )
+
     Record.change_location(command, Record.get_entity("menu/motd"))
     Record.set_attribute("command/test", "name", "test")
+
     Record.set_attribute("menu/motd", "commands", %{
       "test" => "command/test"
     })
 
     {_, args} = Signature.constraints("run(client)")
-    Record.set_method("command/test", "run", args,
-      """
-      client.msg("First test message")
-      client.msg("Second test message")
-      client.msg("Third test message")
-      """)
+
+    Record.set_method("command/test", "run", args, """
+    client.msg("First test message")
+    client.msg("Second test message")
+    client.msg("Third test message")
+    """)
 
     # Create a command with pauses
-    {:ok, _} = Record.create_entity(key: "command/slow", virtual: true, parent: Record.get_entity("generic/command"))
+    {:ok, _} =
+      Record.create_entity(
+        key: "command/slow",
+        virtual: true,
+        parent: Record.get_entity("generic/command")
+      )
+
     Record.set_attribute("command/slow", "location", "menu/motd")
     Record.set_attribute("command/slow", "name", "slow")
 
-    Record.set_method("command/slow", "run", args,
-      """
-      client.msg("Starting slow command...")
-      wait 0.1
-      client.msg("Middle of slow command...")
-      wait 0.1
-      client.msg("Finished slow command!")
-      """)
+    Record.set_method("command/slow", "run", args, """
+    client.msg("Starting slow command...")
+    wait 0.1
+    client.msg("Middle of slow command...")
+    wait 0.1
+    client.msg("Finished slow command!")
+    """)
 
     # Update menu commands
     Record.set_attribute("menu/motd", "commands", %{
@@ -155,7 +191,8 @@ defmodule Pythelix.Game.MessageIntegrationTest do
   describe "TCP client message integration" do
     test "client connects and receives welcome message with prompt (validates Game Hub message system)" do
       # Connect TCP client with active mode for non-blocking message reception
-      {:ok, socket} = :gen_tcp.connect(~c"localhost", @test_port, [:binary, packet: :line, active: true])
+      {:ok, socket} =
+        :gen_tcp.connect(~c"localhost", @test_port, [:binary, packet: :line, active: true])
 
       # Should receive welcome message and then prompt (Game Hub message queuing system)
       assert_receive {:tcp, ^socket, welcome_response}, 1000
@@ -180,7 +217,8 @@ defmodule Pythelix.Game.MessageIntegrationTest do
 
     test "grouped commands send multiple messages together" do
       # Connect with active mode for non-blocking reception
-      {:ok, socket} = :gen_tcp.connect(~c"localhost", @test_port, [:binary, packet: :line, active: true])
+      {:ok, socket} =
+        :gen_tcp.connect(~c"localhost", @test_port, [:binary, packet: :line, active: true])
 
       # Clear welcome message
       welcome = receive_all(socket, 100)
@@ -190,7 +228,8 @@ defmodule Pythelix.Game.MessageIntegrationTest do
       :gen_tcp.send(socket, "test\r\n")
 
       # Collect all messages that arrive within a time window
-      messages = collect_tcp_messages(socket, 800, []) # 800ms timeout to collect grouped messages
+      # 800ms timeout to collect grouped messages
+      messages = collect_tcp_messages(socket, 800, [])
 
       # Should receive the 3 test messages plus a prompt
       assert length(messages) == 4
@@ -203,7 +242,8 @@ defmodule Pythelix.Game.MessageIntegrationTest do
     end
 
     test "Game Hub message queuing system works with job completion" do
-      {:ok, socket} = :gen_tcp.connect(~c"localhost", @test_port, [:binary, packet: :line, active: true])
+      {:ok, socket} =
+        :gen_tcp.connect(~c"localhost", @test_port, [:binary, packet: :line, active: true])
 
       # Clear welcome message
       receive_all(socket, 200)
@@ -220,8 +260,11 @@ defmodule Pythelix.Game.MessageIntegrationTest do
 
     test "multiple client connections each get their own message queuing" do
       # Connect two clients
-      {:ok, socket1} = :gen_tcp.connect(~c"localhost", @test_port, [:binary, packet: :line, active: true])
-      {:ok, socket2} = :gen_tcp.connect(~c"localhost", @test_port, [:binary, packet: :line, active: true])
+      {:ok, socket1} =
+        :gen_tcp.connect(~c"localhost", @test_port, [:binary, packet: :line, active: true])
+
+      {:ok, socket2} =
+        :gen_tcp.connect(~c"localhost", @test_port, [:binary, packet: :line, active: true])
 
       # Both should get welcome messages independently
       assert_receive {:tcp, ^socket1, welcome1}, 1000
@@ -241,7 +284,8 @@ defmodule Pythelix.Game.MessageIntegrationTest do
       {_, args} = Signature.constraints("get_prompt(client)")
       Record.set_method("menu/motd", "get_prompt", args, "undefined_variable")
 
-      {:ok, socket} = :gen_tcp.connect(~c"localhost", @test_port, [:binary, packet: :line, active: true])
+      {:ok, socket} =
+        :gen_tcp.connect(~c"localhost", @test_port, [:binary, packet: :line, active: true])
 
       # Should still receive welcome message even with broken prompt
       assert_receive {:tcp, ^socket, welcome}, 1000

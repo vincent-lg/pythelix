@@ -9,18 +9,16 @@ defmodule Pythelix.Scripting.Namespace.StackableTest do
   alias Pythelix.Record
   alias Pythelix.Stackable
 
-  # ---------------------------------------------------------------------------
-  # Creating stackable handles with the stackable() builtin
-
   describe "stackable() builtin" do
     test "creates a floating stackable handle with correct quantity" do
       {:ok, _coin} = Record.create_entity(key: "builtin_coin")
       Record.set_attribute("builtin_coin", "stackable", true)
 
-      script = run("""
-      coin = stackable(!builtin_coin!, 100)
-      qty = coin.quantity
-      """)
+      script =
+        run("""
+        coin = stackable(!builtin_coin!, 100)
+        qty = coin.quantity
+        """)
 
       qty = Script.get_variable_value(script, "qty")
       assert qty == 100
@@ -30,10 +28,11 @@ defmodule Pythelix.Scripting.Namespace.StackableTest do
       {:ok, _coin} = Record.create_entity(key: "floating_coin")
       Record.set_attribute("floating_coin", "stackable", true)
 
-      script = run("""
-      coin = stackable(!floating_coin!, 50)
-      loc = coin.location
-      """)
+      script =
+        run("""
+        coin = stackable(!floating_coin!, 50)
+        loc = coin.location
+        """)
 
       loc = Script.get_variable_value(script, "loc")
       assert loc == :none
@@ -43,10 +42,11 @@ defmodule Pythelix.Scripting.Namespace.StackableTest do
       {:ok, _coin} = Record.create_entity(key: "repr_coin")
       Record.set_attribute("repr_coin", "stackable", true)
 
-      script = run("""
-      coin = stackable(!repr_coin!, 99)
-      r = repr(coin)
-      """)
+      script =
+        run("""
+        coin = stackable(!repr_coin!, 99)
+        r = repr(coin)
+        """)
 
       r = Script.get_variable_value(script, "r")
       assert r == "repr_coin(x99)"
@@ -55,16 +55,14 @@ defmodule Pythelix.Scripting.Namespace.StackableTest do
     test "raises TypeError when entity does not have stackable: true" do
       {:ok, _sword} = Record.create_entity(key: "plain_sword_ns")
 
-      assert {:error, traceback} = Pythelix.Scripting.eval("""
-      s = stackable(!plain_sword_ns!, 1)
-      """)
+      assert {:error, traceback} =
+               Pythelix.Scripting.eval("""
+               s = stackable(!plain_sword_ns!, 1)
+               """)
 
       assert traceback.exception == TypeError
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # Delegating attributes to the underlying entity
 
   describe "attribute delegation" do
     test "reads an attribute from the underlying entity" do
@@ -72,10 +70,11 @@ defmodule Pythelix.Scripting.Namespace.StackableTest do
       Record.set_attribute("attr_coin", "stackable", true)
       Record.set_attribute("attr_coin", "name", "gold coin")
 
-      script = run("""
-      coin = stackable(!attr_coin!, 10)
-      n = coin.name
-      """)
+      script =
+        run("""
+        coin = stackable(!attr_coin!, 10)
+        n = coin.name
+        """)
 
       n = Script.get_variable_value(script, "n")
       assert n == "gold coin"
@@ -84,9 +83,10 @@ defmodule Pythelix.Scripting.Namespace.StackableTest do
     test "quantity returns 1 for a regular entity" do
       {:ok, _sword} = Record.create_entity(key: "plain_sword")
 
-      script = run("""
-      qty = !plain_sword!.quantity
-      """)
+      script =
+        run("""
+        qty = !plain_sword!.quantity
+        """)
 
       qty = Script.get_variable_value(script, "qty")
       assert qty == 1
@@ -96,17 +96,15 @@ defmodule Pythelix.Scripting.Namespace.StackableTest do
       {:ok, _coin} = Record.create_entity(key: "readonly_coin")
       Record.set_attribute("readonly_coin", "stackable", true)
 
-      assert {:error, traceback} = Pythelix.Scripting.eval("""
-      coin = stackable(!readonly_coin!, 10)
-      coin.quantity = 999
-      """)
+      assert {:error, traceback} =
+               Pythelix.Scripting.eval("""
+               coin = stackable(!readonly_coin!, 10)
+               coin.quantity = 999
+               """)
 
       assert traceback.exception == AttributeError
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # Placing a stackable in a container via location assignment
 
   describe "location assignment — placement" do
     test "setting location places stackable in container" do
@@ -127,16 +125,17 @@ defmodule Pythelix.Scripting.Namespace.StackableTest do
       {:ok, _coin} = Record.create_entity(key: "contents_coin")
       Record.set_attribute("contents_coin", "stackable", true)
 
-      script = run("""
-      coin = stackable(!contents_coin!, 5)
-      coin.location = !contents_room!
-      found = None
-      for item in !contents_room!.contents:
-          if item.quantity == 5:
-              found = item
-          endif
-      done
-      """)
+      script =
+        run("""
+        coin = stackable(!contents_coin!, 5)
+        coin.location = !contents_room!
+        found = None
+        for item in !contents_room!.contents:
+            if item.quantity == 5:
+                found = item
+            endif
+        done
+        """)
 
       found = Script.get_variable_value(script, "found")
       assert %Stackable{quantity: 5} = found
@@ -157,9 +156,6 @@ defmodule Pythelix.Scripting.Namespace.StackableTest do
       assert Record.get_stackable_quantity(room, Record.get_entity("accum_coin")) == 150
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # Transferring a stackable between containers
 
   describe "location assignment — transfer" do
     test "moving stackable from one container to another" do
@@ -223,9 +219,6 @@ defmodule Pythelix.Scripting.Namespace.StackableTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # Removing a stackable (setting location to None)
-
   describe "location assignment — removal" do
     test "setting location to None removes the stackable from container" do
       {:ok, room} = Record.create_entity(key: "rm_room")
@@ -246,19 +239,17 @@ defmodule Pythelix.Scripting.Namespace.StackableTest do
       {:ok, _coin} = Record.create_entity(key: "noop_coin")
       Record.set_attribute("noop_coin", "stackable", true)
 
-      script = run("""
-      coin = stackable(!noop_coin!, 10)
-      coin.location = None
-      qty = coin.quantity
-      """)
+      script =
+        run("""
+        coin = stackable(!noop_coin!, 10)
+        coin.location = None
+        qty = coin.quantity
+        """)
 
       qty = Script.get_variable_value(script, "qty")
       assert qty == 10
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # search.match
 
   describe "search.match" do
     test "finds a stackable by name attribute" do
@@ -267,9 +258,10 @@ defmodule Pythelix.Scripting.Namespace.StackableTest do
       Record.set_attribute("sm_coin", "name", "gold coin")
       Record.add_stackable(room, Record.get_entity("sm_coin"), 100)
 
-      script = run("""
-      results = search.match(!sm_room!, "gold")
-      """)
+      script =
+        run("""
+        results = search.match(!sm_room!, "gold")
+        """)
 
       results = Script.get_variable_value(script, "results")
       assert length(results) == 1
@@ -283,9 +275,10 @@ defmodule Pythelix.Scripting.Namespace.StackableTest do
       Record.set_attribute("nomatch_coin", "name", "gold coin")
       Record.add_stackable(room, Record.get_entity("nomatch_coin"), 10)
 
-      script = run("""
-      results = search.match(!nomatch_room!, "silver")
-      """)
+      script =
+        run("""
+        results = search.match(!nomatch_room!, "silver")
+        """)
 
       results = Script.get_variable_value(script, "results")
       assert results == []
@@ -297,10 +290,11 @@ defmodule Pythelix.Scripting.Namespace.StackableTest do
       Record.set_attribute("nolimit_coin", "name", "gold coin")
       Record.add_stackable(room, Record.get_entity("nolimit_coin"), 500)
 
-      script = run("""
-      results = search.match(!nolimit_room!, "gold")
-      qty = results[0].quantity
-      """)
+      script =
+        run("""
+        results = search.match(!nolimit_room!, "gold")
+        qty = results[0].quantity
+        """)
 
       qty = Script.get_variable_value(script, "qty")
       assert qty == 500
@@ -312,10 +306,11 @@ defmodule Pythelix.Scripting.Namespace.StackableTest do
       Record.set_attribute("limit_coin", "name", "gold coin")
       Record.add_stackable(room, Record.get_entity("limit_coin"), 400)
 
-      script = run("""
-      results = search.match(!limit_room!, "gold", limit=3)
-      qty = results[0].quantity
-      """)
+      script =
+        run("""
+        results = search.match(!limit_room!, "gold", limit=3)
+        qty = results[0].quantity
+        """)
 
       qty = Script.get_variable_value(script, "qty")
       assert qty == 3
@@ -327,10 +322,11 @@ defmodule Pythelix.Scripting.Namespace.StackableTest do
       Record.set_attribute("cap_coin", "name", "gold coin")
       Record.add_stackable(room, Record.get_entity("cap_coin"), 2)
 
-      script = run("""
-      results = search.match(!cap_room!, "gold", limit=100)
-      qty = results[0].quantity
-      """)
+      script =
+        run("""
+        results = search.match(!cap_room!, "gold", limit=100)
+        qty = results[0].quantity
+        """)
 
       qty = Script.get_variable_value(script, "qty")
       assert qty == 2
@@ -344,9 +340,10 @@ defmodule Pythelix.Scripting.Namespace.StackableTest do
       Record.set_attribute("mixed_sm_coin", "name", "gold coin")
       Record.add_stackable(room, Record.get_entity("mixed_sm_coin"), 20)
 
-      script = run("""
-      results = search.match(!mixed_sm_room!, "gold")
-      """)
+      script =
+        run("""
+        results = search.match(!mixed_sm_room!, "gold")
+        """)
 
       results = Script.get_variable_value(script, "results")
       assert length(results) == 2
@@ -366,18 +363,16 @@ defmodule Pythelix.Scripting.Namespace.StackableTest do
       Record.set_attribute("custom_filter_coin", "french_name", "pièce d'or")
       Record.add_stackable(room, Record.get_entity("custom_filter_coin"), 10)
 
-      script = run("""
-      results = search.match(!custom_filter_room!, "pièce", filter="french_name")
-      """)
+      script =
+        run("""
+        results = search.match(!custom_filter_room!, "pièce", filter="french_name")
+        """)
 
       results = Script.get_variable_value(script, "results")
       assert length(results) == 1
       assert hd(results).quantity == 10
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # search.match — index selection
 
   describe "search.match — index selection" do
     test "index=1 returns the first matching item" do
@@ -389,9 +384,10 @@ defmodule Pythelix.Scripting.Namespace.StackableTest do
       Record.add_stackable(room, Record.get_entity("idx_gold"), 10)
       Record.add_stackable(room, Record.get_entity("idx_bar"), 5)
 
-      script = run("""
-      results = search.match(!idx_room!, "gold", index=1)
-      """)
+      script =
+        run("""
+        results = search.match(!idx_room!, "gold", index=1)
+        """)
 
       results = Script.get_variable_value(script, "results")
       assert length(results) == 1
@@ -406,9 +402,10 @@ defmodule Pythelix.Scripting.Namespace.StackableTest do
       Record.add_stackable(room, Record.get_entity("idx2_gold"), 10)
       Record.add_stackable(room, Record.get_entity("idx2_bar"), 5)
 
-      script = run("""
-      results = search.match(!idx2_room!, "gold", index=2)
-      """)
+      script =
+        run("""
+        results = search.match(!idx2_room!, "gold", index=2)
+        """)
 
       results = Script.get_variable_value(script, "results")
       assert length(results) == 1
@@ -420,9 +417,10 @@ defmodule Pythelix.Scripting.Namespace.StackableTest do
       Record.set_attribute("idx_oor_coin", "name", "gold coin")
       Record.add_stackable(room, Record.get_entity("idx_oor_coin"), 10)
 
-      script = run("""
-      results = search.match(!idx_oor_room!, "gold", index=99)
-      """)
+      script =
+        run("""
+        results = search.match(!idx_oor_room!, "gold", index=99)
+        """)
 
       results = Script.get_variable_value(script, "results")
       assert results == []
@@ -449,9 +447,6 @@ defmodule Pythelix.Scripting.Namespace.StackableTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # search.match — __visible__ hook
-
   describe "search.match — __visible__ hook" do
     test "items without __visible__ are always included regardless of viewer" do
       {:ok, room} = Record.create_entity(key: "vis_default_room")
@@ -460,9 +455,10 @@ defmodule Pythelix.Scripting.Namespace.StackableTest do
       Record.set_attribute("vis_default_coin", "name", "gold coin")
       Record.add_stackable(room, Record.get_entity("vis_default_coin"), 10)
 
-      script = run("""
-      results = search.match(!vis_default_room!, "gold", viewer=!vis_default_player!)
-      """)
+      script =
+        run("""
+        results = search.match(!vis_default_room!, "gold", viewer=!vis_default_player!)
+        """)
 
       results = Script.get_variable_value(script, "results")
       assert length(results) == 1
@@ -474,12 +470,20 @@ defmodule Pythelix.Scripting.Namespace.StackableTest do
       {:ok, _coin} = Record.create_entity(key: "vis_hide_coin")
       Record.set_attribute("vis_hide_coin", "name", "gold coin")
       Record.set_attribute("vis_hide_coin", "stackable", true)
-      Record.set_method("vis_hide_coin", "__visible__", [{"viewer", [index: 0, type: :entity]}], "return False")
+
+      Record.set_method(
+        "vis_hide_coin",
+        "__visible__",
+        [{"viewer", [index: 0, type: :entity]}],
+        "return False"
+      )
+
       Record.add_stackable(room, Record.get_entity("vis_hide_coin"), 10)
 
-      script = run("""
-      results = search.match(!vis_hide_room!, "gold", viewer=!vis_hide_player!)
-      """)
+      script =
+        run("""
+        results = search.match(!vis_hide_room!, "gold", viewer=!vis_hide_player!)
+        """)
 
       results = Script.get_variable_value(script, "results")
       assert results == []
@@ -490,12 +494,20 @@ defmodule Pythelix.Scripting.Namespace.StackableTest do
       {:ok, _coin} = Record.create_entity(key: "vis_noview_coin")
       Record.set_attribute("vis_noview_coin", "name", "gold coin")
       Record.set_attribute("vis_noview_coin", "stackable", true)
-      Record.set_method("vis_noview_coin", "__visible__", [{"viewer", [index: 0, type: :entity]}], "return False")
+
+      Record.set_method(
+        "vis_noview_coin",
+        "__visible__",
+        [{"viewer", [index: 0, type: :entity]}],
+        "return False"
+      )
+
       Record.add_stackable(room, Record.get_entity("vis_noview_coin"), 10)
 
-      script = run("""
-      results = search.match(!vis_noview_room!, "gold")
-      """)
+      script =
+        run("""
+        results = search.match(!vis_noview_room!, "gold")
+        """)
 
       results = Script.get_variable_value(script, "results")
       assert length(results) == 1
@@ -507,20 +519,25 @@ defmodule Pythelix.Scripting.Namespace.StackableTest do
       {:ok, _coin} = Record.create_entity(key: "vis_show_coin")
       Record.set_attribute("vis_show_coin", "name", "gold coin")
       Record.set_attribute("vis_show_coin", "stackable", true)
-      Record.set_method("vis_show_coin", "__visible__", [{"viewer", [index: 0, type: :entity]}], "return True")
+
+      Record.set_method(
+        "vis_show_coin",
+        "__visible__",
+        [{"viewer", [index: 0, type: :entity]}],
+        "return True"
+      )
+
       Record.add_stackable(room, Record.get_entity("vis_show_coin"), 10)
 
-      script = run("""
-      results = search.match(!vis_show_room!, "gold", viewer=!vis_show_player!)
-      """)
+      script =
+        run("""
+        results = search.match(!vis_show_room!, "gold", viewer=!vis_show_player!)
+        """)
 
       results = Script.get_variable_value(script, "results")
       assert length(results) == 1
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # search.match — __namefor__ hook
 
   describe "search.match — __namefor__ hook" do
     test "without viewer, matching uses the raw attribute" do
@@ -528,12 +545,20 @@ defmodule Pythelix.Scripting.Namespace.StackableTest do
       {:ok, _coin} = Record.create_entity(key: "nfr_noview_coin")
       Record.set_attribute("nfr_noview_coin", "name", "boring name")
       Record.set_attribute("nfr_noview_coin", "stackable", true)
-      Record.set_method("nfr_noview_coin", "__namefor__", [{"viewer", [index: 0, type: :entity]}], ~s(return "special name"))
+
+      Record.set_method(
+        "nfr_noview_coin",
+        "__namefor__",
+        [{"viewer", [index: 0, type: :entity]}],
+        ~s(return "special name")
+      )
+
       Record.add_stackable(room, Record.get_entity("nfr_noview_coin"), 5)
 
-      script = run("""
-      results = search.match(!nfr_noview_room!, "boring")
-      """)
+      script =
+        run("""
+        results = search.match(!nfr_noview_room!, "boring")
+        """)
 
       results = Script.get_variable_value(script, "results")
       assert length(results) == 1
@@ -545,14 +570,22 @@ defmodule Pythelix.Scripting.Namespace.StackableTest do
       {:ok, _coin} = Record.create_entity(key: "nfr_view_coin")
       Record.set_attribute("nfr_view_coin", "name", "boring name")
       Record.set_attribute("nfr_view_coin", "stackable", true)
-      Record.set_method("nfr_view_coin", "__namefor__", [{"viewer", [index: 0, type: :entity]}], ~s(return "special name"))
+
+      Record.set_method(
+        "nfr_view_coin",
+        "__namefor__",
+        [{"viewer", [index: 0, type: :entity]}],
+        ~s(return "special name")
+      )
+
       Record.add_stackable(room, Record.get_entity("nfr_view_coin"), 5)
 
       # "special" matches what __namefor__ returns; "boring" does not
-      script = run("""
-      by_special = search.match(!nfr_view_room!, "special", viewer=!nfr_view_player!)
-      by_boring  = search.match(!nfr_view_room!, "boring",  viewer=!nfr_view_player!)
-      """)
+      script =
+        run("""
+        by_special = search.match(!nfr_view_room!, "special", viewer=!nfr_view_player!)
+        by_boring  = search.match(!nfr_view_room!, "boring",  viewer=!nfr_view_player!)
+        """)
 
       by_special = Script.get_variable_value(script, "by_special")
       by_boring = Script.get_variable_value(script, "by_boring")
@@ -567,9 +600,10 @@ defmodule Pythelix.Scripting.Namespace.StackableTest do
       Record.set_attribute("nfr_fallback_coin", "name", "gold coin")
       Record.add_stackable(room, Record.get_entity("nfr_fallback_coin"), 5)
 
-      script = run("""
-      results = search.match(!nfr_fallback_room!, "gold", viewer=!nfr_fallback_player!)
-      """)
+      script =
+        run("""
+        results = search.match(!nfr_fallback_room!, "gold", viewer=!nfr_fallback_player!)
+        """)
 
       results = Script.get_variable_value(script, "results")
       assert length(results) == 1
@@ -585,27 +619,31 @@ defmodule Pythelix.Scripting.Namespace.StackableTest do
       {:ok, _coin} = Record.create_entity(key: "nfr_fstr_coin")
       Record.set_attribute("nfr_fstr_coin", "name", "gold coin")
       Record.set_attribute("nfr_fstr_coin", "stackable", true)
-      Record.set_method("nfr_fstr_coin", "__namefor__",
+
+      Record.set_method(
+        "nfr_fstr_coin",
+        "__namefor__",
         [{"viewer", [index: 0, type: :entity]}],
-        ~s(return f"[tag] {self.name}"))
+        ~s(return f"[tag] {self.name}")
+      )
+
       Record.add_stackable(room, Record.get_entity("nfr_fstr_coin"), 3)
 
-      script = run("""
-      by_tag   = search.match(!nfr_fstr_room!, "[tag]", viewer=!nfr_fstr_player!)
-      by_notag = search.match(!nfr_fstr_room!, "[tag]")
-      """)
+      script =
+        run("""
+        by_tag   = search.match(!nfr_fstr_room!, "[tag]", viewer=!nfr_fstr_player!)
+        by_notag = search.match(!nfr_fstr_room!, "[tag]")
+        """)
 
       by_tag = Script.get_variable_value(script, "by_tag")
       by_notag = Script.get_variable_value(script, "by_notag")
+
       # With a viewer: __namefor__ returns f"[tag] {self.name}" → "[tag] gold coin" → matches "[tag]"
       assert length(by_tag) == 1
       # Without a viewer: raw "gold coin" used → does not contain "[tag]"
       assert by_notag == []
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # search.match — normalize hook on !search! entity
 
   describe "search.match — normalize hook" do
     test "without !search! entity, default lowercase normalisation applies" do
@@ -615,9 +653,10 @@ defmodule Pythelix.Scripting.Namespace.StackableTest do
       Record.add_stackable(room, Record.get_entity("norm_default_coin"), 10)
 
       # lowercase search term matches mixed-case item name via default downcase
-      script = run("""
-      results = search.match(!norm_default_room!, "gold")
-      """)
+      script =
+        run("""
+        results = search.match(!norm_default_room!, "gold")
+        """)
 
       results = Script.get_variable_value(script, "results")
       assert length(results) == 1
@@ -629,7 +668,13 @@ defmodule Pythelix.Scripting.Namespace.StackableTest do
       # normalise to the same value — demonstrating that the hook is invoked
       # for each side of the comparison.
       {:ok, _search_entity} = Record.create_entity(key: "search")
-      Record.set_method("search", "normalize", [{"text", [index: 0, type: :str]}], ~s(return "SENTINEL"))
+
+      Record.set_method(
+        "search",
+        "normalize",
+        [{"text", [index: 0, type: :str]}],
+        ~s(return "SENTINEL")
+      )
 
       {:ok, room} = Record.create_entity(key: "norm_hook_room")
       {:ok, _coin} = Record.create_entity(key: "norm_hook_coin")
@@ -637,9 +682,10 @@ defmodule Pythelix.Scripting.Namespace.StackableTest do
       Record.add_stackable(room, Record.get_entity("norm_hook_coin"), 7)
 
       # "SENTINEL" matches because both sides normalise to "SENTINEL"
-      script = run("""
-      results = search.match(!norm_hook_room!, "SENTINEL")
-      """)
+      script =
+        run("""
+        results = search.match(!norm_hook_room!, "SENTINEL")
+        """)
 
       results = Script.get_variable_value(script, "results")
       assert length(results) == 1
@@ -664,9 +710,10 @@ defmodule Pythelix.Scripting.Namespace.StackableTest do
       Record.add_stackable(room, Record.get_entity("norm_accent_sword"), 1)
 
       # "epee" would not match "épée" with plain downcase, but does with the hook
-      script = run("""
-      results = search.match(!norm_accent_room!, "epee")
-      """)
+      script =
+        run("""
+        results = search.match(!norm_accent_room!, "epee")
+        """)
 
       results = Script.get_variable_value(script, "results")
       assert length(results) == 1
@@ -674,9 +721,6 @@ defmodule Pythelix.Scripting.Namespace.StackableTest do
       Record.Cache.clear()
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # Mixed contents: browsing with quantity attribute
 
   describe "browsing contents" do
     test "all items in contents respond to .quantity" do
@@ -687,12 +731,13 @@ defmodule Pythelix.Scripting.Namespace.StackableTest do
       Record.set_attribute("browse_coin", "name", "gold coin")
       Record.add_stackable(room, Record.get_entity("browse_coin"), 75)
 
-      script = run("""
-      total = 0
-      for item in !browse_room!.contents:
-          total = total + item.quantity
-      done
-      """)
+      script =
+        run("""
+        total = 0
+        for item in !browse_room!.contents:
+            total = total + item.quantity
+        done
+        """)
 
       total = Script.get_variable_value(script, "total")
       # sword has quantity 1, stackable has quantity 75

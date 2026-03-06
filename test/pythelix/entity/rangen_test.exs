@@ -14,9 +14,6 @@ defmodule Pythelix.Entity.RangenTest do
     :ok
   end
 
-  # ---------------------------------------------------------------------------
-  # Trie unit tests
-
   describe "Trie" do
     test "insert and lookup" do
       trie = Trie.new()
@@ -68,9 +65,6 @@ defmodule Pythelix.Entity.RangenTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # Helpers
-
   defp create_rangen(key, patterns, check_method \\ nil) do
     generic = Record.get_entity("generic/rangen")
     {:ok, entity} = Record.create_entity(key: key, virtual: true, parent: generic)
@@ -101,9 +95,6 @@ defmodule Pythelix.Entity.RangenTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # Generate all combinations
-
   describe "generate" do
     test "generate all 8 combinations with patterns [\"ab\", \"ab\", \"ab\"]" do
       create_rangen("rangen/test_gen", ["ab", "ab", "ab"])
@@ -120,13 +111,14 @@ defmodule Pythelix.Entity.RangenTest do
       end
 
       # 9th should raise ValueError
-      script = Scripting.run("""
-      try:
-        result = !rangen/test_gen!.generate()
-      except ValueError:
-        result = "exhausted"
-      endtry
-      """)
+      script =
+        Scripting.run("""
+        try:
+          result = !rangen/test_gen!.generate()
+        except ValueError:
+          result = "exhausted"
+        endtry
+        """)
 
       assert script.error == nil
       assert script.variables["result"] == "exhausted"
@@ -162,21 +154,19 @@ defmodule Pythelix.Entity.RangenTest do
       refute "aaa" in results
 
       # 8th should raise ValueError
-      script = Scripting.run("""
-      try:
-        result = !rangen/test_check!.generate()
-      except ValueError:
-        result = "exhausted"
-      endtry
-      """)
+      script =
+        Scripting.run("""
+        try:
+          result = !rangen/test_check!.generate()
+        except ValueError:
+          result = "exhausted"
+        endtry
+        """)
 
       assert script.error == nil
       assert script.variables["result"] == "exhausted"
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # add and remove
 
   describe "add and remove" do
     test "add a string manually, then it cannot be generated" do
@@ -193,13 +183,14 @@ defmodule Pythelix.Entity.RangenTest do
       refute "aab" in results
 
       # 8th should exhaust
-      script = Scripting.run("""
-      try:
-        result = !rangen/test_add!.generate()
-      except ValueError:
-        result = "exhausted"
-      endtry
-      """)
+      script =
+        Scripting.run("""
+        try:
+          result = !rangen/test_add!.generate()
+        except ValueError:
+          result = "exhausted"
+        endtry
+        """)
 
       assert script.error == nil
       assert script.variables["result"] == "exhausted"
@@ -221,9 +212,6 @@ defmodule Pythelix.Entity.RangenTest do
       assert results == ["aab"]
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # count
 
   describe "count" do
     test "count attribute reflects number of entries" do

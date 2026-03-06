@@ -13,12 +13,14 @@ defmodule Pythelix do
     {:ok, d} = Pythelix.Record.create_entity()
 
     start_time = System.monotonic_time(:microsecond)
+
     1..number
     |> Enum.reduce(d, fn _, old ->
       new = (old == b && d) || b
       Pythelix.Record.change_location(c, new)
       new
     end)
+
     elapsed = System.monotonic_time(:microsecond) - start_time
     IO.puts("Took #{elapsed} micro seconds.")
   end
@@ -30,12 +32,14 @@ defmodule Pythelix do
     {:ok, d} = Pythelix.Record.create_entity(virtual: true, key: "d")
 
     start_time = System.monotonic_time(:microsecond)
+
     1..number
     |> Enum.reduce(d, fn _, old ->
       new = (old == b && d) || b
       Pythelix.Record.change_location(c, new)
       new
     end)
+
     elapsed = System.monotonic_time(:microsecond) - start_time
     IO.puts("Took #{elapsed} micro seconds.")
   end

@@ -48,7 +48,7 @@ defmodule Pythelix.MixProject do
   def cli do
     [
       preferred_envs: [
-        pumpkin: :test,
+        pumpkin: :test
       ]
     ]
   end
@@ -93,7 +93,7 @@ defmodule Pythelix.MixProject do
       {:meck, "~> 0.9", only: :test}
     ]
     |> then(fn deps ->
-      impl = (match?({:win32, _}, :os.type) && "windows") || "linux"
+      impl = (match?({:win32, _}, :os.type()) && "windows") || "linux"
       file = "deps_#{impl}.ex"
 
       if File.exists?(file) do

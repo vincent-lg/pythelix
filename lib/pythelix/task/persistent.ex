@@ -1,6 +1,6 @@
 defmodule Pythelix.Task.Persistent do
   @moduledoc """
-  Module to store persistent tasks, to be restarted by the server."""
+  Module to store persistent tasks, to be restarted by the server.\"""
   """
 
   alias Pythelix.Scripting.Interpreter.Script
@@ -15,11 +15,11 @@ defmodule Pythelix.Task.Persistent do
 
   @typedoc "A persistent task"
   @type t() :: %{
-                 id: integer(),
-                 expire_at: nil | DateTime.t(),
-                 script: Script.t(),
-                 references: %{Reference.t() => {term(), Reference.t() | nil}}
-               }
+          id: integer(),
+          expire_at: nil | DateTime.t(),
+          script: Script.t(),
+          references: %{Reference.t() => {term(), Reference.t() | nil}}
+        }
 
   @cache :px_tasks
 
@@ -42,10 +42,10 @@ defmodule Pythelix.Task.Persistent do
   def load() do
     Path.wildcard("#{get_path()}/*.task")
     |> Enum.map(&load_task/1)
-    |> Enum.reject(& &1 == nil)
+    |> Enum.reject(&(&1 == nil))
     |> Enum.reduce({get_status(), get_ids()}, fn task, {status, ids} ->
       task
-      |> tap(& Cachex.put(@cache, &1.id, &1))
+      |> tap(&Cachex.put(@cache, &1.id, &1))
       |> tap(&restore/1)
       |> schedule()
       |> case do
@@ -112,7 +112,12 @@ defmodule Pythelix.Task.Persistent do
     status = get_status()
 
     {:ok, task} =
-      %Task{id: id, expire_at: expire_at, name: name, action: {:entity_method, entity_key, method_name}}
+      %Task{
+        id: id,
+        expire_at: expire_at,
+        name: name,
+        action: {:entity_method, entity_key, method_name}
+      }
       |> save()
       |> schedule()
 
@@ -136,13 +141,15 @@ defmodule Pythelix.Task.Persistent do
   * code (:name or string): the task code (if :same, remains the same).
   * script (Script): the task script.
   """
-  @spec update(integer(), nil | DateTime.t(), :same | String.t(), :same | String.t(), Script.t()) :: :ok | :notask
+  @spec update(integer(), nil | DateTime.t(), :same | String.t(), :same | String.t(), Script.t()) ::
+          :ok | :notask
   def update(id, expire_at, name, code, script) do
     get(id)
     |> case do
-      %Task{} = task->
+      %Task{} = task ->
         name = (name == :same && task.name) || name
         code = (code == :same && task.code) || code
+
         {:ok, _task} =
           %{task | expire_at: expire_at, name: name, code: code, script: script}
           |> save()
@@ -164,17 +171,18 @@ defmodule Pythelix.Task.Persistent do
     |> case do
       %Task{} ->
         status = Map.delete(get_status(), id)
+
         ids =
           get_ids()
-          |> Enum.reject(& &1 == id)
+          |> Enum.reject(&(&1 == id))
 
         Cachex.del(@cache, id)
         Cachex.put(@cache, :ids, ids)
         Cachex.put(@cache, :status, status)
         File.rm(get_task_path(id))
 
-      nil
-        -> :notask
+      nil ->
+        :notask
     end
   end
 
@@ -237,7 +245,10 @@ defmodule Pythelix.Task.Persistent do
       :erlang.binary_to_term(content)
     rescue
       exception ->
-        Logger.error("Loading task from #{path}:\n" <> Exception.format(:error, exception, __STACKTRACE__))
+        Logger.error(
+          "Loading task from #{path}:\n" <> Exception.format(:error, exception, __STACKTRACE__)
+        )
+
         nil
     end
   end
@@ -245,10 +256,11 @@ defmodule Pythelix.Task.Persistent do
   defp schedule(task) do
     if task.expire_at do
       now = DateTime.utc_now()
+
       time =
         task.expire_at
         |> DateTime.diff(now, :millisecond)
-        |> then(& (&1 > 0 && &1) || 0)
+        |> then(&((&1 > 0 && &1) || 0))
 
       continuation_job = {Pythelix.Scripting.Runner, :resume_task, [task.id]}
       Process.send_after(Pythelix.Game.Hub, {:"$gen_cast", {:run, continuation_job}}, time)

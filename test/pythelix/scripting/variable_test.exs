@@ -82,7 +82,7 @@ defmodule Pythelix.Scripting.VariableTest do
 
   test "check ** right associativity" do
     script = run("calcul = 5 ** 2 ** 3")
-    assert script.variables == %{"calcul" => 390625}
+    assert script.variables == %{"calcul" => 390_625}
   end
 
   test "check that operator < returns a bool" do

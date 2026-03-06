@@ -50,6 +50,7 @@ if config_env() == :prod do
 
   if !File.exists?(env_file) do
     IO.puts("Generating default environment file: #{env_file}")
+
     secret =
       :crypto.strong_rand_bytes(64)
       |> Base.encode64()
