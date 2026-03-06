@@ -9,6 +9,7 @@ defmodule Pythelix.Scripting.Namespace.Builtin do
 
   alias Pythelix.Scripting.Display
   alias Pythelix.Scripting.Format
+  alias Pythelix.Scripting.Namespace
   alias Pythelix.Scripting.Object.Dict
   alias Pythelix.Scripting.Object.Tuple
   alias Pythelix.Stackable
@@ -159,5 +160,79 @@ defmodule Pythelix.Scripting.Namespace.Builtin do
     {:object, index: 0, type: :any}
   ] do
     {script, Display.str(script, namespace.object)}
+  end
+
+  deffun getattr(script, namespace), [
+    {:object, index: 0, type: :any},
+    {:name, index: 1, type: :str},
+    {:default, index: 2, type: :any, default: :no_default}
+  ] do
+    object = Store.get_value(namespace.object)
+    name = Format.String.format(Store.get_value(namespace.name))
+    ns = Namespace.locate(object)
+
+    case ns.getattr(script, namespace.object, name) do
+      %Script{} = script ->
+        if namespace.default != :no_default do
+          {%{script | error: nil}, namespace.default}
+        else
+          {script, :none}
+        end
+
+      :none ->
+        if namespace.default != :no_default do
+          {script, namespace.default}
+        else
+          {script, :none}
+        end
+
+      value ->
+        {script, value}
+    end
+  end
+
+  deffun setattr(script, namespace), [
+    {:object, index: 0, type: :any},
+    {:name, index: 1, type: :str},
+    {:value, index: 2, type: :any}
+  ] do
+    object = Store.get_value(namespace.object)
+    name = Format.String.format(Store.get_value(namespace.name))
+    ns = Namespace.locate(object)
+
+    {script, _} = ns.setattr(script, namespace.object, name, namespace.value)
+    {script, :none}
+  end
+
+  deffun hasattr(script, namespace), [
+    {:object, index: 0, type: :any},
+    {:name, index: 1, type: :str}
+  ] do
+    object = Store.get_value(namespace.object)
+    name = Format.String.format(Store.get_value(namespace.name))
+    ns = Namespace.locate(object)
+
+    case ns.getattr(script, namespace.object, name) do
+      %Script{} ->
+        {script, false}
+
+      :none ->
+        {script, false}
+
+      _ ->
+        {script, true}
+    end
+  end
+
+  deffun delattr(script, namespace), [
+    {:object, index: 0, type: :any},
+    {:name, index: 1, type: :str}
+  ] do
+    object = Store.get_value(namespace.object)
+    name = Format.String.format(Store.get_value(namespace.name))
+    ns = Namespace.locate(object)
+
+    {script, _} = ns.delattr(script, namespace.object, name)
+    {script, :none}
   end
 end
