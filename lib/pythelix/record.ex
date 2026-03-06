@@ -5,7 +5,7 @@ defmodule Pythelix.Record do
 
   import Ecto.Query, warn: false
   alias Pythelix.Repo
-  alias Pythelix.{Entity, Method, Stackable}
+  alias Pythelix.{Entity, Generic, Method, Stackable}
   alias Pythelix.Network.TCP.Client
   alias Pythelix.Record
   alias Pythelix.Record.Cache
@@ -464,7 +464,7 @@ defmodule Pythelix.Record do
     old_location = (old_id && get_entity(old_id)) || nil
 
     if location != old_location do
-      if has_parent?(entity, "generic/client") && has_parent?(old_location, "generic/menu") do
+      if has_parent?(entity, Generic.client()) && has_parent?(old_location, Generic.menu()) do
         owner = get_attribute(entity, "owner", nil)
         owner = owner || entity
         try do
@@ -477,7 +477,7 @@ defmodule Pythelix.Record do
   end
 
   defp handle_new_location(entity, location) do
-    if has_parent?(entity, "generic/client") && has_parent?(location, "generic/menu") do
+    if has_parent?(entity, Generic.client()) && has_parent?(location, Generic.menu()) do
       try do
         case Method.call_entity(location, "get_text", [entity]) do
           :nomethod ->

@@ -16,7 +16,7 @@ defmodule Pythelix.Scripting.Namespace.GameModes do
   end
 
   defmet add(script, namespace), [
-    {:menu, index: 0, keyword: "menu", type: {:entity, "generic/menu"}},
+    {:menu, index: 0, keyword: "menu", type: {:entity, Pythelix.Generic.menu()}},
     {:owner, index: 1, keyword: "owner", type: :entity, default: nil},
     {:default, keyword: "default", type: :bool, default: true}
   ] do
@@ -37,7 +37,7 @@ defmodule Pythelix.Scripting.Namespace.GameModes do
   end
 
   defmet remove(script, namespace), [
-    {:menu, index: 0, keyword: "menu", type: {:entity, "generic/menu"}},
+    {:menu, index: 0, keyword: "menu", type: {:entity, Pythelix.Generic.menu()}},
     {:owner, index: 1, keyword: "owner", type: :entity, default: nil}
   ] do
     game_modes = Store.get_value(namespace.self)

@@ -3,16 +3,15 @@ defmodule Pythelix.Command do
   Module to manipulate commands in Pythelix.
   """
 
-  @generic_command "generic/command"
-
   alias Pythelix.Command.Syntax
+  alias Pythelix.Generic
   alias Pythelix.Record
 
   def add_base_command_entity(entities) do
     [
       %{
         virtual: true,
-        key: @generic_command,
+        key: Generic.command(),
         attributes: %{},
         methods: %{},
       } | entities
@@ -23,7 +22,7 @@ defmodule Pythelix.Command do
   Returns a list of command keys (children of the generic command).
   """
   def get_command_keys() do
-    @generic_command
+    Generic.command()
     |> Record.get_children_id_or_key()
   end
 

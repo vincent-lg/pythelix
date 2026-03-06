@@ -74,6 +74,15 @@ config :pythelix,
   worldlets_path: Path.join(File.cwd!(), "worldlets"),
   tasks_path: Path.join(File.cwd!(), "tasks")
 
+# Generic entity names (override to use custom keys)
+# config :pythelix, :generic_entities,
+#   client: "generic/client",
+#   character: "generic/character",
+#   menu: "generic/menu",
+#   command: "generic/command",
+#   rangen: "generic/rangen",
+#   calendar: "generic/calendar"
+
 # Password algorithms
 config :pythelix, :password_algorithms, [
   Pythelix.Password.Algorithm.Argon2,

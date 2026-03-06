@@ -20,6 +20,24 @@ if System.get_env("PHX_SERVER") do
   config :pythelix, PythelixWeb.Endpoint, server: true
 end
 
+# Generic entity names can be overridden via environment variables.
+# For example: GENERIC_CLIENT=my/client GENERIC_MENU=my/menu
+generic_overrides =
+  [
+    {:client, System.get_env("GENERIC_CLIENT")},
+    {:character, System.get_env("GENERIC_CHARACTER")},
+    {:menu, System.get_env("GENERIC_MENU")},
+    {:command, System.get_env("GENERIC_COMMAND")},
+    {:rangen, System.get_env("GENERIC_RANGEN")},
+    {:calendar, System.get_env("GENERIC_CALENDAR")}
+  ]
+  |> Enum.reject(fn {_k, v} -> is_nil(v) end)
+
+if generic_overrides != [] do
+  existing = Application.get_env(:pythelix, :generic_entities, [])
+  config :pythelix, :generic_entities, Keyword.merge(existing, generic_overrides)
+end
+
 if config_env() == :prod do
   # Load (or create and load) an environment file.
   env_path = :filename.basedir(:user_data, "pythelix")

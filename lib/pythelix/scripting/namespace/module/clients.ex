@@ -37,7 +37,7 @@ defmodule Pythelix.Scripting.Namespace.Module.Clients do
   end
 
   def active do
-    client = Record.get_entity("generic/client")
+    client = Record.get_entity(Pythelix.Generic.client())
     Record.get_children(client)
   end
 

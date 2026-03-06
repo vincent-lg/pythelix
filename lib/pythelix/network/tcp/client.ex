@@ -98,7 +98,7 @@ defmodule Pythelix.Network.TCP.Client do
   Initialize client entity (called by the game hub).
   """
   def initialize_client(client_id, pid) do
-    parent = Record.get_entity("generic/client")
+    parent = Record.get_entity(Pythelix.Generic.client())
     key = "client/#{client_id}"
 
     {:ok, _} = Record.create_entity(virtual: true, key: key, parent: parent)

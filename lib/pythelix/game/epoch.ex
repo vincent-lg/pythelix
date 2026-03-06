@@ -125,7 +125,7 @@ defmodule Pythelix.Game.Epoch do
   Cache calendar entities for quick lookup.
   """
   def cache_calendars do
-    case Record.get_entity("generic/calendar") do
+    case Record.get_entity(Pythelix.Generic.calendar()) do
       nil ->
         Cachex.put(:px_cache, :game_calendars, [])
 

@@ -6,12 +6,10 @@ defmodule Pythelix.World do
 
   """
 
-  @generic_client "generic/client"
-  @generic_character "generic/character"
-  @generic_menu "generic/menu"
-  @generic_rangen "generic/rangen"
   @motd_menu "menu/motd"
   @game_menu "menu/game"
+
+  alias Pythelix.Generic
   @worldlet_dir "worldlets"
   @worldlet_pattern "*.txt"
 
@@ -323,7 +321,7 @@ defmodule Pythelix.World do
   defp add_base_calendar_entity(entities) do
     [
       %{
-        key: "generic/calendar",
+        key: Generic.calendar(),
         attributes: %{
           "offset" => 0,
           "type" => "\"custom\""
@@ -337,7 +335,7 @@ defmodule Pythelix.World do
     [
       %{
         virtual: true,
-        key: @generic_client,
+        key: Generic.client(),
         attributes: %{
           "disconnect" => {:extended, Extended.Client, :m_disconnect},
           "msg" => {:extended, Extended.Client, :m_msg},
@@ -351,7 +349,7 @@ defmodule Pythelix.World do
   defp add_base_character_entity(entities) do
     [
       %{
-        key: @generic_character,
+        key: Generic.character(),
         attributes: %{
           "game_modes" => %Modes{}
         },
@@ -364,7 +362,7 @@ defmodule Pythelix.World do
     [
       %{
         virtual: true,
-        key: @generic_rangen,
+        key: Generic.rangen(),
         attributes: %{
           "patterns" => "[]",
           "generate" => {:extended, Extended.Rangen, :m_generate},
@@ -390,7 +388,7 @@ defmodule Pythelix.World do
     [
       %{
         virtual: true,
-        key: @generic_menu,
+        key: Generic.menu(),
         attributes: %{
           "prompt" => "\"\"",
           "text" => "\"\""
@@ -398,22 +396,22 @@ defmodule Pythelix.World do
         methods: %{
           "get_prompt" => {
             [
-              {"self", keyword: "self", type: {:entity, "generic/menu"}},
-              {"client", index: 0, type: {:entity, "generic/client"}}
+              {"self", keyword: "self", type: {:entity, Generic.menu()}},
+              {"client", index: 0, type: {:entity, Generic.client()}}
             ],
             "return self.prompt"
           },
           "get_text" => {
             [
-              {"self", keyword: "self", type: {:entity, "generic/menu"}},
-              {"client", index: 0, type: {:entity, "generic/client"}}
+              {"self", keyword: "self", type: {:entity, Generic.menu()}},
+              {"client", index: 0, type: {:entity, Generic.client()}}
             ],
             "return self.text"
           },
           "invalid_input" => {
             [
-              {"self", keyword: "self", type: {:entity, "generic/menu"}},
-              {"client", index: 0, type: {:entity, "generic/client"}},
+              {"self", keyword: "self", type: {:entity, Generic.menu()}},
+              {"client", index: 0, type: {:entity, Generic.client()}},
               {"input", index: 1, type: :str}
             ],
             "client.msg('Invalid input')"
@@ -428,7 +426,7 @@ defmodule Pythelix.World do
       %{
         virtual: true,
         key: @motd_menu,
-        attributes: %{"parent" => "\"#{@generic_menu}\""},
+        attributes: %{"parent" => "\"#{Generic.menu()}\""},
         methods: %{},
       } | entities
     ]
@@ -439,7 +437,7 @@ defmodule Pythelix.World do
       %{
         virtual: true,
         key: @game_menu,
-        attributes: %{"parent" => "\"#{@generic_menu}\""},
+        attributes: %{"parent" => "\"#{Generic.menu()}\""},
         methods: %{},
       } | entities
     ]
@@ -603,7 +601,7 @@ defmodule Pythelix.World do
         default_location = Record.get_entity("menu/game")
 
         Enum.each(records, fn record ->
-          if Record.has_parent?(record, "generic/command") do
+          if Record.has_parent?(record, Generic.command()) do
             if Record.get_location_entity(record) == nil do
               place_entity(record, default_location)
             end
@@ -683,13 +681,13 @@ defmodule Pythelix.World do
   end
 
   def link_commands() do
-    Record.get_entity("generic/menu")
+    Record.get_entity(Generic.menu())
     |> Record.get_children()
     |> Enum.each(fn menu ->
       commands =
         menu
         |> Record.get_contained()
-        |> Enum.filter(& Record.has_parent?(&1, "generic/command"))
+        |> Enum.filter(& Record.has_parent?(&1, Generic.command()))
         |> tap(fn commands ->
           commands
           |> Enum.map(& Command.build_syntax_pattern(&1.key))
