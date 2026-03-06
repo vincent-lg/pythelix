@@ -51,6 +51,11 @@ defmodule Pythelix.Scripting.Namespace.Tuple do
     end
   end
 
+  defmet __iter__(script, namespace), [] do
+    %Tuple{elements: elements} = Store.get_value(namespace.self, recursive: false)
+    {script, elements}
+  end
+
   defmet __setitem__(script, _namespace), [
     {:item, index: 0, type: :any},
     {:value, index: 1, type: :any}

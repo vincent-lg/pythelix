@@ -28,6 +28,11 @@ defmodule Pythelix.Scripting.Namespace.Dict do
     repr(script, namespace.self)
   end
 
+  defmet __iter__(script, namespace), [] do
+    dict = Store.get_value(namespace.self, recursive: false)
+    {script, Dict.keys(dict)}
+  end
+
   defmet __getitem__(script, namespace), [
     {:item, index: 0, type: :any}
   ] do

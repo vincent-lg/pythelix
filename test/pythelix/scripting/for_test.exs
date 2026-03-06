@@ -17,6 +17,45 @@ defmodule Pythelix.Scripting.ForTest do
     assert script.variables["sum"] == 15
   end
 
+  test "iterates over a tuple" do
+    script =
+      run("""
+      sum = 0
+      for number in (1, 2, 3, 4, 5):
+        sum += number
+      done
+      """)
+
+    assert script.variables["sum"] == 15
+  end
+
+  test "iterates over a set" do
+    script =
+      run("""
+      result = []
+      for item in {10, 20, 30}:
+        result.append(item)
+      done
+      """)
+
+    result = script.variables["result"] |> Store.get_value()
+    assert Enum.sort(result) == [10, 20, 30]
+  end
+
+  test "iterates over a dict (yields keys)" do
+    script =
+      run("""
+      keys = []
+      d = {"a": 1, "b": 2, "c": 3}
+      for key in d:
+        keys.append(key)
+      done
+      """)
+
+    keys = script.variables["keys"] |> Store.get_value()
+    assert Enum.sort(keys) == ["a", "b", "c"]
+  end
+
   test "sums integers in nested loops" do
     script =
       run("""

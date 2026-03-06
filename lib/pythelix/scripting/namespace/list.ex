@@ -84,6 +84,11 @@ defmodule Pythelix.Scripting.Namespace.List do
     end
   end
 
+  defmet __iter__(script, namespace), [] do
+    list = Store.get_value(namespace.self, recursive: false)
+    {script, list}
+  end
+
   defmet __repr__(script, namespace), [] do
     repr(script, namespace.self)
   end

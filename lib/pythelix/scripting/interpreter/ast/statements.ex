@@ -125,6 +125,9 @@ defmodule Pythelix.Scripting.Interpreter.AST.Statements do
       code
       |> add({:line, line})
       |> AST.Core.read_ast(iterate)
+      |> add({:getattr, "__iter__"})
+      |> add({:dict, :no_reference})
+      |> add({:call, 0})
       |> add({:mkiter, nil})
 
     before = length_code(code)
