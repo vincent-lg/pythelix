@@ -3,6 +3,9 @@ defmodule Pythelix.Scripting.Format.String do
   A string, ready to be formatted.
   """
 
+  alias Pythelix.Entity
+  alias Pythelix.Method
+  alias Pythelix.Record
   alias Pythelix.Scripting
   alias Pythelix.Scripting.Format
   alias Pythelix.Scripting.Interpreter.Script
@@ -56,6 +59,53 @@ defmodule Pythelix.Scripting.Format.String do
 
   defp do_split([char | rest], acc, buffer, mode), do: do_split(rest, acc, buffer <> char, mode)
 
+  @doc """
+  Format with viewer-aware entity name resolution.
+
+  Each expression segment that evaluates to an entity will have its name
+  resolved via `__namefor__(viewer)` instead of using `to_string`.
+
+  Returns `{formatted_string, entities}` where `entities` is a `MapSet`
+  of all `Entity` structs encountered in the f-string expressions.
+  """
+  def format_for(string, _viewer) when is_binary(string), do: {string, MapSet.new()}
+
+  def format_for(%Format.String{} = format_string, viewer) do
+    script = %Script{id: "format", bytecode: [], variables: format_string.variables}
+
+    do_split(String.graphemes(format_string.string), [], "", :text)
+    |> maybe_format_for(script, viewer)
+  end
+
+  @doc """
+  Extract all entities referenced in the f-string expressions.
+
+  Evaluates each expression segment and collects those whose result is
+  an entity. Used for auto-exclusion before formatting.
+  """
+  def extract_entities(string) when is_binary(string), do: MapSet.new()
+
+  def extract_entities(%Format.String{} = format_string) do
+    script = %Script{id: "format", bytecode: [], variables: format_string.variables}
+
+    case do_split(String.graphemes(format_string.string), [], "", :text) do
+      {:ok, pattern} ->
+        Enum.reduce(pattern, MapSet.new(), fn
+          {:format, code}, entities ->
+            case Scripting.eval(code, script: script) do
+              {:ok, %Entity{} = entity} -> MapSet.put(entities, entity)
+              _ -> entities
+            end
+
+          _plain, entities ->
+            entities
+        end)
+
+      _ ->
+        MapSet.new()
+    end
+  end
+
   defp maybe_format({:ok, pattern}, script) do
     pattern
     |> Enum.map(fn
@@ -72,6 +122,44 @@ defmodule Pythelix.Scripting.Format.String do
         plain
     end)
     |> Enum.join()
+  end
+
+  defp maybe_format_for({:ok, pattern}, script, viewer) do
+    {parts, entities} =
+      Enum.reduce(pattern, {[], MapSet.new()}, fn
+        {:format, code}, {parts, entities} ->
+          case Scripting.eval(code, script: script) do
+            {:ok, %Entity{} = entity} ->
+              display = resolve_entity_name(entity, viewer)
+              {[display | parts], MapSet.put(entities, entity)}
+
+            {:ok, value} ->
+              {[to_string(value) | parts], entities}
+
+            {:error, error} ->
+              {[inspect(error) | parts], entities}
+          end
+
+        plain, {parts, entities} ->
+          {[plain | parts], entities}
+      end)
+
+    {parts |> Enum.reverse() |> Enum.join(), entities}
+  end
+
+  defp maybe_format_for({:error, _} = error, _script, _viewer) do
+    {inspect(error), MapSet.new()}
+  end
+
+  defp resolve_entity_name(entity, viewer) do
+    case Method.call_entity(entity, "__namefor__", [viewer]) do
+      result when is_binary(result) -> result
+      _ ->
+        case Record.get_attribute(entity, "name") do
+          name when is_binary(name) -> name
+          _ -> inspect(entity)
+        end
+    end
   end
 
   defimpl Inspect do

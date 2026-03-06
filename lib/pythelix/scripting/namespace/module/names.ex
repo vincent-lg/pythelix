@@ -5,12 +5,17 @@ defmodule Pythelix.Scripting.Namespace.Module.Names do
   Provides functions for grouping entities by name, typically for display
   purposes. Works with lists of entities and stackables (e.g., from
   `search.match` or `.contents`).
+
+  Also provides `eval`, `notify`, and `broadcast` for viewer-aware entity
+  name resolution and message delivery.
   """
 
   use Pythelix.Scripting.Module, name: "names"
 
   alias Pythelix.Entity
+  alias Pythelix.Method
   alias Pythelix.Record
+  alias Pythelix.Scripting.Format
   alias Pythelix.Scripting.Namespace.Module.Search
   alias Pythelix.Stackable
 
@@ -28,8 +33,106 @@ defmodule Pythelix.Scripting.Namespace.Module.Names do
     {script, result}
   end
 
-  # ---------------------------------------------------------------------------
-  # Grouping logic
+  defmet eval(script, namespace), [
+    {:entity, index: 0, type: :entity},
+    {:viewer, index: 1, type: :entity},
+    {:quantity, keyword: "quantity", type: :int, default: 1}
+  ] do
+    entity = Store.get_value(namespace.entity)
+    viewer = Store.get_value(namespace.viewer)
+    quantity = namespace.quantity
+
+    result = case Search.call_namefor(entity, viewer, quantity) do
+      nil ->
+        case Record.get_attribute(entity, "name") do
+          name when is_binary(name) -> name
+          _ -> inspect(entity)
+        end
+
+      name -> name
+    end
+
+    {script, result}
+  end
+
+  defmet notify(script, namespace), [
+    {:entity, index: 0, type: :entity},
+    {:text, index: 1, type: :str},
+    {:only_visible, keyword: "only_visible", type: :bool, default: true}
+  ] do
+    entity = Store.get_value(namespace.entity)
+    text = namespace.text
+
+    case Record.get_method(entity, "msg") do
+      %Method{} ->
+        do_notify(entity, text, namespace.only_visible)
+
+      _ -> nil
+    end
+
+    {script, :none}
+  end
+
+  defmet broadcast(script, namespace), [
+    {:location, index: 0, type: :entity},
+    {:text, index: 1, type: :str},
+    {:auto_exclude, keyword: "auto_exclude", type: :bool, default: true},
+    {:only_visible, keyword: "only_visible", type: :bool, default: true}
+  ] do
+    location = Store.get_value(namespace.location)
+    text = namespace.text
+    auto_exclude = namespace.auto_exclude
+    only_visible = namespace.only_visible
+
+    # Get entity IDs referenced in the f-string (for exclusion)
+    referenced_ids =
+      Format.String.extract_entities(text)
+      |> MapSet.new(fn %Entity{id: id} -> id end)
+
+    contents = Record.get_contained(location)
+
+    for item <- contents do
+      entity = get_content_entity(item)
+
+      case Record.get_method(entity, "msg") do
+        %Method{} ->
+          excluded = auto_exclude && MapSet.member?(referenced_ids, entity.id)
+
+          unless excluded do
+            do_notify(entity, text, only_visible)
+          end
+
+        _ -> nil
+      end
+    end
+
+    {script, :none}
+  end
+
+  defp do_notify(entity, text, only_visible) do
+    {formatted, entities} = Format.String.format_for(text, entity)
+
+    should_send =
+      if only_visible do
+        Enum.all?(entities, fn e -> entity_visible?(e, entity) end)
+      else
+        true
+      end
+
+    if should_send do
+      Method.call_entity(entity, "msg", [formatted])
+    end
+  end
+
+  defp entity_visible?(entity, viewer) do
+    case Method.call_entity(entity, "__visible__", [viewer]) do
+      false -> false
+      _ -> true
+    end
+  end
+
+  defp get_content_entity(%Stackable{entity: entity}), do: entity
+  defp get_content_entity(%Entity{} = entity), do: entity
 
   # Groups a list of items by resolved name, preserving first-occurrence order.
   # Returns a list of display names (one per group), where each name is obtained
@@ -67,9 +170,6 @@ defmodule Pythelix.Scripting.Namespace.Module.Names do
     end)
   end
 
-  # ---------------------------------------------------------------------------
-  # Per-viewer name resolution (singular, for grouping key)
-
   defp get_item_name(item, filter, nil) do
     get_item_attribute(item, filter)
   end
@@ -83,9 +183,6 @@ defmodule Pythelix.Scripting.Namespace.Module.Names do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # Display name resolution (with quantity)
-
   # Calls __namefor__(viewer, quantity) on the entity to get the display name.
   # Falls back to the raw name if no viewer or no hook.
   defp resolve_display_name(_entity, nil, _quantity, raw_name), do: raw_name
@@ -96,9 +193,6 @@ defmodule Pythelix.Scripting.Namespace.Module.Names do
       result -> result
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # Private helpers
 
   defp get_item_entity(%Stackable{entity: entity}), do: entity
   defp get_item_entity(%Entity{} = entity), do: entity

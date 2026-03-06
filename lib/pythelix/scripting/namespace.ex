@@ -310,7 +310,8 @@ defmodule Pythelix.Scripting.Namespace do
 
       true ->
         type = opts[:type]
-        {script, value} = enforce_arg_type(script, set, (from_pos == nil && from_keyword) || from_pos, type)
+        ref = if from_pos == nil, do: from_keyword, else: from_pos
+        {script, value} = enforce_arg_type(script, set, ref, type)
 
         {script, args, kwargs, value}
     end

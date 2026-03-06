@@ -89,9 +89,6 @@ defmodule Pythelix.Scripting.Namespace.Module.Search do
     {script, results}
   end
 
-  # ---------------------------------------------------------------------------
-  # Normalization
-
   # Looks for a `normalize` method on the well-known `!search!` entity. If found,
   # returns a closure that delegates to that method; otherwise returns a closure
   # that simply lowercases the input.
@@ -119,9 +116,6 @@ defmodule Pythelix.Scripting.Namespace.Module.Search do
   defp default_normalize(text) when is_binary(text), do: String.downcase(text)
   defp default_normalize(other), do: other
 
-  # ---------------------------------------------------------------------------
-  # Visibility
-
   # When no viewer is given, all items are visible by default.
   defp item_visible?(_item, nil), do: true
 
@@ -136,9 +130,6 @@ defmodule Pythelix.Scripting.Namespace.Module.Search do
       _ -> true
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # Per-viewer name resolution
 
   # Without a viewer, fall back to the raw attribute value.
   defp get_item_name(item, filter, nil) do
@@ -156,9 +147,6 @@ defmodule Pythelix.Scripting.Namespace.Module.Search do
       result -> result
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # __namefor__ calling (supports optional quantity argument)
 
   @doc false
   # Call __namefor__ on an entity with just a viewer (no quantity).
@@ -208,9 +196,6 @@ defmodule Pythelix.Scripting.Namespace.Module.Search do
         nil
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # Private helpers
 
   defp get_item_entity(%Stackable{entity: entity}), do: entity
   defp get_item_entity(%Entity{} = entity), do: entity
