@@ -10,7 +10,7 @@ This page assumes no prior knowledge about Pythelix. You don't have to do anythi
 
 Pythelix offers binary versions for ease-of-use: you don't have to install a programming language. Just download an archive.
 
-<details>
+<details markdown="1">
 <summary>Show instructions for Windows (x64)</summary>
 
 First, [download Pythelix for Windows x64](https://github.com/vincent-lg/pythelix/releases/download/latest-windows/pythelix-windows.zip) .
@@ -35,7 +35,7 @@ You should see the welcome message for Pythelix.
 
 To shutdown the server, just go back to the console where you started `pythelix.bat` and press CTRL + C twice (maybe three times on Windows, depending).
 
-</details>
+</details markdown="1">
 
 <details>
 <summary>Show instructions for Linux (x64)</summary>
@@ -67,7 +67,7 @@ To shutdown the server, just go back to the console where you started `./pytheli
 
 </details>
 
-<details>
+<details markdown="1">
 <summary>Show instructions for other platforms</summary>
 
 If you are not running a x64 version of Windows or Linux, you would need to install Pythelix from source. This is not hard but you'll need to [install Elixir](https://elixir-lang.org/install.html) on your system. Choose a recent version of Elixir and OTP.
