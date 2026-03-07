@@ -35,9 +35,9 @@ You should see the welcome message for Pythelix.
 
 To shutdown the server, just go back to the console where you started `pythelix.bat` and press CTRL + C twice (maybe three times on Windows, depending).
 
-</details markdown="1">
+</details>
 
-<details>
+<details markdown="1">
 <summary>Show instructions for Linux (x64)</summary>
 
 First, [download Pythelix for Linux x64](https://github.com/vincent-lg/pythelix/releases/download/latest-linux/pythelix-linux.tar.gz) .
