@@ -94,3 +94,6 @@ This will start the server. You can connect your MUD client to `localhost` port 
 If you want to open IEX to debug, use `./devex` or `devex.bat`.
 
 </details>
+
+## First login
+

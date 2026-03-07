@@ -7,7 +7,9 @@ defmodule Pythelix.Scripting.Format.String do
   alias Pythelix.Method
   alias Pythelix.Record
   alias Pythelix.Scripting
+  alias Pythelix.Scripting.Display
   alias Pythelix.Scripting.Format
+  alias Pythelix.Scripting.Format.Spec
   alias Pythelix.Scripting.Interpreter.Script
 
   @enforce_keys [:string, :variables]
@@ -94,11 +96,14 @@ defmodule Pythelix.Scripting.Format.String do
 
   defp maybe_format({:ok, pattern}, script) do
     pattern
+    |> process_segments()
     |> Enum.map(fn
-      {:format, code} ->
+      {:format, code, conv, spec_str} ->
         case Scripting.eval(code, script: script) do
           {:ok, value} ->
-            to_string(value)
+            value
+            |> apply_conversion(conv, script)
+            |> format_with_spec(spec_str)
 
           {:error, error} ->
             inspect(error)
@@ -112,15 +117,26 @@ defmodule Pythelix.Scripting.Format.String do
 
   defp maybe_format_for({:ok, pattern}, script, viewer) do
     {parts, entities} =
-      Enum.reduce(pattern, {[], MapSet.new()}, fn
-        {:format, code}, {parts, entities} ->
+      pattern
+      |> process_segments()
+      |> Enum.reduce({[], MapSet.new()}, fn
+        {:format, code, conv, spec_str}, {parts, entities} ->
           case Scripting.eval(code, script: script) do
             {:ok, %Entity{} = entity} ->
-              display = resolve_entity_name(entity, viewer)
+              display =
+                entity
+                |> apply_conversion_for(conv, script, viewer)
+                |> format_with_spec(spec_str)
+
               {[display | parts], MapSet.put(entities, entity)}
 
             {:ok, value} ->
-              {[to_string(value) | parts], entities}
+              display =
+                value
+                |> apply_conversion(conv, script)
+                |> format_with_spec(spec_str)
+
+              {[display | parts], entities}
 
             {:error, error} ->
               {[inspect(error) | parts], entities}
@@ -136,6 +152,144 @@ defmodule Pythelix.Scripting.Format.String do
   defp maybe_format_for({:error, _} = error, _script, _viewer) do
     {inspect(error), MapSet.new()}
   end
+
+  # --- Expression splitting (extract conversion and format spec) ---
+
+  defp process_segments(segments) do
+    Enum.map(segments, fn
+      {:format, raw} ->
+        {expr, conv, spec} = split_expression(raw)
+        {:format, expr, conv, spec}
+
+      plain ->
+        plain
+    end)
+  end
+
+  @conversions ~w(r s c)
+
+  @doc false
+  def split_expression(content) do
+    {expr_conv, spec} = split_at_spec(content)
+    {expr, conv} = split_at_conversion(expr_conv)
+    {expr, conv, spec}
+  end
+
+  defp split_at_spec(content) do
+    graphemes = String.graphemes(content)
+
+    case find_spec_pos(graphemes, 0, 0, :normal) do
+      nil -> {content, nil}
+      pos -> {String.slice(content, 0, pos), String.slice(content, (pos + 1)..-1//1)}
+    end
+  end
+
+  # Scan left-to-right for the first `:` at bracket depth 0, outside string literals.
+  defp find_spec_pos([], _pos, _depth, _state), do: nil
+
+  # Inside string literals: handle escapes
+  defp find_spec_pos(["\\" | [_ | rest]], pos, depth, state) when state in [:sq, :dq] do
+    find_spec_pos(rest, pos + 2, depth, state)
+  end
+
+  defp find_spec_pos(["'" | rest], pos, depth, :sq),
+    do: find_spec_pos(rest, pos + 1, depth, :normal)
+
+  defp find_spec_pos(["\"" | rest], pos, depth, :dq),
+    do: find_spec_pos(rest, pos + 1, depth, :normal)
+
+  defp find_spec_pos([_ | rest], pos, depth, state) when state in [:sq, :dq],
+    do: find_spec_pos(rest, pos + 1, depth, state)
+
+  # Enter string literals
+  defp find_spec_pos(["'" | rest], pos, depth, :normal),
+    do: find_spec_pos(rest, pos + 1, depth, :sq)
+
+  defp find_spec_pos(["\"" | rest], pos, depth, :normal),
+    do: find_spec_pos(rest, pos + 1, depth, :dq)
+
+  # Bracket depth
+  defp find_spec_pos([c | rest], pos, depth, :normal) when c in ["(", "["],
+    do: find_spec_pos(rest, pos + 1, depth + 1, :normal)
+
+  defp find_spec_pos([c | rest], pos, depth, :normal) when c in [")", "]"],
+    do: find_spec_pos(rest, pos + 1, max(depth - 1, 0), :normal)
+
+  # Found `:` at depth 0
+  defp find_spec_pos([":" | _rest], pos, 0, :normal), do: pos
+
+  defp find_spec_pos([_ | rest], pos, depth, :normal),
+    do: find_spec_pos(rest, pos + 1, depth, :normal)
+
+  defp split_at_conversion(expr) do
+    len = String.length(expr)
+
+    if len >= 2 do
+      conv_char = String.at(expr, len - 1)
+      bang = String.at(expr, len - 2)
+
+      if bang == "!" and conv_char in @conversions do
+        {String.slice(expr, 0, len - 2), conv_char}
+      else
+        {expr, nil}
+      end
+    else
+      {expr, nil}
+    end
+  end
+
+  # --- Conversions ---
+
+  defp apply_conversion(value, nil, _script), do: value
+
+  defp apply_conversion(value, "r", script) do
+    case Display.repr(script, value) do
+      {:traceback, _} -> inspect(value)
+      result -> result
+    end
+  end
+
+  defp apply_conversion(value, "s", script) do
+    case Display.str(script, value) do
+      {:traceback, _} -> to_string(value)
+      result -> result
+    end
+  end
+
+  defp apply_conversion(value, "c", _script) do
+    capitalize_first(to_string(value))
+  end
+
+  # Entity-aware conversions for format_for
+  defp apply_conversion_for(entity, nil, _script, viewer),
+    do: resolve_entity_name(entity, viewer)
+
+  defp apply_conversion_for(entity, "c", _script, viewer),
+    do: capitalize_first(resolve_entity_name(entity, viewer))
+
+  defp apply_conversion_for(entity, conv, script, _viewer),
+    do: apply_conversion(entity, conv, script)
+
+  # --- Format spec application ---
+
+  defp format_with_spec(value, nil), do: to_string(value)
+
+  defp format_with_spec(value, spec_str) do
+    case Spec.parse(spec_str) do
+      {:ok, nil} -> to_string(value)
+      {:ok, spec} -> Spec.apply(value, spec)
+      {:error, _} -> to_string(value)
+    end
+  end
+
+  defp capitalize_first(""), do: ""
+
+  defp capitalize_first(str) do
+    {first, rest} = String.split_at(str, 1)
+    String.upcase(first) <> rest
+  end
+
+  # --- Entity name resolution ---
 
   # With no viewer, skip __namefor__ entirely — just use the name attribute.
   # This makes format_for(text, nil) safe for entity-discovery purposes.
