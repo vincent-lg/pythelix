@@ -87,10 +87,11 @@ defmodule Pythelix.Scripting.Namespace.Module.Names do
     auto_exclude = namespace.auto_exclude
     only_visible = namespace.only_visible
 
-    # Get entity IDs referenced in the f-string (for exclusion)
-    referenced_ids =
-      Format.String.extract_entities(text)
-      |> MapSet.new(fn %Entity{id: id} -> id end)
+    # Evaluate the f-string once (viewer=nil) to discover which entities it
+    # references. This single set drives both auto-exclusion and per-recipient
+    # visibility checks, keeping both decisions consistent.
+    referenced = Format.String.extract_entities(text)
+    referenced_ids = MapSet.new(referenced, fn %Entity{id: id} -> id end)
 
     contents = Record.get_contained(location)
 
@@ -102,7 +103,17 @@ defmodule Pythelix.Scripting.Namespace.Module.Names do
           excluded = auto_exclude && MapSet.member?(referenced_ids, entity.id)
 
           unless excluded do
-            do_notify(entity, text, only_visible)
+            should_send =
+              if only_visible do
+                Enum.all?(referenced, fn e -> entity_visible?(e, entity) end)
+              else
+                true
+              end
+
+            if should_send do
+              {formatted, _} = Format.String.format_for(text, entity)
+              Method.call_entity(entity, "msg", [formatted])
+            end
           end
 
         _ ->

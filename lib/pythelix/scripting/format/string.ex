@@ -87,25 +87,9 @@ defmodule Pythelix.Scripting.Format.String do
   """
   def extract_entities(string) when is_binary(string), do: MapSet.new()
 
-  def extract_entities(%Format.String{} = format_string) do
-    script = %Script{id: "format", bytecode: [], variables: format_string.variables}
-
-    case do_split(String.graphemes(format_string.string), [], "", :text) do
-      {:ok, pattern} ->
-        Enum.reduce(pattern, MapSet.new(), fn
-          {:format, code}, entities ->
-            case Scripting.eval(code, script: script) do
-              {:ok, %Entity{} = entity} -> MapSet.put(entities, entity)
-              _ -> entities
-            end
-
-          _plain, entities ->
-            entities
-        end)
-
-      _ ->
-        MapSet.new()
-    end
+  def extract_entities(format_string) do
+    {_, entities} = format_for(format_string, nil)
+    entities
   end
 
   defp maybe_format({:ok, pattern}, script) do
@@ -151,6 +135,15 @@ defmodule Pythelix.Scripting.Format.String do
 
   defp maybe_format_for({:error, _} = error, _script, _viewer) do
     {inspect(error), MapSet.new()}
+  end
+
+  # With no viewer, skip __namefor__ entirely — just use the name attribute.
+  # This makes format_for(text, nil) safe for entity-discovery purposes.
+  defp resolve_entity_name(entity, nil) do
+    case Record.get_attribute(entity, "name") do
+      name when is_binary(name) -> name
+      _ -> inspect(entity)
+    end
   end
 
   defp resolve_entity_name(entity, viewer) do

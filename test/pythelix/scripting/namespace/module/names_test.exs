@@ -761,5 +761,89 @@ defmodule Pythelix.Scripting.Namespace.Module.NamesTest do
       # Viewer can't see actor, so message is not sent
       assert Record.get_attribute(Record.get_entity("nb_invis_viewer"), "last_msg") == nil
     end
+
+    test "only entities in f-string drive exclusion: unlisted entities always receive" do
+      # A, B, C, D all in room R.
+      # f-string mentions only B and C.
+      # Expected: A and D receive; B and C are excluded.
+      {:ok, room} = Record.create_entity(key: "nb_abcd_room")
+      {:ok, _a} = Record.create_entity(key: "nb_abcd_a", location: room)
+      {:ok, _b} = Record.create_entity(key: "nb_abcd_b", location: room)
+      {:ok, _c} = Record.create_entity(key: "nb_abcd_c", location: room)
+      {:ok, _d} = Record.create_entity(key: "nb_abcd_d", location: room)
+
+      for key <- ~w(nb_abcd_a nb_abcd_b nb_abcd_c nb_abcd_d) do
+        Record.set_attribute(key, "name", key)
+
+        Record.set_method(
+          key,
+          "msg",
+          [{"text", [index: 0, type: :str]}],
+          ~s(self.last_msg = text)
+        )
+      end
+
+      run_ok("""
+      a = !nb_abcd_a!
+      b = !nb_abcd_b!
+      c = !nb_abcd_c!
+      d = !nb_abcd_d!
+      names.broadcast(!nb_abcd_room!, f"{b} gives something to {c}.")
+      """)
+
+      assert Record.get_attribute(Record.get_entity("nb_abcd_a"), "last_msg") != nil
+      assert Record.get_attribute(Record.get_entity("nb_abcd_b"), "last_msg") == nil
+      assert Record.get_attribute(Record.get_entity("nb_abcd_c"), "last_msg") == nil
+      assert Record.get_attribute(Record.get_entity("nb_abcd_d"), "last_msg") != nil
+    end
+
+    test "visibility is per-recipient based on f-string entities, not the recipient's own visibility" do
+      # Room has A, B, C. f-string mentions B.
+      # B is invisible to C but visible to A.
+      # Expected: A receives (can see B); C does not (cannot see B).
+      # B is excluded (it's in the f-string).
+      # A's own visibility is irrelevant to whether A receives the message.
+      {:ok, room} = Record.create_entity(key: "nb_vis2_room")
+      {:ok, _a} = Record.create_entity(key: "nb_vis2_a", location: room)
+      {:ok, _b} = Record.create_entity(key: "nb_vis2_b", location: room)
+      {:ok, _c} = Record.create_entity(key: "nb_vis2_c", location: room)
+      Record.set_attribute("nb_vis2_a", "name", "Alice")
+      Record.set_attribute("nb_vis2_b", "name", "Bob")
+      Record.set_attribute("nb_vis2_c", "name", "Charlie")
+
+      # B is invisible to C only
+      Record.set_method(
+        "nb_vis2_b",
+        "__visible__",
+        [{"viewer", [index: 0, type: :entity]}],
+        """
+        if viewer == !nb_vis2_c!:
+            return False
+        endif
+        return True
+        """
+      )
+
+      for key <- ~w(nb_vis2_a nb_vis2_b nb_vis2_c) do
+        Record.set_method(
+          key,
+          "msg",
+          [{"text", [index: 0, type: :str]}],
+          ~s(self.last_msg = text)
+        )
+      end
+
+      run_ok("""
+      b = !nb_vis2_b!
+      names.broadcast(!nb_vis2_room!, f"{b} waves.")
+      """)
+
+      # A can see B → receives message
+      assert Record.get_attribute(Record.get_entity("nb_vis2_a"), "last_msg") == "Bob waves."
+      # B is in the f-string → excluded
+      assert Record.get_attribute(Record.get_entity("nb_vis2_b"), "last_msg") == nil
+      # C cannot see B → does not receive message
+      assert Record.get_attribute(Record.get_entity("nb_vis2_c"), "last_msg") == nil
+    end
   end
 end
