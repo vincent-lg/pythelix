@@ -2,6 +2,6 @@
 title: Pythelix tutorials
 ---
 
-This page describes tutorials to start with Pythelix.
+This page contains tutorials that aim to explain Pythelix in context, for these who don't know the engine or wish to implement something very specific.
 
-> This page doesn't yet include resources. Unfortunately, reading the main documentation remains the easiest at this point. Tutorials will be added when the Pythelix structure is considered stable enough.
+* [Getting Started](./start.md) : learn Pythelix by doing, not reading long documentation with abstract concepts.
