@@ -34,6 +34,7 @@ Now you can open your favorite MUD client (zMUD, VIPMud, CocoMUD...) and connect
 You should see the welcome message for Pythelix.
 
 To shutdown the server, just go back to the console where you started `pythelix.bat` and press CTRL + C twice (maybe three times on Windows, depending).
+
 </details>
 
 <details>
@@ -63,6 +64,7 @@ Now you can open your favorite MUD client (Telnet, TinTin++...) and connect to h
 You should see the welcome message for Pythelix.
 
 To shutdown the server, just go back to the console where you started `./pythelix` and press CTRL + C twice.
+
 </details>
 
 <details>
@@ -90,4 +92,5 @@ On Windows, there's also `dev.bat`.
 This will start the server. You can connect your MUD client to `localhost` port 4000.
 
 If you want to open IEX to debug, use `./devex` or `devex.bat`.
+
 </details>
