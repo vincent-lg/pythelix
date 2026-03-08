@@ -97,3 +97,55 @@ If you want to open IEX to debug, use `./devex` or `devex.bat`.
 
 ## First login
 
+Your first step is to login to Pythelix. You can use your favorite MUD client, use `localhost` as host name and `4000` as port. Pythelix needs to be running (see the previous sections).
+
+Once you have connected to Pythelix, in your MUD client, you might see something like:
+
+```
+  ____        _   _          _ _
+ |  _ \ _   _| |_| |__   ___| (_)_  __
+ | |_) | | | | __| '_ \ / _ \ | \ \/ /
+ |  __/| |_| | |_| | | |  __/ | |>  <
+ |_|    \__, |\__|_| |_|\___|_|_/_/\_\
+        |___/
+        Welcome to the Pythelix Engine
+-------------------------------------------------------------------------------
+Enter your username or 'new' to create a new one.
+```
+
+Pythelix welcomes you with some basic ASCII art. It's not pretty and, of course, can be changed to fit your game. But before diving into building, we need an account. So create one. Enter `new` in your MUD client:
+
+    > new
+
+    Welcome, new user! Enter your new username.
+
+You can create an account with whatever name you want. For this example,w e'll use the name `admin`, but it's definitely not mandatory:
+
+    > admin
+
+    Enter your new account's password.
+
+Choose a password (long is better).
+
+    > MyAdminPassword
+
+    Enter your username or 'new' to create a new one.
+
+This is obviously an example.
+
+We're not back to the initial connection.
+
+Enter `admin` (our username):
+
+    > admin
+
+    Enter the password for this account.
+
+We've chosen `MyAdminPassword` for a password, so let's enter that:
+
+    > MyAdminPassword
+
+    Welcome to Pythelix!
+
+You've created your first account. And because it's the first, Pythelix grants it administrator privileges. So you have access to all the administrator commands. but in Pythelix, there aren't many, because building doesn't happen from your MUD client by default.
+

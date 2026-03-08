@@ -22,11 +22,6 @@ defmodule Pythelix.Command do
   @doc """
   Returns a list of command keys (children of the generic command).
   """
-  def get_command_keys() do
-    Generic.command()
-    |> Record.get_children_id_or_key()
-  end
-
   def get_command_names(key) do
     key
     |> Record.get_entity()

@@ -4,8 +4,9 @@ defmodule Pythelix.Command.IntegrationTest do
   @moduletag capture_log: true
   @moduletag :slow
 
-  alias Pythelix.Command.Handler
+  alias Pythelix.Command.Handler, as: CommandHandler
   alias Pythelix.Command.Signature
+  alias Pythelix.Menu.Handler, as: MenuHandler
   alias Pythelix.Command.Syntax.Parser
   alias Pythelix.Game.Hub
   alias Pythelix.Record
@@ -73,12 +74,9 @@ defmodule Pythelix.Command.IntegrationTest do
     {:ok, client: client, menu: menu}
   end
 
-  # Helper function to run commands using the new handler system
+  # Helper function to run commands using the menu handler system
   defp run_command_via_handler(client, menu, command_input) do
-    Handler.handle(command_input, client, menu, System.monotonic_time(:microsecond))
-
-    # Give the async system some time to process
-    # Process.sleep(100)
+    MenuHandler.try_command_processing(menu, client, command_input, System.monotonic_time(:microsecond), nil)
   end
 
   describe "simple command execution" do
@@ -368,7 +366,7 @@ defmodule Pythelix.Command.IntegrationTest do
       setup_get_command()
 
       # Execute via handler with owner_entity (character)
-      Handler.start_command_execution(
+      CommandHandler.start_command_execution(
         "command/get",
         "10 gold coin",
         client,
@@ -393,7 +391,7 @@ defmodule Pythelix.Command.IntegrationTest do
 
       # Execute: "get sword" in an empty room — to_pick will be []
       # The run method's for loop over to_pick produces no iterations, so no messages.
-      Handler.start_command_execution(
+      CommandHandler.start_command_execution(
         "command/get",
         "sword",
         client,
@@ -423,7 +421,7 @@ defmodule Pythelix.Command.IntegrationTest do
       setup_get_command()
 
       # Execute: "get apple" (no number, defaults to 1 via method signature)
-      Handler.start_command_execution(
+      CommandHandler.start_command_execution(
         "command/get",
         "apple",
         client,
@@ -491,6 +489,120 @@ defmodule Pythelix.Command.IntegrationTest do
       # Should handle refine error
       assert_receive {:message, msg}, 1000
       assert String.contains?(msg, "Refine failed")
+    end
+  end
+
+  describe "command permission (can_run)" do
+    test "command with can_run returning True is executed", %{client: client, menu: menu} do
+      {:ok, _} = Record.create_entity(key: "command/allowed", virtual: true)
+      {_, args} = Signature.constraints("run(client)")
+      Record.set_method("command/allowed", "run", args, "client.msg('Allowed!')")
+      {_, cr_args} = Signature.constraints("can_run(client)")
+      Record.set_method("command/allowed", "can_run", cr_args, "return True")
+
+      Record.set_attribute("menu/test", "commands", %{
+        "allowed" => ["command/allowed"]
+      })
+
+      run_command_via_handler(client, menu, "allowed")
+      assert_receive {:message, "Allowed!"}, 1000
+    end
+
+    test "command with can_run returning False is not executed", %{client: client, menu: menu} do
+      {:ok, _} = Record.create_entity(key: "command/denied", virtual: true)
+      {_, args} = Signature.constraints("run(client)")
+      Record.set_method("command/denied", "run", args, "client.msg('Should not see this')")
+      {_, cr_args} = Signature.constraints("can_run(client)")
+      Record.set_method("command/denied", "can_run", cr_args, "return False")
+
+      Record.set_attribute("menu/test", "commands", %{
+        "denied" => ["command/denied"]
+      })
+
+      run_command_via_handler(client, menu, "denied")
+      refute_receive {:message, "Should not see this"}, 500
+    end
+
+    test "command without can_run method is allowed by default", %{client: client, menu: menu} do
+      {:ok, _} = Record.create_entity(key: "command/nocheck", virtual: true)
+      {_, args} = Signature.constraints("run(client)")
+      Record.set_method("command/nocheck", "run", args, "client.msg('No check needed')")
+
+      Record.set_attribute("menu/test", "commands", %{
+        "nocheck" => ["command/nocheck"]
+      })
+
+      run_command_via_handler(client, menu, "nocheck")
+      assert_receive {:message, "No check needed"}, 1000
+    end
+
+    test "falls through to next command when first candidate is denied",
+         %{client: client, menu: menu} do
+      # Admin command: can_run returns False for this client
+      {:ok, _} = Record.create_entity(key: "command/lock", virtual: true)
+      {_, args} = Signature.constraints("run(client)")
+      Record.set_method("command/lock", "run", args, "client.msg('Locked!')")
+      {_, cr_args} = Signature.constraints("can_run(client)")
+      Record.set_method("command/lock", "can_run", cr_args, "return False")
+
+      # Regular command: no can_run, allowed by default
+      {:ok, _} = Record.create_entity(key: "command/look", virtual: true)
+      Record.set_method("command/look", "run", args, "client.msg('You look around.')")
+
+      # Both share the prefix "l", lock first, look second
+      Record.set_attribute("menu/test", "commands", %{
+        "l" => ["command/lock", "command/look"],
+        "lo" => ["command/lock", "command/look"],
+        "loc" => ["command/lock", "command/look"],
+        "lock" => ["command/lock"],
+        "look" => ["command/look"]
+      })
+
+      # Typing "l" should skip lock (denied) and run look
+      run_command_via_handler(client, menu, "l")
+      assert_receive {:message, "You look around."}, 1000
+    end
+
+    test "first allowed candidate is used when multiple commands match",
+         %{client: client, menu: menu} do
+      # Admin command: can_run returns True
+      {:ok, _} = Record.create_entity(key: "command/lock_ok", virtual: true)
+      {_, args} = Signature.constraints("run(client)")
+      Record.set_method("command/lock_ok", "run", args, "client.msg('Locked!')")
+      {_, cr_args} = Signature.constraints("can_run(client)")
+      Record.set_method("command/lock_ok", "can_run", cr_args, "return True")
+
+      # Regular command
+      {:ok, _} = Record.create_entity(key: "command/look_ok", virtual: true)
+      Record.set_method("command/look_ok", "run", args, "client.msg('You look around.')")
+
+      Record.set_attribute("menu/test", "commands", %{
+        "l" => ["command/lock_ok", "command/look_ok"]
+      })
+
+      # Typing "l" should run lock (first candidate, allowed)
+      run_command_via_handler(client, menu, "l")
+      assert_receive {:message, "Locked!"}, 1000
+    end
+
+    test "no command found when all candidates are denied", %{client: client, menu: menu} do
+      {:ok, _} = Record.create_entity(key: "command/secret1", virtual: true)
+      {_, args} = Signature.constraints("run(client)")
+      Record.set_method("command/secret1", "run", args, "client.msg('Secret 1')")
+      {_, cr_args} = Signature.constraints("can_run(client)")
+      Record.set_method("command/secret1", "can_run", cr_args, "return False")
+
+      {:ok, _} = Record.create_entity(key: "command/secret2", virtual: true)
+      Record.set_method("command/secret2", "run", args, "client.msg('Secret 2')")
+      Record.set_method("command/secret2", "can_run", cr_args, "return False")
+
+      Record.set_attribute("menu/test", "commands", %{
+        "secret" => ["command/secret1", "command/secret2"]
+      })
+
+      run_command_via_handler(client, menu, "secret")
+      refute_receive {:message, "Secret 1"}, 500
+      refute_receive {:message, "Secret 2"}, 500
     end
   end
 

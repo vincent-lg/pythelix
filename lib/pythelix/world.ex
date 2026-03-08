@@ -719,7 +719,11 @@ defmodule Pythelix.World do
             |> Enum.map(fn len -> {String.slice(name, 0, len), command.key} end)
           end)
         end)
-        |> Enum.into(%{})
+        |> Enum.reduce(%{}, fn {prefix, command_key}, acc ->
+          Map.update(acc, prefix, [command_key], fn existing ->
+            if command_key in existing, do: existing, else: existing ++ [command_key]
+          end)
+        end)
 
       Record.set_attribute(menu.key, "commands", commands)
     end)

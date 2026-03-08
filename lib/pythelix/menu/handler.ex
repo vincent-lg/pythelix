@@ -94,7 +94,7 @@ defmodule Pythelix.Menu.Handler do
   Try processing input as a command.
   """
   def try_command_processing(menu, client, input, start_time, owner_entity) do
-    case parse_command_from_input(input, menu) do
+    case parse_command_from_input(input, menu, owner_entity || client) do
       {:command, command_key, args} ->
         CommandHandler.start_command_execution(
           command_key,
@@ -201,23 +201,47 @@ defmodule Pythelix.Menu.Handler do
     |> Script.write_variable("self", menu)
   end
 
-  defp parse_command_from_input(input, menu) do
+  defp parse_command_from_input(input, menu, entity) do
     case String.split(input, " ", parts: 2) do
       [command_name] ->
-        check_command_exists(menu, command_name, "")
+        check_command_exists(menu, command_name, "", entity)
 
       [command_name, args] ->
-        check_command_exists(menu, command_name, args)
+        check_command_exists(menu, command_name, args, entity)
     end
   end
 
-  defp check_command_exists(menu, command_name, args) do
+  defp check_command_exists(menu, command_name, args, entity) do
     commands = Record.get_attribute(menu, "commands", %{})
 
     case Map.get(commands, command_name) do
-      nil -> :no_command
-      command_key -> {:command, command_key, args}
+      nil ->
+        :no_command
+
+      candidates when is_list(candidates) ->
+        case find_runnable_command(candidates, entity) do
+          nil -> :no_command
+          command_key -> {:command, command_key, args}
+        end
+
+      command_key when is_binary(command_key) ->
+        {:command, command_key, args}
     end
+  end
+
+  defp find_runnable_command(candidates, entity) do
+    Enum.find(candidates, fn command_key ->
+      case Record.get_entity(command_key) do
+        nil ->
+          false
+
+        command ->
+          case Method.call_entity(command, "can_run", [entity]) do
+            false -> false
+            _ -> true
+          end
+      end
+    end)
   end
 
   defp log_performance(start_time) do

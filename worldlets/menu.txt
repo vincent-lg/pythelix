@@ -13,7 +13,7 @@ text = """
 """
 
 def enter(client):
-client.location = !menu/username!
+    client.location = !menu/username!
 
 !menu/username!
 parent = "generic/menu"
@@ -22,13 +22,13 @@ Enter your username or 'new' to create a new one.
 """
 
 def unknown_input(client, input):
-account = search.one(!account!, username=input.strip().lower())
-if account:
-    client.account = account
-    client.location = !menu/password!
-else:
-    client.msg(f"The username {input} doesn't exist. Want to create one? Enter NEW.")
-endif
+    account = search.one(!account!, username=input.strip().lower())
+    if account:
+        client.account = account
+        client.location = !menu/password!
+    else:
+        client.msg(f"The username {input} doesn't exist. Want to create one? Enter NEW.")
+    endif
 
 !command/username/new!
 parent = "generic/command"
@@ -36,7 +36,7 @@ location = "menu/username"
 name = "new"
 
 def run(client):
-client.location = !menu/new/username!
+    client.location = !menu/new/username!
 
 !menu/password!
 parent = "generic/menu"
@@ -45,61 +45,60 @@ Enter the password for this account.
 """
 
 def input(client, input):
-account = client.account
-if account.password.verify(input):
-    character = account.character
-    client.msg("Good.")
-    client.owner = account.character
-    client.controls.add(account.character)
-    client.location = !menu/game!
-else:
-    client.location = !menu/invalid/password!
-endif
+    account = client.account
+    if account.password.verify(input):
+        character = account.character
+        client.owner = account.character
+        client.controls.add(account.character)
+        client.location = !menu/game!
+    else:
+        client.location = !menu/invalid/password!
+    endif
 
 !menu/invalid/password!
 parent = "generic/menu"
 text = """
-Invalid password. Waiting...
+Invalid password. Wait before retrying...
 """
 
 def enter(client):
-log("Before wait")
-wait 3
-log("After wait")
-client.location = !menu/password!
+    wait 3
+    client.location = !menu/password!
 
 def unknown_input(client, _input):
-client.msg("Wait a bit...")
+    client.msg("Wait a bit...")
 
 !menu/new/username!
 parent = "generic/menu"
 text = """
-Welcome! Enter your new username.
+Welcome, new user! Enter your new username.
 """
 
 def input(client, input):
-account = search.one(!account!, username=input.lower())
-if account:
-    client.msg("This account already exists. Try a new one.")
-else:
-    account = Entity(parent=!account!)
-    account.username = input.lower()
-    client.account = account
-    client.location = !menu/new/password!
-endif
+    username = input.strip().lower()
+    account = search.one(!account!, username=username)
+    if not username:
+        client.msg("This username isn't valid. Choose another one.")
+    elif account:
+        client.msg("This account already exists. Try a new one.")
+    else:
+        account = Entity(parent=!account!)
+        account.username = username
+        client.account = account
+        client.location = !menu/new/password!
+    endif
 
 !menu/new/password!
 parent = "generic/menu"
 text = """
-Great! Enter your new password.
+Enter your new account's password.
 """
 
-def input(client, input=2):
-client.account.password = password.hash(input)
-client.msg("Awesome!")
-character = Entity(parent=!generic/character!)
-client.location = !menu/username!
-client.account.character = character
+def input(client, input):
+    client.account.password = password.hash(input)
+    character = Entity(parent=!generic/character!)
+    client.location = !menu/username!
+    client.account.character = character
 
 !menu/game!
 parent = "generic/menu"
@@ -108,29 +107,7 @@ And that's pythelix!
 """
 
 def get_prompt(_client):
-return "HP: 200"
+    return "HP: 200"
 
 def invalid_input(character, _input):
-character.msg("Command not found.")
-
-!menu/pythello!
-parent = "generic/menu"
-text = """
-Welcome to the Pythello scripting console
-You can enter Pythello scripting instructions and see the result in your console.
-Enter 'quit' to quit this console.
-Use '>' followed by a command to enter a command in the normal game mode (like '>look').
-"""
-prompt = ">>>"
-
-def unknown_input(character, input):
-character.msg(f"Received: {input}.")
-
-!command/pythello/quit!
-parent = "generic/command"
-location = "menu/pythello"
-name = "quit"
-
-def run(character):
-character.game_modes.remove(0)
-character.msg("Good bye.")
+    character.msg("Command not found.")

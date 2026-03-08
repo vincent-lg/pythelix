@@ -1,0 +1,30 @@
+!command/pythello!
+parent = "generic/char_command"
+name = "pythello"
+syntax = ""
+
+def run(character):
+    character.game_modes.add("menu/pythello", character.id)
+    character.msg("Pythello console")
+
+!menu/pythello!
+parent = "generic/menu"
+text = """
+Welcome to the Pythello scripting console
+You can enter Pythello scripting instructions and see the result in your console.
+Enter 'quit' to quit this console.
+Use '>' followed by a command to enter a command in the normal game mode (like '>look').
+"""
+prompt = ">>>"
+
+def unknown_input(character, input):
+    character.msg(f"Received: {input}.")
+
+!command/pythello/quit!
+parent = "generic/command"
+location = "menu/pythello"
+name = "quit"
+
+def run(character):
+    character.game_modes.remove(0)
+    character.msg("Good bye.")

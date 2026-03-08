@@ -1,19 +1,22 @@
-!command/shout!
+!generic/char_command!
 parent = "generic/command"
+
+!command/shout!
+parent = "generic/char_command"
 name = "shout"
 syntax = "<message>"
 
 def refine(character, message):
-message = message.upper()
+    message = message.upper()
 
 def run(character, message):
-i = 15
-character.msg("Waiting...")
-wait 2
-character.msg(f"And i]{i} and {message.center(10)}")
+    i = 15
+    character.msg("Waiting...")
+    wait 2
+    character.msg(f"And i]{i} and {message.center(10)}")
 
 !command/system!
-parent = "generic/command"
+parent = "generic/char_command"
 name = "system"
 syntax = ""
 
@@ -33,20 +36,11 @@ System statistics:
 character.msg(text)
 
 !command/quit!
-parent = "generic/command"
+parent = "generic/char_command"
 name = "quit"
 syntax = ""
 
 def run(character):
-client = clients.owning(character)
-client.msg("Ciao!")
-client.disconnect()
-
-!command/pythello!
-parent = "generic/command"
-name = "pythello"
-syntax = ""
-
-def run(character):
-character.game_modes.add("menu/pythello", character.id)
-character.msg("Pythello console")
+    client = clients.owning(character)
+    client.msg("Good bye!")
+    client.disconnect()

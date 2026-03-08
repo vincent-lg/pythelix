@@ -13,26 +13,6 @@ defmodule Pythelix.Command.Handler do
   require Logger
 
   @doc """
-  Handle command input from a client.
-
-  This function parses the command, validates arguments, and starts
-  the command execution pipeline with the refine step.
-  """
-  @spec handle(String.t(), map(), Entity.t(), integer()) :: :ok
-  def handle(input, client, menu, start_time) do
-    case parse_command_input(input) do
-      {command_name, args_string} ->
-        case find_command(menu, command_name) do
-          nil ->
-            handle_unknown_command(client, command_name)
-
-          command_key ->
-            start_command_execution(command_key, args_string, client, start_time)
-        end
-    end
-  end
-
-  @doc """
   Start the command execution pipeline.
 
   The owner_entity parameter allows specifying a different entity context
@@ -45,44 +25,56 @@ defmodule Pythelix.Command.Handler do
         send_error(client, "Unknown command")
 
       %Entity{} = command ->
-        case parse_and_prepare_command(command, args_string) do
-          {:ok, _args, script, _method_name} ->
-            # Start with refine step if refine method exists
-            case Record.get_method(command, "refine") do
-              :nomethod ->
-                execute_method(command, "run", script, client, start_time, owner_entity)
+        entity = owner_entity || client
 
-              refine_method ->
-                # Execute refine method through check_args, passing the
-                # client/character entity as the first positional arg and
-                # parsed command variables as keyword args.
-                relevant_vars = relevant_method_vars(script.variables, refine_method)
+        can_run =
+          case Method.call_entity(command, "can_run", [entity]) do
+            false -> false
+            _ -> true
+          end
 
-                refine_script =
-                  Method.fetch_script(refine_method, owner: script.id)
-                  |> Method.check_args(
-                    refine_method,
-                    entity_positional_args(refine_method, owner_entity || client),
-                    Dict.new(relevant_vars),
-                    "#{command_key}, method refine"
+        if not can_run do
+          handle_unknown_command(client, command_key)
+        else
+          case parse_and_prepare_command(command, args_string) do
+            {:ok, _args, script, _method_name} ->
+              # Start with refine step if refine method exists
+              case Record.get_method(command, "refine") do
+                :nomethod ->
+                  execute_method(command, "run", script, client, start_time, owner_entity)
+
+                refine_method ->
+                  # Execute refine method through check_args, passing the
+                  # client/character entity as the first positional arg and
+                  # parsed command variables as keyword args.
+                  relevant_vars = relevant_method_vars(script.variables, refine_method)
+
+                  refine_script =
+                    Method.fetch_script(refine_method, owner: script.id)
+                    |> Method.check_args(
+                      refine_method,
+                      entity_positional_args(refine_method, owner_entity || client),
+                      Dict.new(relevant_vars),
+                      "#{command_key}, method refine"
+                    )
+                    |> then(fn {method_script, namespace} ->
+                      Method.write_arguments(method_script, Enum.to_list(namespace))
+                    end)
+                    |> Script.write_variable("self", command)
+
+                  step =
+                    {__MODULE__, :handle_refine_completion,
+                     [command, client, start_time, owner_entity]}
+
+                  Runner.run(refine_script, refine_method.code, "#{command_key}, method refine",
+                    step: step,
+                    sync: true
                   )
-                  |> then(fn {method_script, namespace} ->
-                    Method.write_arguments(method_script, Enum.to_list(namespace))
-                  end)
-                  |> Script.write_variable("self", command)
+              end
 
-                step =
-                  {__MODULE__, :handle_refine_completion,
-                   [command, client, start_time, owner_entity]}
-
-                Runner.run(refine_script, refine_method.code, "#{command_key}, method refine",
-                  step: step,
-                  sync: true
-                )
-            end
-
-          {:error, reason} ->
-            handle_command_error(command, args_string, client, reason, owner_entity)
+            {:error, reason} ->
+              handle_command_error(command, args_string, client, reason, owner_entity)
+          end
         end
     end
   end
@@ -150,18 +142,6 @@ defmodule Pythelix.Command.Handler do
   def handle_run_completion(:error, _script, _client, start_time) do
     # Command execution failed
     log_performance(start_time)
-  end
-
-  defp parse_command_input(input) do
-    case String.split(input, " ", parts: 2) do
-      [command] -> {command, ""}
-      [command, args] -> {command, args}
-    end
-  end
-
-  defp find_command(menu, command_name) do
-    commands = Record.get_attribute(menu, "commands", %{})
-    Map.get(commands, command_name)
   end
 
   defp parse_and_prepare_command(command, args_string) do

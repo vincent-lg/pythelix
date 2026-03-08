@@ -1,7 +1,7 @@
 defmodule Pythelix.Command.DebugTest do
   use Pythelix.DataCase, async: false
 
-  alias Pythelix.Command.Handler
+  alias Pythelix.Menu.Handler, as: MenuHandler
   alias Pythelix.Game.Hub
   alias Pythelix.Record
 
@@ -81,7 +81,7 @@ defmodule Pythelix.Command.DebugTest do
     assert Record.get_entity("command/debug") != nil
 
     # Execute command
-    Handler.handle("debug", client, menu, System.monotonic_time(:microsecond))
+    MenuHandler.try_command_processing(menu, client, "debug", System.monotonic_time(:microsecond), nil)
 
     # Check for message
     receive do
