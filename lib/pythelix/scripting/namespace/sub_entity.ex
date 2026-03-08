@@ -8,10 +8,21 @@ defmodule Pythelix.Scripting.Namespace.SubEntity do
   alias Pythelix.Record
   alias Pythelix.Scripting.Callable
   alias Pythelix.Scripting.Display
+  alias Pythelix.Scripting.Interpreter.Script
   alias Pythelix.Scripting.Object.Dict
 
   defmet __bool__(script, _namespace), [] do
     {script, true}
+  end
+
+  defmet __len__(script, namespace), [] do
+    case Callable.call!(script, namespace.self, "__iter__", []) do
+      {:traceback, _} ->
+        {Script.raise(script, TypeError, "object has no len()"), :none}
+
+      items when is_list(items) ->
+        {script, length(items)}
+    end
   end
 
   defmet __repr__(script, namespace), [] do

@@ -32,6 +32,10 @@ defmodule Pythelix.Scripting.Namespace.String do
     {script, String.contains?(namespace.self, namespace.element)}
   end
 
+  defmet __len__(script, namespace), [] do
+    {script, String.length(namespace.self)}
+  end
+
   defmet __repr__(script, namespace), [] do
     {script, inspect(namespace.self)}
   end

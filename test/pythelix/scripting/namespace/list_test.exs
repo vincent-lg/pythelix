@@ -530,6 +530,23 @@ defmodule Pythelix.Scripting.Namespace.ListTest do
     end
   end
 
+  describe "len" do
+    test "empty list" do
+      value = expr_ok("len([])")
+      assert value == 0
+    end
+
+    test "list with elements" do
+      value = expr_ok("len([1, 2, 3])")
+      assert value == 3
+    end
+
+    test "list with one element" do
+      value = expr_ok("len([42])")
+      assert value == 1
+    end
+  end
+
   describe "sort" do
     test "sort empty list" do
       script =

@@ -15,6 +15,11 @@ defmodule Pythelix.Scripting.Namespace.GameModes do
     {script, true}
   end
 
+  defmet __len__(script, namespace), [] do
+    game_modes = Store.get_value(namespace.self)
+    {script, length(game_modes.game_modes)}
+  end
+
   defmet add(script, namespace), [
     {:menu, index: 0, keyword: "menu", type: {:entity, Pythelix.Generic.menu()}},
     {:owner, index: 1, keyword: "owner", type: :entity, default: nil},

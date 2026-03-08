@@ -515,6 +515,23 @@ defmodule Pythelix.Scripting.Namespace.DictTest do
     end
   end
 
+  describe "len" do
+    test "empty dict" do
+      value = expr_ok("len({})")
+      assert value == 0
+    end
+
+    test "dict with elements" do
+      value = expr_ok("len({'a': 1, 'b': 2, 'c': 3})")
+      assert value == 3
+    end
+
+    test "dict with one element" do
+      value = expr_ok("len({'key': 42})")
+      assert value == 1
+    end
+  end
+
   describe "values" do
     test "an empty dictionary" do
       values =

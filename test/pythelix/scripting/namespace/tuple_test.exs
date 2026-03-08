@@ -207,6 +207,23 @@ defmodule Pythelix.Scripting.Namespace.TupleTest do
     end
   end
 
+  describe "len" do
+    test "empty tuple" do
+      value = expr_ok("len(())")
+      assert value == 0
+    end
+
+    test "tuple with elements" do
+      value = expr_ok("len((1, 2, 3))")
+      assert value == 3
+    end
+
+    test "tuple with one element" do
+      value = expr_ok("len((42,))")
+      assert value == 1
+    end
+  end
+
   describe "multiline" do
     test "a tuple on multiple lines" do
       script =

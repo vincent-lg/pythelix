@@ -32,6 +32,11 @@ defmodule Pythelix.Scripting.Namespace.Set do
     {script, MapSet.to_list(set)}
   end
 
+  defmet __len__(script, namespace), [] do
+    set = Store.get_value(namespace.self, recursive: false)
+    {script, MapSet.size(set)}
+  end
+
   defmet __getitem__(script, _namespace), [
     {:item, index: 0, type: :any}
   ] do

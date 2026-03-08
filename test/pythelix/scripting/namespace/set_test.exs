@@ -495,6 +495,23 @@ defmodule Pythelix.Scripting.Namespace.SetTest do
     end
   end
 
+  describe "len" do
+    test "empty set" do
+      value = expr_ok("len(set())")
+      assert value == 0
+    end
+
+    test "set with elements" do
+      value = expr_ok("len({1, 2, 3})")
+      assert value == 3
+    end
+
+    test "set with one element" do
+      value = expr_ok("len({42})")
+      assert value == 1
+    end
+  end
+
   describe "update" do
     test "in-place update with one set" do
       script =

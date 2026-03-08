@@ -27,6 +27,23 @@ defmodule Pythelix.Scripting.Namespace.StringTest do
     end
   end
 
+  describe "len" do
+    test "empty string" do
+      value = expr_ok("len('')")
+      assert value == 0
+    end
+
+    test "string with characters" do
+      value = expr_ok("len('hello')")
+      assert value == 5
+    end
+
+    test "string with one character" do
+      value = expr_ok("len('a')")
+      assert value == 1
+    end
+  end
+
   describe "capitalize" do
     test "capitalize an ASCII string in lowercase" do
       script =

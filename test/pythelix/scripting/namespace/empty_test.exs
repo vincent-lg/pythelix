@@ -50,4 +50,21 @@ defmodule Pythelix.Scripting.Namespace.EmptyTest do
       end
     end
   end
+
+  describe "len" do
+    test "len on an integer raises TypeError" do
+      traceback = expr_fail("len(5)")
+      assert traceback.exception == TypeError
+    end
+
+    test "len on a boolean raises TypeError" do
+      traceback = expr_fail("len(True)")
+      assert traceback.exception == TypeError
+    end
+
+    test "len on None raises TypeError" do
+      traceback = expr_fail("len(None)")
+      assert traceback.exception == TypeError
+    end
+  end
 end

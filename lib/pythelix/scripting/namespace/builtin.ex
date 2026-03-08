@@ -7,6 +7,7 @@ defmodule Pythelix.Scripting.Namespace.Builtin do
 
   require Logger
 
+  alias Pythelix.Scripting.Callable
   alias Pythelix.Scripting.Display
   alias Pythelix.Scripting.Format
   alias Pythelix.Scripting.Namespace
@@ -141,6 +142,23 @@ defmodule Pythelix.Scripting.Namespace.Builtin do
     else
       stackable = %Stackable{entity: entity, quantity: quantity, location: nil}
       {script, stackable}
+    end
+  end
+
+  deffun len(script, namespace), [
+    {:object, index: 0, type: :any}
+  ] do
+    try do
+      case Callable.call!(script, namespace.object, "__len__", []) do
+        {:traceback, _} ->
+          {Script.raise(script, TypeError, "object has no len()"), :none}
+
+        value ->
+          {script, value}
+      end
+    rescue
+      UndefinedFunctionError ->
+        {Script.raise(script, TypeError, "object has no len()"), :none}
     end
   end
 
