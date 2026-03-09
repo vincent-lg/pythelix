@@ -18,6 +18,7 @@ defmodule Pythelix.World do
   alias Pythelix.Record
   alias Pythelix.Scripting
   alias Pythelix.Scripting.Namespace.Extended
+  alias Extended.Menu, as: ExtendedMenu
 
   def init() do
     if Application.get_env(:pythelix, :worldlets) do
@@ -402,7 +403,8 @@ defmodule Pythelix.World do
         key: Generic.menu(),
         attributes: %{
           "prompt" => "\"\"",
-          "text" => "\"\""
+          "text" => "\"\"",
+          "get_commands" => {:extended, ExtendedMenu, :m_get_commands}
         },
         methods: %{
           "get_prompt" => {
@@ -592,60 +594,55 @@ defmodule Pythelix.World do
           (entity.key && entity.key =~ ~r/^\p{Lu}/u) || false
         end)
 
+      # Phase 1: create all entities (sub-entities first, then regular).
       Enum.each(sub_entities, &create_entity(&1, sub_entity: true))
+      Enum.each(entities, &create_entity/1)
 
-      entities
-      |> Enum.map(&create_entity/1)
-      |> tap(fn records ->
-        locations =
-          Enum.map(entities, fn entity ->
-            {entity.key, Map.get(entity.attributes, "location")}
-          end)
-          |> Map.new()
+      # Phase 2: assign locations.
+      Enum.each(entities, fn entity ->
+        case Map.get(entity.attributes, "location") do
+          nil ->
+            :ok
 
-        Enum.each(records, fn record ->
-          case Map.get(locations, record.key) do
-            nil ->
-              :ok
-
-            location ->
-              {:ok, location} = Scripting.eval(location)
-              location = Record.get_entity(location)
-              place_entity(record, location)
-          end
-        end)
+          location ->
+            {:ok, location} = Scripting.eval(location)
+            location = Record.get_entity(location)
+            record = Record.get_entity(entity.key)
+            place_entity(record, location)
+        end
       end)
-      |> tap(fn records ->
-        default_location = Record.get_entity("menu/game")
 
-        Enum.each(records, fn record ->
-          if Record.has_parent?(record, Generic.command()) do
-            if Record.get_location_entity(record) == nil do
-              place_entity(record, default_location)
-            end
+      default_location = Record.get_entity("menu/game")
+
+      Enum.each(entities, fn entity ->
+        record = Record.get_entity(entity.key)
+
+        if Record.has_parent?(record, Generic.command()) do
+          has_name = Map.has_key?(entity.attributes, "name")
+
+          if has_name and Record.get_location_entity(record) == nil do
+            place_entity(record, default_location)
           end
-        end)
+        end
       end)
-      |> tap(fn _ -> Record.Diff.apply() end)
-      |> tap(fn _ -> link_commands() end)
-      |> tap(fn _ -> Epoch.init() end)
+
+      # Phase 3: set attributes and methods.
+      Enum.each(sub_entities, &apply_entity_attributes_and_methods/1)
+      Enum.each(entities, &apply_entity_attributes_and_methods/1)
+
+      Record.Diff.apply()
+      link_commands()
+      Epoch.init()
+
+      Enum.map(entities, &Record.get_entity(&1.key))
     rescue
       e -> {:error, Exception.message(e)}
     end
   end
 
   defp create_entity(entity, opts \\ []) do
-    {parent, attributes} = Map.pop(entity.attributes, "parent")
-    {location, attributes} = Map.pop(attributes, "location")
+    {parent, _attributes} = Map.pop(entity.attributes, "parent")
     parent = (parent && Record.get_entity(parent)) || nil
-
-    location =
-      if location do
-        {:ok, location} = Scripting.eval(location)
-        Record.get_entity(location)
-      else
-        nil
-      end
 
     virtual_parent = (parent && parent.id == :virtual) || false
     virtual_parent = (opts[:sub_entity] && true) || virtual_parent
@@ -658,19 +655,20 @@ defmodule Pythelix.World do
         opts
       end
 
-    record = Record.get_entity(entity.key)
+    case Record.get_entity(entity.key) do
+      nil ->
+        {:ok, _record} = Record.create_entity(opts)
+        :ok
 
-    record =
-      if record == nil do
-        {:ok, record} = Record.create_entity(opts)
-        record
-      else
-        record
-      end
-
-    if location do
-      Record.change_location(record, location)
+      _record ->
+        :ok
     end
+  end
+
+  defp apply_entity_attributes_and_methods(entity) do
+    attributes =
+      entity.attributes
+      |> Map.drop(["parent", "location"])
 
     for {name, value} <- attributes do
       value =
@@ -695,8 +693,6 @@ defmodule Pythelix.World do
 
       Record.set_method(entity.key, name, args, code)
     end
-
-    Record.get_entity(entity.key)
   end
 
   def link_commands() do
