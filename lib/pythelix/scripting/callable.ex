@@ -59,6 +59,33 @@ defmodule Pythelix.Scripting.Callable do
     end
   end
 
+  def call(%Script{immediate: true} = script, %Callable.Method{} = method, args, kwargs) do
+    kwargs = (kwargs == nil && Dict.new()) || kwargs
+    name = "#{method.entity}m hetod #{method.name}"
+    entity = Record.get_entity(method.entity)
+
+    inner_script =
+      Method.fetch_script(method.method, owner: script.id, immediate: true)
+      |> Method.check_args(method.method, args, kwargs, name)
+      |> then(fn {method_script, namespace} ->
+        Method.write_arguments(method_script, Enum.to_list(namespace))
+      end)
+      |> Script.write_variable("self", entity)
+      |> then(&%{&1 | id: script.id})
+
+    case Script.execute(inner_script, method.method.code, name) do
+      %Script{error: %Traceback{chain: chain} = traceback} ->
+        %{traceback | chain: [{script, nil, nil} | chain]}
+        |> then(&{%{script | error: &1}, :none})
+
+      %Script{pause: :immediately, last_raw: raw} ->
+        {script, raw}
+
+      _script ->
+        {script, :none}
+    end
+  end
+
   def call(%Script{} = script, %Callable.Method{} = method, args, kwargs) do
     kwargs = (kwargs == nil && Dict.new()) || kwargs
     name = "#{method.entity}m hetod #{method.name}"
@@ -76,17 +103,6 @@ defmodule Pythelix.Scripting.Callable do
 
     Runner.run(inner_script, method.method.code, name, sync: true)
 
-    # case Callable.Method.call(method, args, kwargs, owner: script.id, parent: script) do
-    #  %Script{error: %Traceback{chain: chain} = traceback} = _script ->
-    #    %{traceback | chain: [{script, nil, nil} | chain]}
-    #    |> then(& {%{script | error: &1}, :none})
-
-    #  %Script{pause: :immediately, last_raw: raw} ->
-    #    {script, raw}
-
-    #  _script ->
-    #    {script, :none}
-    # end
     {%{script | pause: :wait_child}, :none}
   end
 

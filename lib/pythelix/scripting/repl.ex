@@ -40,7 +40,7 @@ defmodule Pythelix.Scripting.REPL do
   end
 
   defp tokenize(input) do
-    regex = ~r/[\p{L}\p{N}]+|[^\p{L}\p{N}\s]|[\n]/u
+    regex = ~r/[\p{L}\p{N}_]+|[^\p{L}\p{N}_\s]|[\n]/u
     tokens = Regex.scan(regex, input) |> List.flatten()
 
     {annotated, _line} =

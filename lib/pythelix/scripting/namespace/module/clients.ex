@@ -30,7 +30,7 @@ defmodule Pythelix.Scripting.Namespace.Module.Clients do
     active()
     |> Enum.filter(fn client ->
       owner = Record.get_attribute(client, "owner")
-      owner == entity
+      owner.id == entity.id && owner.key == entity.key
     end)
     |> Enum.at(0, :none)
     |> then(&{script, &1})

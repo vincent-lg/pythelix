@@ -1,55 +1,48 @@
 !account!
 
-!room!
+!Description!
+parent = "SubEntity"
 
-!bakery!
-parent = "room"
+def __init__(self, text: str):
+    self.text = text
+
+def format_for(self, viewer: Entity):
+    """Format the text description in proper paragraphs."""
+    lines = []
+    for paragraph in self.text.split("\n\n"):
+        lines.extend(display.wrap(paragraph, width=75, initial_indent='   '))
+    done
+    return "\n".join(lines)
+
+!generic/room!
+description = None
+
+def look(self, viewer: Entity):
+    lines = [self.title]
+    description = self.description.format_for(viewer)
+    lines.extend(description.splitlines())
+    return "\n".join(lines)
+
+!room/bakery!
+parent = "generic/room"
 title = "A bakery"
-Description = """
+description = Description("""
 The warm, inviting scent of freshly baked bread and sweet pastries fills
 the air upon entering this cozy little shop. A fine dusting of flour clings
 lightly to the wooden floorboards and countertops. Shelves and display cases
 brim with golden-baked goods—loaves of crusty bread, delicate pastries,
 and confections in all shapes and sizes. Icing glistens under soft lighting,
 while nuts, berries, and chocolate chips adorn many of the treats with artistic
-precision. At the back of the shop, an antique wooden cash register rests
+precision.
+
+At the back of the shop, an antique wooden cash register rests
 atop a counter, its brass details dulled slightly with age and use.
-"""
-price = 30000
+""")
 
-def spill:
-author.msg("You swipe the merchandise and throw it to the ground. How rude!")
-author.announce(f"{author} swipes the merchandise and throws it to the ground. Really!")
-
-def honk:
-author.msg("You honk and that's nhot great.")
-
-def test:
-e = !bakery!
-e.id = 8
-
-!sidewalk!
-parent = "room"
+!room/sidewalk!
+parent = "generic/room"
 title = "The sidewalk"
-
-def walk:
-author.msg("You're walking... and that's already something.")
-
-def test:
-e = !bakery!
-e.test()
-
-!animal!
-height = 0
-weight = 0
-
-def call(client: Entity["generic/client"]):
-client.msg("The animal calls... don't know what.")
-
-def add(a: int, b: int):
-return [a, b, 58]
-
-def test():
-log("That's the one")
-wait 3
-log("That's the second")
+description = Description("""
+This is just a bare, dumb sidewalk with tons of cracks in the concrete.
+Fascinating, isn't it?
+""")

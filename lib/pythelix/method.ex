@@ -79,9 +79,9 @@ defmodule Pythelix.Method do
   Returns:
     The returned result of the method or :nomethod, :noresult, :traceback.
   """
-  @spec call_entity(Entity.t(), String.t(), list() | nil, Dict.t() | nil) ::
+  @spec call_entity(Entity.t(), String.t(), list() | nil, Dict.t() | nil, keyword()) ::
           term() | :nomethod | :noresult | :traceback
-  def call_entity(entity, name, args \\ nil, kwargs \\ nil) do
+  def call_entity(entity, name, args \\ nil, kwargs \\ nil, opts \\ []) do
     method_name = "#{inspect(entity)}, method #{name}"
 
     args = (args == nil && []) || args
@@ -94,8 +94,10 @@ defmodule Pythelix.Method do
       end
       |> then(&Dict.put(&1, "self", entity))
 
+    call_opts = if opts[:immediate], do: [immediate: true], else: []
+
     with %Method{} = method <- Record.get_method(entity, name),
-         %Script{error: nil} = script <- Method.call(method, args, kwargs, method_name) do
+         %Script{error: nil} = script <- Method.call(method, args, kwargs, method_name, call_opts) do
       result =
         case (script.last_raw == nil && :noresult) || script.last_raw do
           %Format.String{} = fstr -> Format.String.format(fstr)
@@ -134,6 +136,13 @@ defmodule Pythelix.Method do
 
         _ ->
           script
+      end
+
+    script =
+      if opts[:immediate] do
+        %{script | immediate: true}
+      else
+        script
       end
 
     script

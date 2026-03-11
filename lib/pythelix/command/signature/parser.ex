@@ -24,7 +24,9 @@ defmodule Pythelix.Command.Signature.Parser do
     choice([
       string("int") |> isolate() |> replace(:int),
       string("float") |> isolate() |> replace(:float),
-      parsec(:entity)
+      string("str") |> isolate() |> replace(:str),
+      parsec(:entity),
+      string("Entity") |> isolate() |> replace(:entity)
     ])
   )
 

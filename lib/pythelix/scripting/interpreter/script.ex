@@ -30,7 +30,8 @@ defmodule Pythelix.Scripting.Interpreter.Script do
     parent: nil,
     step: nil,
     code: "",
-    name: "unknown"
+    name: "unknown",
+    immediate: false
   ]
 
   @typedoc "a script with bytecode"
@@ -49,7 +50,8 @@ defmodule Pythelix.Scripting.Interpreter.Script do
           parent: nil | t(),
           step: nil | {atom(), atom(), list()},
           code: String.t(),
-          name: String.t()
+          name: String.t(),
+          immediate: boolean()
         }
 
   @doc """

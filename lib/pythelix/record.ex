@@ -4,6 +4,9 @@ defmodule Pythelix.Record do
   """
 
   import Ecto.Query, warn: false
+
+  require Logger
+
   alias Pythelix.Repo
   alias Pythelix.{Entity, Generic, Method, Stackable}
   alias Pythelix.Network.TCP.Client
@@ -484,7 +487,7 @@ defmodule Pythelix.Record do
   defp handle_new_location(entity, location) do
     if has_parent?(entity, Generic.client()) && has_parent?(location, Generic.menu()) do
       try do
-        case Method.call_entity(location, "get_text", [entity]) do
+        case Method.call_entity(location, "get_text", [entity], nil, immediate: true) do
           :nomethod ->
             nil
 
@@ -492,16 +495,15 @@ defmodule Pythelix.Record do
             Client.send(entity, text)
         end
       rescue
-        _ -> nil
+        e ->
+          stacktrace = __STACKTRACE__
+          Logger.error(Exception.format(:error, e, stacktrace))
+          nil
       end
 
       owner = get_attribute(entity, "owner", nil)
       owner = owner || entity
-      # try do
       Runner.run_method({location, "enter"}, [owner], nil, sync: true)
-      # rescue
-      #  _ -> nil
-      # end
     end
   end
 

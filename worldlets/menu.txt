@@ -97,16 +97,26 @@ Enter your new account's password.
 def input(client, input):
     client.account.password = password.hash(input)
     character = Entity(parent=!generic/character!)
+    character.former_location = !room/bakery!
     client.location = !menu/username!
     client.account.character = character
 
 !menu/game!
 parent = "generic/menu"
-text = """
-And that's pythelix!
-"""
 
-def get_prompt(_client):
+def enter(character):
+    log("Enter")
+    character.location = character.former_location
+
+def get_text(client):
+    character = client.owner
+    text = character.location.look(character)
+    return f"""
+        Welcome back!
+        {text}
+    """
+
+def get_prompt(_character):
     return "HP: 200"
 
 def invalid_input(character, _input):

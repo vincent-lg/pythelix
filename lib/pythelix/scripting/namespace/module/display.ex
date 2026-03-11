@@ -24,13 +24,13 @@ defmodule Pythelix.Scripting.Namespace.Module.Display do
     {script, list}
   end
 
-  deffun function_dedent(script, namespace), [
+  deffun dedent(script, namespace), [
     {:text, index: 0, type: :str}
   ] do
     {script, dedent(namespace.text)}
   end
 
-  deffun function_wrap(script, namespace), [
+  deffun wrap(script, namespace), [
     {:text, index: 0, type: :str},
     {:width, keyword: "width", type: :int, default: 70},
     {:initial_indent, keyword: "initial_indent", type: :str, default: ""},
@@ -58,7 +58,7 @@ defmodule Pythelix.Scripting.Namespace.Module.Display do
     {script, lines}
   end
 
-  deffun function_fill(script, namespace), [
+  deffun fill(script, namespace), [
     {:text, index: 0, type: :str},
     {:width, keyword: "width", type: :int, default: 70},
     {:initial_indent, keyword: "initial_indent", type: :str, default: ""},
@@ -88,8 +88,6 @@ defmodule Pythelix.Scripting.Namespace.Module.Display do
     {script, result}
   end
 
-  # --- dedent helper ---
-
   defp dedent(text) do
     lines = String.split(text, "\n")
 
@@ -111,8 +109,6 @@ defmodule Pythelix.Scripting.Namespace.Module.Display do
     end)
     |> Enum.join("\n")
   end
-
-  # --- wrap/fill engine ---
 
   defp do_wrap(text, opts) do
     text =
