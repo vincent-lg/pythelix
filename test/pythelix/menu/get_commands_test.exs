@@ -40,14 +40,14 @@ defmodule Pythelix.Menu.GetCommandsTest do
     )
 
     # Create a test client entity
-    {:ok, client} =
+    {:ok, _client} =
       Record.create_entity(key: "test_client", virtual: true, parent: generic_client)
 
     Record.set_attribute("test_client", "client_id", 999)
     Record.set_attribute("test_client", "pid", self())
 
     # Create a test menu entity
-    {:ok, menu} = Record.create_entity(key: "menu/test", virtual: true)
+    {:ok, _menu} = Record.create_entity(key: "menu/test", virtual: true)
 
     Record.set_attribute(
       "menu/test",

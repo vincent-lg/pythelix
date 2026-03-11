@@ -76,7 +76,13 @@ defmodule Pythelix.Command.IntegrationTest do
 
   # Helper function to run commands using the menu handler system
   defp run_command_via_handler(client, menu, command_input) do
-    MenuHandler.try_command_processing(menu, client, command_input, System.monotonic_time(:microsecond), nil)
+    MenuHandler.try_command_processing(
+      menu,
+      client,
+      command_input,
+      System.monotonic_time(:microsecond),
+      nil
+    )
   end
 
   describe "simple command execution" do

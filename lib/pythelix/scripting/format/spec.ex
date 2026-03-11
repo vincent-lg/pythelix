@@ -148,8 +148,12 @@ defmodule Pythelix.Scripting.Format.Spec do
       pad_size = width - len
 
       case align do
-        ">" -> String.duplicate(fill, pad_size) <> str
-        "<" -> str <> String.duplicate(fill, pad_size)
+        ">" ->
+          String.duplicate(fill, pad_size) <> str
+
+        "<" ->
+          str <> String.duplicate(fill, pad_size)
+
         "^" ->
           left = div(pad_size, 2)
           right = pad_size - left

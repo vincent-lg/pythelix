@@ -9,7 +9,19 @@ defmodule Pythelix.Scripting.Namespace do
   alias Pythelix.Scripting.Format
   alias Pythelix.Scripting.Interpreter.Script
   alias Pythelix.Scripting.Namespace
-  alias Pythelix.Scripting.Object.{Dict, Duration, GameTime, Password, RealDateTime, Time, Tuple}
+
+  alias Pythelix.Scripting.Object.{
+    Dict,
+    Duration,
+    GameTime,
+    HorizontalList,
+    HorizontalListGroup,
+    Password,
+    RealDateTime,
+    Time,
+    Tuple
+  }
+
   alias Pythelix.Scripting.Store
   alias Pythelix.Scripting.Traceback
 
@@ -18,6 +30,7 @@ defmodule Pythelix.Scripting.Namespace do
       Module.register_attribute(__MODULE__, :attribute, accumulate: true, persist: true)
       Module.register_attribute(__MODULE__, :function, accumulate: true, persist: true)
       Module.register_attribute(__MODULE__, :method, accumulate: true, persist: true)
+      Module.register_attribute(__MODULE__, :option, accumulate: true, persist: true)
       Module.register_attribute(__MODULE__, :attributes, persist: true)
       Module.register_attribute(__MODULE__, :functions, persist: true)
       Module.register_attribute(__MODULE__, :methods, persist: true)
@@ -106,10 +119,11 @@ defmodule Pythelix.Scripting.Namespace do
         end
       end
 
+      @options_list @option
+
       @doc false
-      def setattr(script, _, _, _) do
-        Traceback.raise(script, AttributeError, "can't set attribute")
-        |> then(&{%{script | error: &1}, :none})
+      def setattr(script, self, name, to_ref) do
+        Namespace.handle_setattr(script, self, name, to_ref, @options_list)
       end
 
       @doc false
@@ -185,6 +199,31 @@ defmodule Pythelix.Scripting.Namespace do
   end
 
   @doc """
+  Define an option attribute that can be both read and written.
+
+  This macro registers a struct field as a readable attribute and a writable
+  option with automatic type checking and conversion (e.g., f-strings are
+  automatically formatted to strings).
+
+  ## Example
+
+      defopt :indent, :int
+      defopt :title, :str
+  """
+  defmacro defopt(name, type) do
+    attr_fun = String.to_atom("a_#{name}")
+
+    quote do
+      @option {to_string(unquote(name)), unquote(name), unquote(type)}
+      @attribute to_string(unquote(name))
+
+      def unquote(attr_fun)(_script, self) do
+        Map.get(Store.get_value(self), unquote(name))
+      end
+    end
+  end
+
+  @doc """
   Locate the namespace matching a given value.
   """
   @spec locate(term()) :: module()
@@ -212,6 +251,8 @@ defmodule Pythelix.Scripting.Namespace do
       %Pythelix.Entity{} -> Namespace.Entity
       %Pythelix.SubEntity{} -> Namespace.SubEntity
       %Pythelix.Stackable{} -> Namespace.Stackable
+      %HorizontalList{} -> Namespace.HorizontalList
+      %HorizontalListGroup{} -> Namespace.HorizontalListGroup
     end
   end
 
@@ -229,6 +270,52 @@ defmodule Pythelix.Scripting.Namespace do
       method -> apply(module, method, [script, self, args, kwargs])
     end
   end
+
+  @doc """
+  Handle setattr for namespaces, checking writable options.
+  """
+  def handle_setattr(script, _self, _name, _to_ref, []) do
+    Traceback.raise(script, AttributeError, "can't set attribute")
+    |> then(&{%{script | error: &1}, :none})
+  end
+
+  def handle_setattr(script, self, name, to_ref, options) do
+    case Enum.find(options, fn {n, _, _} -> n == name end) do
+      {_, field, type} ->
+        value = Store.get_value(to_ref)
+
+        case check_and_convert_option(value, type) do
+          {:ok, converted} ->
+            obj = Store.get_value(self)
+            Store.update_reference(self, Map.put(obj, field, converted))
+            {script, to_ref}
+
+          :error ->
+            Traceback.raise(script, TypeError, "invalid type for option '#{name}'")
+            |> then(&{%{script | error: &1}, :none})
+        end
+
+      nil ->
+        Traceback.raise(script, AttributeError, "can't set attribute '#{name}'")
+        |> then(&{%{script | error: &1}, :none})
+    end
+  end
+
+  @doc """
+  Check if a value matches an option type and convert if needed.
+
+  F-strings are automatically formatted to plain strings for `:str` options.
+  """
+  def check_and_convert_option(value, :str) when is_binary(value), do: {:ok, value}
+
+  def check_and_convert_option(%Format.String{} = value, :str),
+    do: {:ok, Format.String.format(value)}
+
+  def check_and_convert_option(value, :int) when is_integer(value), do: {:ok, value}
+  def check_and_convert_option(value, :float) when is_float(value), do: {:ok, value}
+  def check_and_convert_option(true, :bool), do: {:ok, true}
+  def check_and_convert_option(false, :bool), do: {:ok, false}
+  def check_and_convert_option(_, _), do: :error
 
   @doc """
   Validate constraints and fills out an argument map if valid.

@@ -691,7 +691,14 @@ defmodule Pythelix.World do
           Enum.filter(args, fn {set, _} -> set != "self" end)
         end
 
-      Record.set_method(entity.key, name, args, code)
+      try do
+        Record.set_method(entity.key, name, args, code)
+      rescue
+        e ->
+          file = Map.get(entity, :file, "unknown file")
+
+          raise "#{file}: syntax error in method '#{name}' of entity '#{entity.key}': #{Exception.message(e)}"
+      end
     end
   end
 

@@ -20,10 +20,17 @@ defmodule Pythelix.Scripting.Parser.String do
       lookahead_not(but_not)
       |> utf8_string(allowed, 1)
 
+    escape_fun =
+      if opts[:multiline] do
+        :escape_multiline
+      else
+        :escape
+      end
+
     # open delim
     ignore(string(delimiter))
     |> repeat(choice([escaped, normal]))
-    |> reduce({Pythelix.Scripting.Parser.Value, :escape, []})
+    |> reduce({Pythelix.Scripting.Parser.Value, escape_fun, []})
     # close delim
     |> ignore(string(delimiter))
     |> label(opts[:label] || "quoted(#{inspect(delimiter)})")

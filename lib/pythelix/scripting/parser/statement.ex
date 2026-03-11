@@ -11,7 +11,19 @@ defmodule Pythelix.Scripting.Parser.Statement do
   import Pythelix.Scripting.Parser.Constants, only: [id: 0, isolate: 1, isolate: 2]
   import Pythelix.Scripting.Parser.Operator
 
-  newline = string("\n") |> replace(:line) |> label("newline") |> isolate(check: false)
+  comment =
+    ignore(
+      string("#")
+      |> repeat(utf8_char(not: ?\n))
+    )
+    |> label("comment")
+
+  newline =
+    optional(comment)
+    |> string("\n")
+    |> replace(:line)
+    |> label("newline")
+    |> isolate(check: false)
 
   equal = string("=") |> label("=") |> replace(:=) |> isolate(check: false)
   colon = ascii_char([?:]) |> label(":") |> replace(:":") |> isolate(check: false)
@@ -301,12 +313,15 @@ defmodule Pythelix.Scripting.Parser.Statement do
   defparsecp(
     :statement_list,
     repeat(newline)
-    |> parsec(:statement)
-    |> repeat(
-      times(newline, min: 1)
-      |> parsec(:statement)
+    |> optional(
+      parsec(:statement)
+      |> repeat(
+        times(newline, min: 1)
+        |> parsec(:statement)
+      )
     )
     |> repeat(newline)
+    |> optional(comment)
     |> tag(:stmt_list)
   )
 

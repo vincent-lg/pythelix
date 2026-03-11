@@ -132,6 +132,39 @@ defmodule Pythelix.Scripting.Parser.Value do
     |> String.replace("\\n", "\n")
   end
 
+  def escape_multiline(chars) do
+    chars
+    |> escape()
+    |> strip_and_dedent()
+  end
+
+  defp strip_and_dedent(text) do
+    # Strip leading newline and trailing whitespace (newlines + spaces from indented closing delimiter).
+    text = text |> String.trim_leading("\n") |> String.trim_trailing()
+
+    # Find the minimum indentation among non-empty lines.
+    lines = String.split(text, "\n")
+
+    min_indent =
+      lines
+      |> Enum.reject(&(String.trim(&1) == ""))
+      |> Enum.map(fn line ->
+        String.length(line) - String.length(String.trim_leading(line))
+      end)
+      |> Enum.min(fn -> 0 end)
+
+    # Remove that many leading spaces from each line.
+    lines
+    |> Enum.map(fn line ->
+      if String.trim(line) == "" do
+        ""
+      else
+        String.slice(line, min_indent..-1//1)
+      end
+    end)
+    |> Enum.join("\n")
+  end
+
   defcombinator(
     :arg,
     choice([

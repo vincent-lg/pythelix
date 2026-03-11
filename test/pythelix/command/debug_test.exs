@@ -81,7 +81,13 @@ defmodule Pythelix.Command.DebugTest do
     assert Record.get_entity("command/debug") != nil
 
     # Execute command
-    MenuHandler.try_command_processing(menu, client, "debug", System.monotonic_time(:microsecond), nil)
+    MenuHandler.try_command_processing(
+      menu,
+      client,
+      "debug",
+      System.monotonic_time(:microsecond),
+      nil
+    )
 
     # Check for message
     receive do

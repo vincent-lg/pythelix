@@ -1,10 +1,44 @@
 !generic/char_command!
 parent = "generic/command"
 
+!command/help!
+parent = "generic/char_command"
+name = "help"
+category = "Information"
+
+def run(character):
+    commands = !menu/game!.get_commands(character)
+    categories = {
+        "General": [],
+        "Information": [],
+        "Administrator": [],
+    }
+
+    for command in commands:
+        category = command.category
+        if category in categories:
+            categories[category].append(command.name)
+        endif
+    done
+
+    hlist = display.HorizontalList(columns=4, col_width=15)
+    for category in categories.keys():
+        commands = categories[category]
+        if commands:
+            hgroup = hlist.add_group(category)
+            for command in commands:
+                hgroup.add_entry(command)
+            done
+        endif
+    done
+
+    character.msg(hlist.format())
+
 !command/shout!
 parent = "generic/char_command"
 name = "shout"
 syntax = "<message>"
+category = "General"
 
 def refine(character, message):
     message = message.upper()
@@ -19,6 +53,7 @@ def run(character, message):
 parent = "generic/char_command"
 name = "system"
 syntax = ""
+category = "Administrator"
 
 def run(character):
 text = f"""
@@ -39,6 +74,7 @@ character.msg(text)
 parent = "generic/char_command"
 name = "quit"
 syntax = ""
+category = "General"
 
 def run(character):
     client = clients.owning(character)

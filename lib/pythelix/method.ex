@@ -28,6 +28,11 @@ defmodule Pythelix.Method do
     bytecode =
       if bytecode == nil do
         script = Scripting.run(code, id: "method", call: false)
+
+        if script.error do
+          raise "syntax error in method body: #{script.error.message}"
+        end
+
         script.bytecode
       else
         bytecode

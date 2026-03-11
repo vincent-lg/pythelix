@@ -72,4 +72,54 @@ defmodule Pythelix.Scripting.Parser.StringTest do
   test "a double-quoted string with an unescape newsline should fail" do
     eval_fail("\"abc\nde\"")
   end
+
+  describe "multiline strings (triple-quoted)" do
+    test "strips leading and trailing newlines" do
+      ast = eval_ok("\"\"\"\nThis\nis\njust\nfive\nlines\n\"\"\"")
+      assert ast == "This\nis\njust\nfive\nlines"
+    end
+
+    test "dedents based on common indentation" do
+      ast = eval_ok("\"\"\"\n    This\n    is\n    just\n    five\n    lines\n\"\"\"")
+      assert ast == "This\nis\njust\nfive\nlines"
+    end
+
+    test "dedents with mixed indentation levels" do
+      ast = eval_ok("\"\"\"\n    Hello\n        World\n    End\n\"\"\"")
+      assert ast == "Hello\n    World\nEnd"
+    end
+
+    test "handles empty string" do
+      ast = eval_ok("\"\"\"\"\"\"")
+      assert ast == ""
+    end
+
+    test "handles content without newlines" do
+      ast = eval_ok("\"\"\"ok\"\"\"")
+      assert ast == "ok"
+    end
+
+    test "works with single-quote triple strings" do
+      ast = eval_ok("'''\nThis\nis\nok\n'''")
+      assert ast == "This\nis\nok"
+    end
+
+    test "dedents indented multiline string (closing delimiter indented less)" do
+      # Simulates:
+      #     text = """
+      #         This
+      #         is
+      #         just
+      #         five
+      #         lines
+      #     """
+      # The closing line's whitespace is stripped, so dedent is based on content lines (8 spaces).
+      ast =
+        eval_ok(
+          "\"\"\"\n        This\n        is\n        just\n        five\n        lines\n    \"\"\""
+        )
+
+      assert ast == "This\nis\njust\nfive\nlines"
+    end
+  end
 end
