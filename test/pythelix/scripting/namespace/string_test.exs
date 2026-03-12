@@ -1059,6 +1059,149 @@ defmodule Pythelix.Scripting.Namespace.StringTest do
     end
   end
 
+  describe "partition" do
+    test "partition with string separator found" do
+      script =
+        run("""
+        a, b, c = "hello, world".partition(", ")
+        """)
+
+      assert Script.get_variable_value(script, "a") == "hello"
+      assert Script.get_variable_value(script, "b") == ", "
+      assert Script.get_variable_value(script, "c") == "world"
+    end
+
+    test "partition with string separator not found" do
+      script =
+        run("""
+        a, b, c = "hello world".partition(",")
+        """)
+
+      assert Script.get_variable_value(script, "a") == "hello world"
+      assert Script.get_variable_value(script, "b") == ""
+      assert Script.get_variable_value(script, "c") == ""
+    end
+
+    test "partition with list of separators" do
+      script =
+        run("""
+        a, b, c = "hello, friend".partition([" ", ","])
+        """)
+
+      assert Script.get_variable_value(script, "a") == "hello"
+      assert Script.get_variable_value(script, "b") == ","
+      assert Script.get_variable_value(script, "c") == " friend"
+    end
+
+    test "partition with tuple of separators" do
+      script =
+        run("""
+        a, b, c = "hello, friend".partition((" ", ","))
+        """)
+
+      assert Script.get_variable_value(script, "a") == "hello"
+      assert Script.get_variable_value(script, "b") == ","
+      assert Script.get_variable_value(script, "c") == " friend"
+    end
+
+    test "partition with multiple separators, first one wins by position" do
+      script =
+        run("""
+        a, b, c = "a.b-c".partition([".", "-"])
+        """)
+
+      assert Script.get_variable_value(script, "a") == "a"
+      assert Script.get_variable_value(script, "b") == "."
+      assert Script.get_variable_value(script, "c") == "b-c"
+    end
+
+    test "partition with list separator not found" do
+      script =
+        run("""
+        a, b, c = "hello world".partition([",", ";"])
+        """)
+
+      assert Script.get_variable_value(script, "a") == "hello world"
+      assert Script.get_variable_value(script, "b") == ""
+      assert Script.get_variable_value(script, "c") == ""
+    end
+
+    test "partition with invalid separator type" do
+      traceback =
+        expr_fail("""
+        "hello".partition(42)
+        """)
+
+      assert traceback.exception == TypeError
+    end
+  end
+
+  describe "rpartition" do
+    test "rpartition with string separator found" do
+      script =
+        run("""
+        a, b, c = "hello, world, test".rpartition(", ")
+        """)
+
+      assert Script.get_variable_value(script, "a") == "hello, world"
+      assert Script.get_variable_value(script, "b") == ", "
+      assert Script.get_variable_value(script, "c") == "test"
+    end
+
+    test "rpartition with string separator not found" do
+      script =
+        run("""
+        a, b, c = "hello world".rpartition(",")
+        """)
+
+      assert Script.get_variable_value(script, "a") == ""
+      assert Script.get_variable_value(script, "b") == ""
+      assert Script.get_variable_value(script, "c") == "hello world"
+    end
+
+    test "rpartition with list of separators" do
+      script =
+        run("""
+        a, b, c = "hello, dear friend".rpartition([" ", ","])
+        """)
+
+      assert Script.get_variable_value(script, "a") == "hello, dear"
+      assert Script.get_variable_value(script, "b") == " "
+      assert Script.get_variable_value(script, "c") == "friend"
+    end
+
+    test "rpartition with tuple of separators" do
+      script =
+        run("""
+        a, b, c = "hello, dear friend".rpartition((" ", ","))
+        """)
+
+      assert Script.get_variable_value(script, "a") == "hello, dear"
+      assert Script.get_variable_value(script, "b") == " "
+      assert Script.get_variable_value(script, "c") == "friend"
+    end
+
+    test "rpartition with list separator not found" do
+      script =
+        run("""
+        a, b, c = "hello world".rpartition([",", ";"])
+        """)
+
+      assert Script.get_variable_value(script, "a") == ""
+      assert Script.get_variable_value(script, "b") == ""
+      assert Script.get_variable_value(script, "c") == "hello world"
+    end
+
+    test "rpartition with invalid separator type" do
+      traceback =
+        expr_fail("""
+        "hello".rpartition(42)
+        """)
+
+      assert traceback.exception == TypeError
+    end
+  end
+
   describe "replace" do
     test "replace all occurrences" do
       script =
@@ -1434,6 +1577,87 @@ defmodule Pythelix.Scripting.Namespace.StringTest do
         """)
 
       assert Script.get_variable_value(script, "s") == true
+    end
+  end
+
+  describe "scan_between" do
+    alias Pythelix.Scripting.Object.Tuple
+
+    test "scan_between with multiple groups" do
+      script =
+        run("""
+        s = "The light is $light, but a clock $clock.".scan_between("$", " ,.")
+        """)
+
+      assert Script.get_variable_value(script, "s") == [
+               %Tuple{elements: ["The light is ", "$", "light", ","]},
+               %Tuple{elements: [" but a clock ", "$", "clock", "."]}
+             ]
+    end
+
+    test "scan_between with group at end of string" do
+      script =
+        run("""
+        s = "Light is $light".scan_between("$", " ,.")
+        """)
+
+      assert Script.get_variable_value(script, "s") == [
+               %Tuple{elements: ["Light is ", "$", "light", ""]}
+             ]
+    end
+
+    test "scan_between with group at start of string" do
+      script =
+        run("""
+        s = "$light".scan_between("$", " ,.")
+        """)
+
+      assert Script.get_variable_value(script, "s") == [
+               %Tuple{elements: ["", "$", "light", ""]}
+             ]
+    end
+
+    test "scan_between with no groups" do
+      script =
+        run("""
+        s = "no variables here".scan_between("$", " ,.")
+        """)
+
+      assert Script.get_variable_value(script, "s") == []
+    end
+
+    test "scan_between with empty group" do
+      script =
+        run("""
+        s = "a $ b".scan_between("$", " ")
+        """)
+
+      assert Script.get_variable_value(script, "s") == [
+               %Tuple{elements: ["a ", "$", "", " "]}
+             ]
+    end
+
+    test "scan_between with separator at end" do
+      script =
+        run("""
+        s = "hello $".scan_between("$", " ,.")
+        """)
+
+      assert Script.get_variable_value(script, "s") == [
+               %Tuple{elements: ["hello ", "$", "", ""]}
+             ]
+    end
+
+    test "scan_between with multiple begin separators" do
+      script =
+        run("""
+        s = "a $x and {y end".scan_between("${", " ")
+        """)
+
+      assert Script.get_variable_value(script, "s") == [
+               %Tuple{elements: ["a ", "$", "x", " "]},
+               %Tuple{elements: ["and ", "{", "y", " "]}
+             ]
     end
   end
 

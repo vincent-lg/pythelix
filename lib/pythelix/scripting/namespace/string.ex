@@ -192,12 +192,44 @@ defmodule Pythelix.Scripting.Namespace.String do
     {script, string_removesuffix(namespace.self, namespace.suffix)}
   end
 
+  defmet partition(script, namespace), [
+    {:sep, index: 0, type: :any}
+  ] do
+    sep = Store.get_value(namespace.sep)
+    string = namespace.self
+
+    case normalize_sep(sep) do
+      {:ok, separators} ->
+        {script, string_partition(string, separators)}
+
+      :error ->
+        message = "partition argument must be str, list, or tuple, not #{type_name(sep)}"
+        {Script.raise(script, TypeError, message), :none}
+    end
+  end
+
   defmet replace(script, namespace), [
     {:old, index: 0, type: :str},
     {:new, index: 1, type: :str},
     {:count, index: 2, type: :int, default: -1}
   ] do
     {script, string_replace(namespace.self, namespace.old, namespace.new, namespace.count)}
+  end
+
+  defmet rpartition(script, namespace), [
+    {:sep, index: 0, type: :any}
+  ] do
+    sep = Store.get_value(namespace.sep)
+    string = namespace.self
+
+    case normalize_sep(sep) do
+      {:ok, separators} ->
+        {script, string_rpartition(string, separators)}
+
+      :error ->
+        message = "rpartition argument must be str, list, or tuple, not #{type_name(sep)}"
+        {Script.raise(script, TypeError, message), :none}
+    end
   end
 
   defmet rfind(script, namespace), [
@@ -242,6 +274,13 @@ defmodule Pythelix.Scripting.Namespace.String do
     {script, rstrip(namespace.self, namespace.chars)}
   end
 
+  defmet scan_between(script, namespace), [
+    {:begin_sep, index: 0, type: :str},
+    {:end_sep, index: 1, type: :str}
+  ] do
+    {script, scan_between(namespace.self, namespace.begin_sep, namespace.end_sep)}
+  end
+
   defmet split(script, namespace), [
     {:sep, index: 0, type: :str, default: nil},
     {:maxsplit, index: 1, type: :int, default: -1}
@@ -278,6 +317,100 @@ defmodule Pythelix.Scripting.Namespace.String do
   end
 
   # Helper functions
+  alias Pythelix.Scripting.Object.Tuple
+
+  defp normalize_sep(sep) when is_binary(sep), do: {:ok, [sep]}
+
+  defp normalize_sep(sep) when is_list(sep) do
+    values = Enum.map(sep, &Store.get_value(&1, recursive: false))
+
+    if Enum.all?(values, &is_binary/1) do
+      {:ok, values}
+    else
+      :error
+    end
+  end
+
+  defp normalize_sep(%Tuple{elements: elements}) do
+    values = Enum.map(elements, &Store.get_value(&1, recursive: false))
+
+    if Enum.all?(values, &is_binary/1) do
+      {:ok, values}
+    else
+      :error
+    end
+  end
+
+  defp normalize_sep(_), do: :error
+
+  defp type_name(value) when is_binary(value), do: "str"
+  defp type_name(value) when is_integer(value), do: "int"
+  defp type_name(value) when is_float(value), do: "float"
+  defp type_name(value) when is_boolean(value), do: "bool"
+  defp type_name(value) when is_list(value), do: "list"
+  defp type_name(%Tuple{}), do: "tuple"
+  defp type_name(_), do: "object"
+
+  defp string_partition(string, separators) do
+    # Find the earliest occurrence of any separator
+    result =
+      separators
+      |> Enum.map(fn sep ->
+        case String.split(string, sep, parts: 2) do
+          [before, _after] -> {String.length(before), sep}
+          [_] -> nil
+        end
+      end)
+      |> Enum.reject(&is_nil/1)
+      |> Enum.min_by(fn {pos, _sep} -> pos end, fn -> nil end)
+
+    case result do
+      nil ->
+        %Tuple{elements: [string, "", ""]}
+
+      {pos, sep} ->
+        before = String.slice(string, 0, pos)
+        after_str = String.slice(string, pos + String.length(sep), String.length(string))
+        %Tuple{elements: [before, sep, after_str]}
+    end
+  end
+
+  defp string_rpartition(string, separators) do
+    # Find the latest occurrence of any separator
+    result =
+      separators
+      |> Enum.map(fn sep ->
+        parts = String.split(string, sep)
+
+        case length(parts) do
+          1 ->
+            nil
+
+          n ->
+            parts_before_last = Enum.take(parts, n - 1)
+
+            pos =
+              Enum.reduce(parts_before_last, 0, fn part, acc ->
+                acc + String.length(part) + String.length(sep)
+              end) - String.length(sep)
+
+            {pos, sep}
+        end
+      end)
+      |> Enum.reject(&is_nil/1)
+      |> Enum.max_by(fn {pos, _sep} -> pos end, fn -> nil end)
+
+    case result do
+      nil ->
+        %Tuple{elements: ["", "", string]}
+
+      {pos, sep} ->
+        before = String.slice(string, 0, pos)
+        after_str = String.slice(string, pos + String.length(sep), String.length(string))
+        %Tuple{elements: [before, sep, after_str]}
+    end
+  end
+
   defp adjust(string, width, fill_char, dir) do
     adjust(string, width, fill_char, dir, String.length(string))
   end
@@ -667,6 +800,39 @@ defmodule Pythelix.Scripting.Namespace.String do
     |> String.split(~r{\s}, include_captures: true)
     |> Enum.map(&String.capitalize/1)
     |> Enum.join()
+  end
+
+  defp scan_between(string, begin_sep, end_sep) do
+    begin_chars = MapSet.new(String.codepoints(begin_sep))
+    end_chars = MapSet.new(String.codepoints(end_sep))
+    codepoints = String.codepoints(string)
+    do_scan_between(codepoints, begin_chars, end_chars, "", [])
+  end
+
+  defp do_scan_between([], _begin_chars, _end_chars, _before, results) do
+    Enum.reverse(results)
+  end
+
+  defp do_scan_between([cp | rest], begin_chars, end_chars, before, results) do
+    if MapSet.member?(begin_chars, cp) do
+      {group, end_char, remaining} = capture_group(rest, end_chars, "")
+      tuple = %Tuple{elements: [before, cp, group, end_char]}
+      do_scan_between(remaining, begin_chars, end_chars, "", [tuple | results])
+    else
+      do_scan_between(rest, begin_chars, end_chars, before <> cp, results)
+    end
+  end
+
+  defp capture_group([], _end_chars, group) do
+    {group, "", []}
+  end
+
+  defp capture_group([cp | rest], end_chars, group) do
+    if MapSet.member?(end_chars, cp) do
+      {group, cp, rest}
+    else
+      capture_group(rest, end_chars, group <> cp)
+    end
   end
 
   defp string_concat(%Format.String{} = a, %Format.String{} = b) do

@@ -34,6 +34,16 @@ def run(character):
 
     character.msg(hlist.format())
 
+!command/look!
+parent = "generic/char_command"
+name = "look"
+aliases = ["l"]
+category = "General"
+
+def run(character):
+    text = character.location.look(character)
+    character.msg(text)
+
 !command/shout!
 parent = "generic/char_command"
 name = "shout"
