@@ -143,6 +143,35 @@ defmodule Pythelix.Scripting.Interpreter.AST.Statements do
     |> replace({:unset, end_block}, fn code -> {:iter, length_code(code)} end)
   end
 
+  def read_ast(code, {:for_unpack, targets, iterate, block, {line, _}}) do
+    code =
+      code
+      |> add({:line, line})
+      |> AST.Core.read_ast(iterate)
+      |> add({:getattr, "__iter__"})
+      |> add({:dict, :no_reference})
+      |> add({:call, 0})
+      |> add({:mkiter, nil})
+
+    before = length_code(code)
+    end_block = make_ref()
+
+    code =
+      code
+      |> add({:unset, end_block})
+      |> add({:unpack, length(targets)})
+
+    code =
+      Enum.reduce(targets, code, fn target, code ->
+        add(code, {:store, target})
+      end)
+
+    code
+    |> read_asts(block)
+    |> add({:goto, before})
+    |> replace({:unset, end_block}, fn code -> {:iter, length_code(code)} end)
+  end
+
   def read_ast(code, {:wait, [{_, {line, _}} | values]}) do
     code
     |> add({:line, line})

@@ -186,10 +186,15 @@ defmodule Pythelix.Scripting.Parser.Statement do
   def reduce_while([{[:while], {line, offset}}, condition, {:stmt_list, block}, :done]),
     do: {:while, condition, block, {line, offset}}
 
+  for_tuple_target =
+    id()
+    |> times(ignore(comma()) |> concat(id()), min: 1)
+    |> tag(:tuple_target)
+
   for_stmt =
     for_kw
     |> line()
-    |> concat(id())
+    |> choice([for_tuple_target, id()])
     |> concat(in_kw)
     |> parsec({Pythelix.Scripting.Parser.Expression, :expr})
     |> ignore(colon)
@@ -207,6 +212,18 @@ defmodule Pythelix.Scripting.Parser.Statement do
         :done
       ]) do
     {:for, variable, expression, block, {line, offset}}
+  end
+
+  def reduce_for([
+        {[:for], {line, offset}},
+        {:tuple_target, targets},
+        :in,
+        expression,
+        {:stmt_list, block},
+        :done
+      ]) do
+    names = for {:var, name} <- targets, do: name
+    {:for_unpack, names, expression, block, {line, offset}}
   end
 
   except_clause =

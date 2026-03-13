@@ -56,6 +56,51 @@ defmodule Pythelix.Scripting.ForTest do
     assert Enum.sort(keys) == ["a", "b", "c"]
   end
 
+  test "unpacks tuples in for loop" do
+    script =
+      run("""
+      keys = []
+      values = []
+      d = {"a": 1, "b": 2, "c": 3}
+      for key, value in d.items():
+        keys.append(key)
+        values.append(value)
+      done
+      """)
+
+    keys = script.variables["keys"] |> Store.get_value()
+    values = script.variables["values"] |> Store.get_value()
+    assert Enum.sort(keys) == ["a", "b", "c"]
+    assert Enum.sort(values) == [1, 2, 3]
+  end
+
+  test "unpacks list of lists in for loop" do
+    script =
+      run("""
+      xs = []
+      ys = []
+      for x, y in [[1, 10], [2, 20], [3, 30]]:
+        xs.append(x)
+        ys.append(y)
+      done
+      """)
+
+    assert script.variables["xs"] |> Store.get_value() == [1, 2, 3]
+    assert script.variables["ys"] |> Store.get_value() == [10, 20, 30]
+  end
+
+  test "unpacks three variables in for loop" do
+    script =
+      run("""
+      result = 0
+      for a, b, c in [(1, 2, 3), (4, 5, 6)]:
+        result += a + b + c
+      done
+      """)
+
+    assert script.variables["result"] == 21
+  end
+
   test "sums integers in nested loops" do
     script =
       run("""

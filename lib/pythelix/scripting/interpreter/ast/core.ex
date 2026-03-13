@@ -135,6 +135,10 @@ defmodule Pythelix.Scripting.Interpreter.AST.Core do
     Statements.read_ast(code, ast)
   end
 
+  def read_ast(code, {:for_unpack, _, _, _, _} = ast) do
+    Statements.read_ast(code, ast)
+  end
+
   def read_ast(code, {stmt, _} = ast) when stmt in [:wait, :return] do
     Statements.read_ast(code, ast)
   end
