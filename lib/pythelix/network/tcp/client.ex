@@ -6,6 +6,7 @@ defmodule Pythelix.Network.TCP.Client do
   alias Pythelix.Scripting.Format
   alias Pythelix.Game.Hub
   alias Pythelix.Game.Modes.Handler, as: ModeHandler
+  alias Pythelix.Network.Encoding
 
   require Logger
 
@@ -14,40 +15,42 @@ defmodule Pythelix.Network.TCP.Client do
   end
 
   def init(socket) do
-    {:ok, {socket, nil, []}, {:continue, :assign_id}}
+    encoding = Application.get_env(:pythelix, :default_encoding, "utf-8")
+    {:ok, %{socket: socket, client_id: nil, messages: [], encoding: encoding},
+     {:continue, :assign_id}}
   end
 
-  def handle_continue(:assign_id, {socket, _, messages}) do
+  def handle_continue(:assign_id, state) do
     client_id = assign_client_id()
     Logger.debug("Connection of #{client_id}")
 
     # Initialize client entity in the new system
     Hub.run({__MODULE__, :initialize_client, [client_id, self()]})
 
-    {:noreply, {socket, client_id, messages}}
+    {:noreply, %{state | client_id: client_id}}
   end
 
-  def handle_info({:tcp, _socket, data}, {socket_state, client_id, messages}) do
+  def handle_info({:tcp, _socket, data}, %{client_id: client_id, encoding: encoding} = state) do
     start_time = System.monotonic_time(:microsecond)
-    input = String.trim_trailing(data, "\r\n")
+    input = data |> Encoding.decode(encoding) |> String.trim_trailing("\r\n")
 
     # Send input processing to the new game hub
     Hub.run({__MODULE__, :process_input, [client_id, input, start_time]})
 
-    {:noreply, {socket_state, client_id, messages}}
+    {:noreply, state}
   end
 
-  def handle_info({:tcp_closed, _socket}, {socket_state, client_id, messages}) do
+  def handle_info({:tcp_closed, _socket}, %{client_id: client_id} = state) do
     Logger.debug("Disconnection of #{client_id}")
     Hub.run({__MODULE__, :disconnect_client, [client_id]})
-    {:stop, :normal, {socket_state, client_id, messages}}
+    {:stop, :normal, state}
   end
 
-  def handle_info({:message, message}, {socket, client_id, messages}) do
-    {:noreply, {socket, client_id, [message | messages]}}
+  def handle_info({:message, message}, %{messages: messages} = state) do
+    {:noreply, %{state | messages: [message | messages]}}
   end
 
-  def handle_info({:full, prompt}, {socket, client_id, messages}) do
+  def handle_info({:full, prompt}, %{socket: socket, messages: messages, encoding: encoding} = state) do
     text =
       messages
       |> Enum.reverse()
@@ -57,22 +60,28 @@ defmodule Pythelix.Network.TCP.Client do
       |> Enum.join("\n")
       |> then(&((!String.ends_with?(&1, "\n") && &1 <> "\n") || &1))
       |> String.replace("\n", "\r\n")
+      |> Encoding.encode(encoding)
 
     :gen_tcp.send(socket, text)
-    {:noreply, {socket, client_id, []}}
+    {:noreply, %{state | messages: []}}
   end
 
-  def handle_cast(:disconnect, {socket, client_id, messages}) do
+  def handle_info({:set_encoding, encoding}, state) do
+    {:noreply, %{state | encoding: encoding}}
+  end
+
+  def handle_cast(:disconnect, %{socket: socket, messages: messages, encoding: encoding} = state) do
     text =
       messages
       |> Enum.reverse()
       |> Enum.join("\n")
       |> then(&((!String.ends_with?(&1, "\n") && &1 <> "\n") || &1))
       |> String.replace("\n", "\r\n")
+      |> Encoding.encode(encoding)
 
     :gen_tcp.send(socket, text)
     :gen_tcp.shutdown(socket, :write)
-    {:noreply, {socket, client_id, []}}
+    {:noreply, %{state | messages: []}}
   end
 
   def send(%Entity{} = client, message) do

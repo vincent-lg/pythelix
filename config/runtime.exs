@@ -93,10 +93,16 @@ if config_env() == :prod do
   database_path = resolve_path.("DATABASE_PATH", "pythelix.db")
   worldlets_path = resolve_path.("WORLDLETS_PATH", "worldlets")
   tasks_path = resolve_path.("TASKS_PATH", "tasks")
+  default_encoding = System.get_env("PYTHELIX_DEFAULT_ENCODING", "utf-8")
+
+  if !Enum.member?(["iso-8859-1", "iso-8859-15", "cp1252", "utf-8"], default_encoding) do
+    raise "unknown default encoding #{default_encoding}"
+  end
 
   config :pythelix,
     worldlets_path: worldlets_path,
-    tasks_path: tasks_path
+    tasks_path: tasks_path,
+    default_encoding: default_encoding
 
   config :pythelix, Pythelix.Repo,
     database: database_path,

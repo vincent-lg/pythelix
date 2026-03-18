@@ -68,11 +68,20 @@ config :libcluster,
     ]
   ]
 
+config :codepagex, :encodings, [
+  ~r[iso8859]i,
+  "VENDORS/MICSFT/WINDOWS/CP1252"
+]
+
 config :pythelix,
   worldlets: true,
   show_stats: true,
   worldlets_path: Path.join(File.cwd!(), "worldlets"),
-  tasks_path: Path.join(File.cwd!(), "tasks")
+  tasks_path: Path.join(File.cwd!(), "tasks"),
+  # Default encoding for new TCP client connections.
+  # Supported values: "utf-8", "iso-8859-1", "iso-8859-15", "cp1252"
+  # Can be overridden per-client at runtime via client.encoding = "..."
+  default_encoding: "utf-8"
 
 # Generic entity names (override to use custom keys)
 # config :pythelix, :generic_entities,

@@ -348,6 +348,7 @@ defmodule Pythelix.World do
         attributes: %{
           "disconnect" => {:extended, Extended.Client, :m_disconnect},
           "msg" => {:extended, Extended.Client, :m_msg},
+          "encoding" => {:extended_property, Extended.Client, :encoding},
           "controls" => "Controls()"
         },
         methods: %{}
