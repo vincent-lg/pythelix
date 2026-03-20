@@ -91,6 +91,15 @@ defmodule Pythelix.Record do
   end
 
   @doc """
+  Return the cached or stored entity.
+  """
+  @spec refresh_entity(Entity.t()) :: Entity.t()
+  def refresh_entity(%Entity{} = entity) do
+    id_or_key = Entity.get_id_or_key(entity)
+    get_entity(id_or_key)
+  end
+
+  @doc """
   Return the parent's entity.
 
   If opts["recursive], tap the DB/Cache.

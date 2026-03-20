@@ -91,7 +91,7 @@ defmodule Pythelix.Game.Modes.Handler do
   defp get_owned_by_client(client) do
     case Record.get_attribute(client, "owner") do
       nil -> nil
-      entity -> entity
+      entity -> Record.refresh_entity(entity)
     end
   end
 
