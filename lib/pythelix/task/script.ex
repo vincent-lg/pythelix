@@ -89,7 +89,7 @@ defmodule Pythelix.Task.Script do
   def execute(process, input, variables) do
     script =
       Scripting.run(input, call: false)
-      |> then(&%{&1 | variables: variables})
+      |> restore_variables(variables)
 
     step = {__MODULE__, :handle_result, [process]}
     Runner.run(script, input, "<stdin>", step: step, sync: true)
@@ -123,5 +123,18 @@ defmodule Pythelix.Task.Script do
       {key, Script.get_variable_value(script, key)}
     end)
     |> Map.new()
+  end
+
+  defp restore_variables(script, variables) do
+    Enum.reduce(variables, script, fn {key, value}, script ->
+      {script, value} =
+        if Script.references?(value) do
+          Script.reference(script, value)
+        else
+          {script, value}
+        end
+
+      Script.store(script, key, value)
+    end)
   end
 end
