@@ -154,8 +154,9 @@ defmodule Pythelix.Menu.Handler do
     case Record.get_method(menu, "invalid_input") do
       :nomethod ->
         # Send generic error message
+        client_id = Record.get_attribute(client, "client_id")
         pid = Record.get_attribute(client, "pid")
-        send(pid, {:message, "I don't understand that."})
+        Pythelix.Game.Hub.mark_client_with_message(client_id, "I don't understand that.", pid)
         log_performance(start_time)
 
       invalid_input_method ->

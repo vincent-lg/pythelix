@@ -196,8 +196,9 @@ defmodule Pythelix.Command.Handler do
   end
 
   defp handle_unknown_command(client, command_name) do
+    client_id = Record.get_attribute(client, "client_id")
     pid = Record.get_attribute(client, "pid")
-    send(pid, {:message, "Unknown command: #{command_name}"})
+    Pythelix.Game.Hub.mark_client_with_message(client_id, "Unknown command: #{command_name}", pid)
   end
 
   defp handle_parse_error(command, args, client, owner_entity) do
@@ -205,8 +206,9 @@ defmodule Pythelix.Command.Handler do
 
     case Record.get_method(command, "parse_error") do
       :nomethod ->
+        client_id = Record.get_attribute(client, "client_id")
         pid = Record.get_attribute(client, "pid")
-        send(pid, {:message, "Invalid command arguments."})
+        Pythelix.Game.Hub.mark_client_with_message(client_id, "Invalid command arguments.", pid)
 
       method ->
         # Execute parse_error method asynchronously
@@ -222,8 +224,9 @@ defmodule Pythelix.Command.Handler do
 
     case Record.get_method(command, "refine_error") do
       :nomethod ->
+        client_id = Record.get_attribute(client, "client_id")
         pid = Record.get_attribute(client, "pid")
-        send(pid, {:message, "Command refinement failed."})
+        Pythelix.Game.Hub.mark_client_with_message(client_id, "Command refinement failed.", pid)
 
       method ->
         # Execute refine_error method asynchronously
@@ -239,14 +242,16 @@ defmodule Pythelix.Command.Handler do
 
     case Record.get_method(command, "run") do
       :nomethod ->
+        client_id = Record.get_attribute(client, "client_id")
         pid = Record.get_attribute(client, "pid")
-        send(pid, {:message, "Command has no run method."})
+        Pythelix.Game.Hub.mark_client_with_message(client_id, "Command has no run method.", pid)
 
       _method ->
         case Record.get_method(command, "run_error") do
           :nomethod ->
+            client_id = Record.get_attribute(client, "client_id")
             pid = Record.get_attribute(client, "pid")
-            send(pid, {:message, "Command execution failed."})
+            Pythelix.Game.Hub.mark_client_with_message(client_id, "Command execution failed.", pid)
 
           error_method ->
             # Execute run_error method asynchronously
@@ -259,8 +264,9 @@ defmodule Pythelix.Command.Handler do
   end
 
   defp send_error(client, message) do
+    client_id = Record.get_attribute(client, "client_id")
     pid = Record.get_attribute(client, "pid")
-    send(pid, {:message, message})
+    Pythelix.Game.Hub.mark_client_with_message(client_id, message, pid)
   end
 
   # Filter script variables to only those that are named parameters of the method.
