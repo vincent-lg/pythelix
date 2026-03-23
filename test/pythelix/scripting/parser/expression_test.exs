@@ -204,4 +204,29 @@ defmodule Pythelix.Scripting.Parser.ExpressionTest do
     ast = eval_ok("(1 + 2) * 3")
     assert ast == {:*, [{:+, [1, 2]}, 3]}
   end
+
+  test "is operator parses correctly" do
+    ast = eval_ok("a is b")
+    assert ast == {:is, [{:var, "a"}, {:var, "b"}]}
+  end
+
+  test "is not operator parses correctly" do
+    ast = eval_ok("a is not b")
+    assert ast == {:is_not, [{:var, "a"}, {:var, "b"}]}
+  end
+
+  test "is None parses correctly" do
+    ast = eval_ok("a is None")
+    assert ast == {:is, [{:var, "a"}, :none]}
+  end
+
+  test "is not None parses correctly" do
+    ast = eval_ok("a is not None")
+    assert ast == {:is_not, [{:var, "a"}, :none]}
+  end
+
+  test "is has same precedence as ==" do
+    ast = eval_ok("a == b is c")
+    assert ast == {:is, [{:==, [{:var, "a"}, {:var, "b"}]}, {:var, "c"}]}
+  end
 end

@@ -95,7 +95,7 @@ defmodule Pythelix.Scripting.Interpreter.AST.Core do
     Expressions.read_ast(code, ast)
   end
 
-  def read_ast(code, {cnt, _} = ast) when cnt in [:in, :not_in] do
+  def read_ast(code, {cnt, _} = ast) when cnt in [:in, :not_in, :is, :is_not] do
     Expressions.read_ast(code, ast)
   end
 

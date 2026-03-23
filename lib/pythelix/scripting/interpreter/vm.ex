@@ -20,6 +20,8 @@ defmodule Pythelix.Scripting.Interpreter.VM do
     >=: {VM.Cmp, :ge},
     ==: {VM.Cmp, :eq},
     !=: {VM.Cmp, :ne},
+    is: {VM.Cmp, :is_op},
+    is_not: {VM.Cmp, :is_not_op},
     in: {VM.List, :in_},
     not_in: {VM.List, :not_in},
     put_dict: {VM.Dict, :put},

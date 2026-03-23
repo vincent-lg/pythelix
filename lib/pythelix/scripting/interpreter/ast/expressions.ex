@@ -34,7 +34,7 @@ defmodule Pythelix.Scripting.Interpreter.AST.Expressions do
     |> replace({:unset, ref}, fn code -> {:iffalse, length_code(code)} end)
   end
 
-  def read_ast(code, {cnt, [left, right]}) when cnt in [:in, :not_in] do
+  def read_ast(code, {cnt, [left, right]}) when cnt in [:in, :not_in, :is, :is_not] do
     code
     |> AST.Core.read_ast(left)
     |> AST.Core.read_ast(right)

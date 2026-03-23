@@ -24,7 +24,8 @@ defmodule Pythelix.Scripting.Parser.Constants do
     "finally",
     "raise",
     "endtry",
-    "del"
+    "del",
+    "is"
   ]
   @id_start "[[:L:][:Nl:][:Other_ID_Start:]-[:Pattern_Syntax:]-[:Pattern_White_Space:][_]]"
   @id_continue "[[:ID_Start:][:Mn:][:Mc:][:Nd:][:Pc:][:Other_ID_Continue:]-[:Pattern_Syntax:]-[:Pattern_White_Space:][_]]"

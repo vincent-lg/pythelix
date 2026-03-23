@@ -133,6 +133,20 @@ defmodule Pythelix.Scripting.Parser.Operator do
     |> replace(:not_in)
   end
 
+  def is_not do
+    string("is")
+    |> times(string(" "), min: 1)
+    |> string("not")
+    |> isolate(space: true, allow_newline: true)
+    |> replace(:is_not)
+  end
+
+  def is_ do
+    string("is")
+    |> replace(:is)
+    |> isolate(space: true, allow_newline: true)
+  end
+
   def plus_eq do
     string("+=")
     |> replace(:"+=")

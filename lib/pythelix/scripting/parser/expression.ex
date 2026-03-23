@@ -183,7 +183,9 @@ defmodule Pythelix.Scripting.Parser.Expression do
         eq(),
         neq(),
         not_in(),
-        in_()
+        in_(),
+        is_not(),
+        is_()
       ])
       |> parsec(:term_cmp)
     )
