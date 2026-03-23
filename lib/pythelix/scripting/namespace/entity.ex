@@ -84,7 +84,7 @@ defmodule Pythelix.Scripting.Namespace.Entity do
 
     entity
     |> get_attribute(name, script, self)
-    |> maybe_get_method(entity, name)
+    |> maybe_get_method(script, entity, name)
   end
 
   @doc """
@@ -211,11 +211,18 @@ defmodule Pythelix.Scripting.Namespace.Entity do
   def delattr(script, self, name) do
     entity = Store.get_value(self)
     id_or_key = Entity.get_id_or_key(entity)
+    display =
+      if entity.key != :virtual do
+        "!#{entity.key}!"
+      else
+        "Entity(#{entity.id})"
+      end
+
     attributes = Record.get_attributes(entity)
 
     case Map.get(attributes, name) do
       nil ->
-        {Script.raise(script, AttributeError, "'#{id_or_key}' has no attribute '#{name}'"), :none}
+        {Script.raise(script, AttributeError, "'#{display}' has no attribute '#{name}'"), :none}
 
       _ ->
         Record.delete_attribute(id_or_key, name)
@@ -251,20 +258,26 @@ defmodule Pythelix.Scripting.Namespace.Entity do
     end
   end
 
-  defp maybe_get_method({:error, :attribute_not_found}, entity, name) do
-    id_or_key = Pythelix.Entity.get_id_or_key(entity)
+  defp maybe_get_method({:error, :attribute_not_found}, script, entity, name) do
+    id_or_key =
+      if entity.key != :virtual do
+        "!#{entity.key}!"
+      else
+        "Entity(#{entity.id})"
+      end
+
     methods = Record.get_methods(entity)
 
     case Map.get(methods, name) do
       nil ->
-        :none
+        Script.raise(script, AttributeError, "#{id_or_key} has no attribute '#{name}'")
 
       method ->
         %Callable.Method{entity: id_or_key, name: name, method: method}
     end
   end
 
-  defp maybe_get_method(other, _entity, _name), do: other
+  defp maybe_get_method(other, _script, _entity, _name), do: other
 
   defp repr(script, self) do
     Store.get_value(self)

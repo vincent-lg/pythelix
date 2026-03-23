@@ -53,7 +53,7 @@ defmodule Pythelix.Scripting.AttrFunctionsTest do
       assert value == "fallback"
     end
 
-    test "getattr without default returns none for missing attribute" do
+    test "getattr without default raises AttributeError for missing attribute" do
       Record.create_entity(key: "getattr_none")
 
       script =
@@ -62,9 +62,7 @@ defmodule Pythelix.Scripting.AttrFunctionsTest do
         val = getattr(ent, "missing")
         """)
 
-      assert script.error == nil
-      value = Script.get_variable_value(script, "val")
-      assert value == :none
+      assert script.error != nil
     end
 
     test "getattr with f-string attribute name" do

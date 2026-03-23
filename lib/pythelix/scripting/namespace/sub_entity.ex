@@ -36,13 +36,13 @@ defmodule Pythelix.Scripting.Namespace.SubEntity do
   @doc """
   Gets an attribute or method from a sub entity.
   """
-  def getattr(_script, self, name) do
+  def getattr(script, self, name) do
     sub = Store.get_value(self, recursive: false)
     data = Store.get_value(sub.data, recursive: false)
 
     data
     |> get_attribute(name)
-    |> maybe_get_method(sub, self, name)
+    |> maybe_get_method(script, sub, self, name)
   end
 
   @doc """
@@ -87,19 +87,19 @@ defmodule Pythelix.Scripting.Namespace.SubEntity do
     end
   end
 
-  defp maybe_get_method({:error, :attribute_not_found}, sub, self, name) do
+  defp maybe_get_method({:error, :attribute_not_found}, script, sub, self, name) do
     methods = Record.get_methods(sub.base)
 
     case Map.get(methods, name) do
       nil ->
-        :none
+        Script.raise(script, AttributeError, "'#{sub.base.key}' has no attribute '#{name}'")
 
       method ->
         %Callable.SubMethod{entity: sub.base.key, sub: self, name: name, method: method}
     end
   end
 
-  defp maybe_get_method(other, _sub, _self, _name), do: other
+  defp maybe_get_method(other, _script, _sub, _self, _name), do: other
 
   defp repr(script, self) do
     Store.get_value(self)

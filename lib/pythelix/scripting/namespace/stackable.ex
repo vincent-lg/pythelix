@@ -43,7 +43,7 @@ defmodule Pythelix.Scripting.Namespace.Stackable do
 
     entity
     |> get_attribute(name, script, entity_ref)
-    |> maybe_get_method(entity, name)
+    |> maybe_get_method(script, entity, name)
   end
 
   @doc """
@@ -116,20 +116,20 @@ defmodule Pythelix.Scripting.Namespace.Stackable do
     end
   end
 
-  defp maybe_get_method({:error, :attribute_not_found}, entity, name) do
+  defp maybe_get_method({:error, :attribute_not_found}, script, entity, name) do
     id_or_key = Entity.get_id_or_key(entity)
     methods = Record.get_methods(entity)
 
     case Map.get(methods, name) do
       nil ->
-        :none
+        Script.raise(script, AttributeError, "'#{id_or_key}' has no attribute '#{name}'")
 
       method ->
         %Callable.Method{entity: id_or_key, name: name, method: method}
     end
   end
 
-  defp maybe_get_method(other, _entity, _name), do: other
+  defp maybe_get_method(other, _script, _entity, _name), do: other
 
   defp repr(script, self) do
     stackable = Store.get_value(self)

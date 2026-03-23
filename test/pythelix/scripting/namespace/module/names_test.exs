@@ -670,7 +670,7 @@ defmodule Pythelix.Scripting.Namespace.Module.NamesTest do
 
       # Actor is seen differently by admins vs players
       Record.set_method("nb_nf_actor", "__namefor__", [{"viewer", [index: 0, type: :entity]}], """
-      if viewer.is_admin:
+      if hasattr(viewer, "is_admin") and viewer.is_admin:
           return "Alice (disguised)"
       endif
       return "a masked figure"
