@@ -11,6 +11,7 @@ defmodule Pythelix.Scripting.Namespace do
   alias Pythelix.Scripting.Namespace
 
   alias Pythelix.Scripting.Object.{
+    Console,
     Dict,
     Duration,
     GameTime,
@@ -253,6 +254,7 @@ defmodule Pythelix.Scripting.Namespace do
       %Pythelix.Stackable{} -> Namespace.Stackable
       %HorizontalList{} -> Namespace.HorizontalList
       %HorizontalListGroup{} -> Namespace.HorizontalListGroup
+      %Console{} -> Namespace.Console
     end
   end
 

@@ -69,7 +69,7 @@ config :libcluster,
   ]
 
 config :codepagex, :encodings, [
-  ~r[iso8859]iE,
+  ~r[iso8859]i,
   "VENDORS/MICSFT/WINDOWS/CP1252"
 ]
 
