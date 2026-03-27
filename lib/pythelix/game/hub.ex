@@ -6,6 +6,7 @@ defmodule Pythelix.Game.Hub do
   require Logger
 
   alias Pythelix.{Method, Record, World}
+  alias Pythelix.Scripting.InputWaiter
   alias Pythelix.Task.Persistent
 
   @behaviour :gen_statem
@@ -102,15 +103,13 @@ defmodule Pythelix.Game.Hub do
 
   def busy(:info, {:job_ok, ticket, _result}, %{ticket: ticket, mon_ref: mon} = data) do
     Process.demonitor(mon, [:flush])
-    Record.Diff.apply()
-    data = send_prompts_to_clients_with_messages(data)
+    data = finalize_job(data)
     {:next_state, :idle, %{data | job_pid: nil, mon_ref: nil, ticket: nil}}
   end
 
   # Anything else (crash, kill, or "no ok sent"): rely on :DOWN to recover
   def busy(:info, {:DOWN, mon, :process, _pid, _reason}, %{mon_ref: mon} = data) do
-    Record.Diff.apply()
-    data = send_prompts_to_clients_with_messages(data)
+    data = finalize_job(data)
     {:next_state, :idle, %{data | job_pid: nil, mon_ref: nil, ticket: nil}}
   end
 
@@ -124,6 +123,22 @@ defmodule Pythelix.Game.Hub do
   end
 
   def busy(_type, _event, data), do: {:keep_state, data}
+
+  defp finalize_job(data) do
+    try do
+      Record.Diff.apply()
+    rescue
+      e -> Logger.error("Record.Diff.apply/0 failed: #{Exception.message(e)}")
+    end
+
+    try do
+      send_prompts_to_clients_with_messages(data)
+    rescue
+      e ->
+        Logger.error("send_prompts_to_clients_with_messages/1 failed: #{Exception.message(e)}")
+        %{data | clients_with_messages: MapSet.new()}
+    end
+  end
 
   defp run_job(fun) when is_function(fun, 0), do: fun.()
 
@@ -164,18 +179,24 @@ defmodule Pythelix.Game.Hub do
       client ->
         menu = Record.get_location_entity(client)
 
+        # Suppress the game prompt while a script is waiting for input from
+        # this client — the ask/choice prompt (if any) was already sent inline.
         prompt =
-          case menu do
-            nil ->
-              ""
+          if InputWaiter.waiting?(client_id) do
+            ""
+          else
+            case menu do
+              nil ->
+                ""
 
-            menu ->
-              try do
-                Method.call_entity(menu, "get_prompt", [client])
-              rescue
-                _exception ->
-                  ""
-              end
+              menu ->
+                try do
+                  Method.call_entity(menu, "get_prompt", [client])
+                rescue
+                  _exception ->
+                    ""
+                end
+            end
           end
 
         pid = Record.get_attribute(client, "pid")
@@ -208,7 +229,9 @@ defmodule Pythelix.Game.Hub do
     |> tap(fn _ ->
       tasks_start_time = System.monotonic_time(:microsecond)
       Persistent.init()
+      InputWaiter.init()
       number = Persistent.load()
+      InputWaiter.reload()
       tasks_elapsed = System.monotonic_time(:microsecond) - tasks_start_time
 
       if Application.get_env(:pythelix, :show_stats) do

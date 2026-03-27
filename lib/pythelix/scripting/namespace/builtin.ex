@@ -7,12 +7,13 @@ defmodule Pythelix.Scripting.Namespace.Builtin do
 
   require Logger
 
+  alias Pythelix.{Entity, Record}
   alias Pythelix.Scripting.Callable
   alias Pythelix.Scripting.Display
   alias Pythelix.Scripting.Format
   alias Pythelix.Scripting.Namespace
-  alias Pythelix.Scripting.Object.Dict
-  alias Pythelix.Scripting.Object.Tuple
+  alias Pythelix.Scripting.Namespace.Module.Clients
+  alias Pythelix.Scripting.Object.{Dict, InputState, Tuple}
   alias Pythelix.Stackable
   alias Pythelix.World
 
@@ -252,5 +253,91 @@ defmodule Pythelix.Scripting.Namespace.Builtin do
 
     {script, _} = ns.delattr(script, namespace.object, name)
     {script, :none}
+  end
+
+  deffun ask(script, namespace), [
+    {:entity, index: 0, type: :entity},
+    {:prompt, index: 1, keyword: "prompt", type: :str, default: nil},
+    {:timeout, keyword: "timeout", type: :any, default: nil}
+  ] do
+    entity = Store.get_value(namespace.entity)
+    prompt = namespace.prompt && Format.String.format(namespace.prompt)
+    timeout = namespace.timeout
+
+    case resolve_client(entity) do
+      nil ->
+        {script, :none}
+
+      {client_id, pid, entity_id_or_key} ->
+        if prompt do
+          Pythelix.Game.Hub.mark_client_with_message(client_id, prompt, pid)
+        end
+
+        input_state = %InputState{
+          client_id: client_id,
+          client_pid: pid,
+          entity_id_or_key: entity_id_or_key,
+          prompt: prompt,
+          timeout: timeout
+        }
+
+        {%{script | pause: :input, input: input_state}, :none}
+    end
+  end
+
+  deffun choice(script, namespace), [
+    {:entity, index: 0, type: :entity},
+    {:error_msg, index: 1, type: :str},
+    {:choices, index: 2, args: true}
+  ] do
+    entity = Store.get_value(namespace.entity)
+    error_msg = Format.String.format(namespace.error_msg)
+    choices = Enum.map(namespace.choices, &Format.String.format/1)
+
+    case resolve_client(entity) do
+      nil ->
+        {script, :none}
+
+      {client_id, pid, entity_id_or_key} ->
+        input_state = %InputState{
+          client_id: client_id,
+          client_pid: pid,
+          entity_id_or_key: entity_id_or_key,
+          prompt: nil,
+          timeout: nil,
+          choices: choices,
+          error_msg: error_msg
+        }
+
+        {%{script | pause: :input, input: input_state}, :none}
+    end
+  end
+
+  # Returns {client_id, pid, entity_id_or_key} or nil.
+  # entity_id_or_key is nil when the entity itself is a client (login-time asks),
+  # since clients are ephemeral and cannot be reconnected to by identity.
+  defp resolve_client(%Entity{} = entity) do
+    case Record.get_attribute(entity, "client_id") do
+      nil ->
+        # Controlled entity (character etc.) — find who controls it
+        try do
+          case Clients.controlling(Entity.get_id_or_key(entity)) do
+            [client | _] ->
+              client_id = Record.get_attribute(client, "client_id")
+              pid = Record.get_attribute(client, "pid")
+              {client_id, pid, Entity.get_id_or_key(entity)}
+
+            [] ->
+              nil
+          end
+        rescue
+          _ -> nil
+        end
+
+      client_id ->
+        # The entity is itself a client (login menus, no owner yet)
+        pid = Record.get_attribute(entity, "pid")
+        {client_id, pid, nil}
+    end
   end
 end

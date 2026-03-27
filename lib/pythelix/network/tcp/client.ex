@@ -158,15 +158,22 @@ defmodule Pythelix.Network.TCP.Client do
         :ok
 
       client ->
-        menu = Record.get_location_entity(client)
+        # Check if a script is waiting for input from this client
+        case Pythelix.Scripting.InputWaiter.handle_input(client_id, input) do
+          :handled ->
+            :ok
 
-        if menu do
-          # Use the mode handler which will delegate to menu handler if no game modes
-          ModeHandler.handle(menu, client, input, start_time)
-        else
-          # No menu context - send error message
-          pid = Record.get_attribute(client, "pid")
-          Kernel.send(pid, {:message, "No active menu context."})
+          :not_waiting ->
+            menu = Record.get_location_entity(client)
+
+            if menu do
+              # Use the mode handler which will delegate to menu handler if no game modes
+              ModeHandler.handle(menu, client, input, start_time)
+            else
+              # No menu context - send error message
+              pid = Record.get_attribute(client, "pid")
+              Kernel.send(pid, {:message, "No active menu context."})
+            end
         end
     end
   end

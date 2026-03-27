@@ -9,8 +9,9 @@ defmodule Pythelix.Scripting.Runner do
 
   alias Pythelix.{Entity, Method, Record}
   alias Pythelix.Game.Hub
+  alias Pythelix.Scripting.InputWaiter
   alias Pythelix.Scripting.Interpreter.Script
-  alias Pythelix.Scripting.Object.Dict
+  alias Pythelix.Scripting.Object.{Dict, InputState}
   alias Pythelix.Scripting.Traceback
   alias Pythelix.Task.Persistent, as: Task
 
@@ -91,6 +92,11 @@ defmodule Pythelix.Scripting.Runner do
 
         run(parent, parent.code, parent.name, sync: true)
 
+      %Script{pause: :input, input: %InputState{} = input_state, error: nil} = paused_script ->
+        # Script waiting for user input - save as persistent task
+        schedule_input(paused_script, code, name, input_state)
+        Script.destroy(paused_script)
+
       %Script{pause: wait_time, error: nil} = paused_script
       when is_integer(wait_time) or is_float(wait_time) ->
         # Script paused - save as persistent task and schedule continuation
@@ -147,7 +153,18 @@ defmodule Pythelix.Scripting.Runner do
       task ->
         # Restore references and resume script
         Task.restore(task)
-        resumed_script = %Script{task.script | pause: nil}
+
+        resumed_script =
+          case task.script do
+            %Script{pause: :input, input: %InputState{client_id: client_id}} ->
+              # Input timeout - unregister waiter and resume with None
+              InputWaiter.unregister(client_id)
+              %Script{task.script | pause: nil, input: nil}
+              |> Script.put_stack(:none)
+
+            _ ->
+              %Script{task.script | pause: nil}
+          end
 
         case Script.execute(resumed_script, task.code, task.name) do
           %Script{parent: %Script{} = parent, pause: :immediately, error: nil} =
@@ -158,6 +175,12 @@ defmodule Pythelix.Scripting.Runner do
 
             run(parent, parent.code, parent.name, sync: true)
             cleanup_task(task.id)
+
+          %Script{pause: :input, input: %InputState{} = input_state, error: nil} = paused_script ->
+            # Script waiting for user input again (e.g. choice retry)
+            cleanup_task(task.id)
+            schedule_input(paused_script, task.code, task.name, input_state)
+            Script.destroy(paused_script)
 
           %Script{pause: wait_time, error: nil} = paused_script
           when is_integer(wait_time) or is_float(wait_time) ->
@@ -219,6 +242,19 @@ defmodule Pythelix.Scripting.Runner do
   end
 
   defp maybe_set_step(script, _), do: script
+
+  defp schedule_input(script, code, name, input_state) do
+    expire_at =
+      case input_state.timeout do
+        nil -> nil
+        timeout ->
+          now = DateTime.utc_now()
+          DateTime.add(now, trunc(timeout * 1000), :millisecond)
+      end
+
+    task = Task.add(expire_at, name, code, script)
+    InputWaiter.register(input_state.client_id, task.id, input_state.entity_id_or_key)
+  end
 
   defp schedule_continuation(script, code, name, wait_time) do
     now = DateTime.utc_now()

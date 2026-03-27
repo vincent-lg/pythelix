@@ -13,7 +13,7 @@ defmodule Pythelix.Record do
   alias Pythelix.Record
   alias Pythelix.Record.Cache
   alias Pythelix.Record.Diff
-  alias Pythelix.Scripting.Runner
+  alias Pythelix.Scripting.{InputWaiter, Runner}
 
   def warmup() do
     warmup_database()
@@ -495,24 +495,39 @@ defmodule Pythelix.Record do
 
   defp handle_new_location(entity, location) do
     if has_parent?(entity, Generic.client()) && has_parent?(location, Generic.menu()) do
-      try do
-        case Method.call_entity(location, "get_text", [entity], nil, immediate: true) do
-          :nomethod ->
-            nil
+      owner = get_attribute(entity, "owner", nil)
+      owner_entity = owner || entity
 
-          text ->
-            Client.send(entity, text)
+      # Check if this entity (or its owner) has a script waiting for input.
+      # If so, skip the menu's welcome text and re-establish the connection
+      # to the waiting task (reconnection / server restart recovery).
+      pending_input =
+        case owner do
+          nil ->
+            false
+
+          owner_entity ->
+            entity_id_or_key = Entity.get_id_or_key(owner_entity)
+            client_id = get_attribute(entity, "client_id")
+            pid = get_attribute(entity, "pid")
+            InputWaiter.reconnect(entity_id_or_key, client_id, pid)
         end
-      rescue
-        e ->
-          stacktrace = __STACKTRACE__
-          Logger.error(Exception.format(:error, e, stacktrace))
-          nil
+
+      unless pending_input do
+        try do
+          case Method.call_entity(location, "get_text", [entity], nil, immediate: true) do
+            :nomethod -> nil
+            text -> Client.send(entity, text)
+          end
+        rescue
+          e ->
+            stacktrace = __STACKTRACE__
+            Logger.error(Exception.format(:error, e, stacktrace))
+            nil
+        end
       end
 
-      owner = get_attribute(entity, "owner", nil)
-      owner = owner || entity
-      Runner.run_method({location, "enter"}, [owner], nil, sync: true)
+      Runner.run_method({location, "enter"}, [owner_entity], nil, sync: true)
     end
   end
 

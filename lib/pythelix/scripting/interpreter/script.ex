@@ -10,7 +10,7 @@ defmodule Pythelix.Scripting.Interpreter.Script do
   alias Pythelix.Scripting.Callable.{Method, SubMethod}
   alias Pythelix.Scripting.Format
   alias Pythelix.Scripting.Interpreter.{Debugger, Script, VM}
-  alias Pythelix.Scripting.Object.{GameTime, RealDateTime, Reference, Tuple}
+  alias Pythelix.Scripting.Object.{GameTime, InputState, RealDateTime, Reference, Tuple}
   alias Pythelix.Scripting.Store
   alias Pythelix.Scripting.Traceback
 
@@ -24,6 +24,7 @@ defmodule Pythelix.Scripting.Interpreter.Script do
     variables: %{},
     last_raw: nil,
     pause: nil,
+    input: nil,
     error: nil,
     handlers: [],
     debugger: nil,
@@ -43,7 +44,8 @@ defmodule Pythelix.Scripting.Interpreter.Script do
           stack: list(),
           variables: map(),
           last_raw: any(),
-          pause: nil | :immediately | integer() | float(),
+          pause: nil | :immediately | :input | integer() | float(),
+          input: nil | InputState.t(),
           error: nil | Traceback.t(),
           handlers: list(),
           debugger: nil | %Debugger{},

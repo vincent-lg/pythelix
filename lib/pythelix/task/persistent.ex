@@ -195,6 +195,16 @@ defmodule Pythelix.Task.Persistent do
     task
   end
 
+  @doc """
+  Get all stored tasks.
+  """
+  @spec all() :: [t()]
+  def all do
+    get_ids()
+    |> Enum.map(&get/1)
+    |> Enum.reject(&is_nil/1)
+  end
+
   defp cache_path() do
     path =
       Application.get_env(:pythelix, :tasks_path, Path.join(File.cwd!(), "tasks"))
