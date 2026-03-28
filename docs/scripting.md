@@ -26,18 +26,20 @@ This might all sound abstract, so let's see an example you can paste into your [
 
 ```
 !command/shout!
-parent = "generic/command"
+parent = "generic/char_command"
+category = "General"
 name = "shout"
 syntax = "<message>"
 
-def run:
-client.msg(f"You shout at top volume: {message}")
+def run(character, message):
+    character.msg(f"You shout at top volume: {message}")
 ```
 
 Here's our first method! But let's first look at the entity definition:
 
 - `!command/shout!`: this starts a new entity with the unique key `command/shout` in our [worldlet file](./worldlets.md). The following lines describe it until the next entity definition;
-- `parent = "generic/command"`: sets the entity's parent as `generic/command`, marking it as a command (otherwise, it would be a different kind of entity);
+- `parent = "generic/char_command"`: sets the entity's parent as `generic/char_command`, marking it as a character command (otherwise, it would be a different kind of entity);
+- `category = "General"`: the command category for help;
 - `name = "shout"`: commands have a name;
 - `syntax = "<message>"`: all commands should have a syntax. When the user enters `shout`, they should specify the message to shout. The syntax can be quite extensive—refer to [the documentation about commands](./commands.md) for details.
 
@@ -46,16 +48,16 @@ Next is our first method. It's called `run`. Everything that follows is consider
 Our script looks like this:
 
 ```
-client.msg(f"You shout at top volume: {message}")
+character.msg(f"You shout at top volume: {message}")
 ```
 
-If you're familiar with Python, this should look simple. We call the `msg` method on the client to send a message. This message is an f-string: portions between braces will be evaluated at runtime. Here, we insert the content of `message` directly into our text.
+If you're familiar with Python, this should look simple. We call the `msg` method on the character to send a message. This message is an f-string: portions between braces will be evaluated at runtime. Here, we insert the content of `message` directly into our text.
 
 So if you save this file and apply the worldlet (or start the server), you can connect, enter:
 
-    shout something
+    > shout something
 
-and you should receive:
+... and you should receive:
 
     You shout at top volume: something!
 
@@ -89,9 +91,11 @@ If you'd like to practice or see what happens when you type lines of script, rea
 
 If you're new to programming—or have some Python experience—you might want to check the playground, also called the Pythello console: it is a console where you can type Pythello scripts and see them in action. Very useful to check syntax before writing your worldlet, for instance.
 
-To start it:
+There are various ways to access the console. As an administrator, in your MUD client (once connected), you should have access to the `py` command. You can enter `py` followed by some code (for instance, `py 3 * 2`) and see the result. This also allows you to enter multiple line of code (just enter `py` before every line). This is much easier than the scripting console described below, but it requires an administrator account (you usually have one).
 
-1. First start the server: if you have a binary version, click `bin/server.bat` (Windows) or start `bin/server` (other OSes). If running from source, it is best to use `dev.bat` or `./dev` to start the development server.
+Otherwise, you can use the standalone console. To start it:
+
+1. First start the server: if you have a binary version, click `bin/server.bat` (Windows) or start `./bin/server` (other OSes). If running from source, it is best to use `dev.bat` or `./dev` to start the development server.
 2. Connect the console: while the server is running, start the console. For a binary version, execute `bin/script.bat` or `./bin/script`. This will attempt to connect to the server. If running from source, enter `mix script` while the server is still running.
 
 If all goes well, after a short wait (it might need some time to compile—don’t worry, it won’t happen next time), you should see:
@@ -119,7 +123,7 @@ Here you can type your scripting instructions. Don’t type the `>>>` prompt; it
 And that's not all. Assuming you noticed that client number 3 connected (clients are stored as `client/{number}` keys, so `client/3` is your client's key), you can do:
 
 ```
->>> client = get_entity(key="client/3")
+>>> client = entity(key="client/3")
 >>> client.msg("I see you!")
 ```
 
@@ -128,7 +132,7 @@ As expected, the client would receive your message.
 In fact, you can use a short form here. Retrieving an entity by its key is so common there’s a syntax to do it quickly. You can replace:
 
 ```python
-get_entity(key="client/3")
+!client/3!
 ```
 
 with:
@@ -291,6 +295,22 @@ endtry
 
 > It is not possible to capture an exception in a variable (`except Type as variable`).
 
+### Collections
+
+Pythello supports standard Python collections: lists, tuples, dictionaries and sets with the Python syntax. Their respective namespace (including their methods) is also available:
+
+```
+>>> l [ 2, 5, 1, 3, 4]
+>>> l.sort()
+>>> l
+[1, 2, 3, 4, 5]
+>>> l[2]
+3
+>>>
+```
+
+Notice that lambdas aren't available however.
+
 ### Subtleties
 
 A few things to keep in mind:
@@ -303,11 +323,11 @@ A few things to keep in mind:
 
 ## Scripting and entities
 
-As pointed out earlier, entities are first-class citizens in Pythelix—and they're easy to manipulate in Pythello too. There's a function called `Entity` (with a capital E) to create them, and a function `get_entity` to retrieve them, with a shorthand syntax as seen before.
+As pointed out earlier, entities are first-class citizens in Pythelix—and they're easy to manipulate in Pythello too. There's a function called `Entity` (with a capital E) to create them, and a function `entity` to retrieve them, with a shorthand syntax as seen above.
 
 What about entity attributes? An entity can have two things: methods (behavior) and attributes (data). Reading and writing attributes is extremely simple:
 
-```python
+```
 >>> nova = Entity()
 >>> nova
 Entity(id=7)
@@ -326,7 +346,7 @@ Worth noting: this small snippet created and saved an entity in the database. No
 Don't believe it? Note the entity's ID is 7 in the example (yours may differ). Shut down the server, restart it, and start the Pythello console again:
 
 ```
->>> old_nova = get_entity(7)
+>>> old_nova = entity(7)
 >>> old_nova
 Entity(id=7)
 >>> old_nova.size
@@ -338,13 +358,12 @@ Let's do something more interesting:
 ```
 >>> old_nova.points = [1, 2, 8]
 >>> old_nova.points.append(135)
->>>
 ```
 
 Restart the server and start a console again:
 
 ```
->>> very_old_nova = Entity(7)
+>>> very_old_nova = entity(7)
 >>> very_old_nova.points
 [1, 2, 8, 135]
 >>>
@@ -365,7 +384,7 @@ Working with entities in scripts is straightforward.
 >>>
 ```
 
-Now, something interesting: entities can have parents, like our `command/shout` entity inherited from `generic/command`.
+Now, something interesting: entities can have parents, like our `command/shout` entity inherited from `generic/char_command`.
 
 Here, we create an entity with key `mother`. Then we create a child entity with key `boy`, specifying its parent as `mother`.
 
@@ -409,14 +428,14 @@ Here's an example:
 >>> room = Entity(key="room/demo")
 >>> player = Entity(key="player/kredh", location=room)
 >>> player.location
-Entity(key="room/demo")
+!room/demo!
 ```
 
 You can look at the room's contents:
 
 ```
 >>> room.contents
-[Entity(key="player/kredh")]
+[!player/kredh!]
 >>>
 ```
 

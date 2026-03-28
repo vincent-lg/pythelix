@@ -95,8 +95,15 @@ Enter your new account's password.
 """
 
 def input(client, input):
+    has_players = len(!generic/player!.children) > 0
     client.account.password = password.hash(input)
-    character = Entity(parent=!generic/character!)
+    character = Entity(parent=!generic/player!)
+
+    if not has_players:
+        log(f"{client.account.username!r} (#{client.account.id}) becomes an administrator")
+        character.permissions.add("admin")
+    endif
+
     character.former_location = !room/bakery!
     client.location = !menu/username!
     client.account.character = character
@@ -105,12 +112,11 @@ def input(client, input):
 parent = "generic/menu"
 
 def enter(character):
-    log("Enter")
     character.location = character.former_location
 
 def get_text(client):
     character = client.owner
-    text = character.location.look(character)
+    text = character.former_location.look(character)
     return f"""
         Welcome back!
         {text}

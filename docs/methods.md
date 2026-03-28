@@ -11,246 +11,153 @@ Inside a [worldlet](./worldlets.md), a method is set in an entity like this:
 ```
 !entity key!
 attribute1 = value1
-attribute2 = value2
 
-def method name:
-method code
-on several
-lines
+def method_name(arg1, arg2):
+    method code
+    on several lines
 ```
 
-All it takes is to create a method by writing a line with the `def` keyword (`def method name:`), followed by the method code. The code itself, written in [Pythello](./scripting.md), is the behavior associated with this method.
+A method starts with the `def` keyword, followed by the method name, its arguments in parentheses, and a colon. The code itself, written in [Pythello](./scripting.md), is the behavior associated with this method.
 
-We'll use the same example throughout this documentation: a method that simply displays a message to the client. It's a simple example, but it illustrates the power of methods.
+We'll use the same example throughout this documentation: NPCs (non-player characters) that greet a player. It's a simple example, but it illustrates the power of methods and inheritance.
 
-## An animal entity
+## A simple NPC entity
 
-Let's begin by defining an entity representing an animal:
+Let's begin by defining an entity representing a generic NPC:
 
-You can copy this code into your [worldlet](./worldlets.md) files. If you're not sure how to do that (or how to apply them), refer to the [documentation about worldlets](./worldlets.md).
-
-```
-!animal!
-height = None
-weight = None
-
-def call:
-client.msg("The animal calls... don't know what.")
-```
-
-We create an entity with the key `"animal"` and two attributes: height and weight, both set to `None`. Then we define a method named `call` with a single line: it just sends a generic message to the client.
-
-> What does the client contain?
-
-If you're used to programming, you might wonder: where does the `client` variable come from? Usually, it would be defined in the method arguments. Here it just magically appears. We'll see where it actually comes from shortly.
-
-Apply this worldlet. Start a server (click `start.bat` or enter `mix run`), then enter a scripting session (click `script.bat` or enter `mix script`). You should see something like:
+You can copy this code into your [worldlet](./worldlets.md) files. If you're not sure how to do that (or how to apply them), refer to the [documentation about worldlets](./worldlets.md). It is advised to simply write a file `npc.txt` inside of your worldlets directory.
 
 ```
-Starting interactive script. Press CTRL+C twice to exit.
->>>
+!generic/npc!
+
+def greet(character):
+    character.msg("A stranger looks at you and nods silently.")
 ```
 
-Before entering anything, open a MUD client and connect to the server. We'll assume it's our very first connection (the server isn't exposed to anyone but you).
+We create an entity with the key `"generic/npc"` and define a method named `greet` with one argument: `character`. The method sends a message to the character.
 
-First, let's get your client: clients, like most things in Pythelix, are entities. To retrieve it, enter the key of the entity. Clients are always called `client/1`, `client/2`, `client/3`, and so on (depending on how many clients connect). So our connected client would be `client/1`. You can type in your script console:
-
-```
-client = !client/1!
-```
-
-And that's it. You now have a variable containing your client. Believe it or not. Try to send it something:
+Apply this worldlet. Start a server and connect your MUD client (see [Getting started](./start.md) for how to do that). Once logged in, you can test the method using the `py` command:
 
 ```
-client.msg("Great!")
+> py npc = !generic/npc!
+> py npc.greet(self)
 ```
 
-If you paste this line inside your scripting console, you shouldn't see anything. But if you go back to your MUD client, you should see the message.
+Note the syntax: the variable, a dot, the method name (`greet` here), and arguments between parentheses.
 
-You're not impressed, I see. Let's retrieve the `animal` entity and try to call its method:
-
-```
-animal = !animal!
-```
-
-That wasn't that complicated. You now have another variable set to our entity with the key `animal`. You can try to see its weight:
+In your MUD client, you should see:
 
 ```
-animal.weight
+A stranger looks at you and nods silently.
 ```
 
-The result is not impressive because we set these to `None`, which isn't even displayed.
+`self` is your character (always available in the `py` command). We passed it as the `character` argument, so `character.msg(...)` sends the message to us.
 
-Let's call our `call` method:
-
-```
-animal.call()
-```
-
-Before seeing the result, note the syntax: the variable, a dot, the method name (`call` here), and arguments between parentheses. We have no argument, but we still need to include empty parentheses.
-
-Now for the result:
+What happens if we call the method with no argument?
 
 ```
->>> animal.call()
+> py npc.greet()
 Traceback most recent call last:
   <stdin>, line 1
-    animal.call()
-  !animal!, method call, line 1
-    client.msg("The animal calls... don't know what.")
+    npc.greet()
 
-NameError: name 'client' is not defined
->>>
+TypeError: expected positional argument character
 ```
 
-A traceback? All that for an error?
-
-Don't go away! The error is quite explicit and logical, as you can see in the traceback. Here, the first (and only) line in our method tries to find the `client` variable. It cannot. Not surprising: we didn't give it the client (we have a variable `client` in the scripting environment, but it is not magically transmitted to methods).
-
-Okay, let's try again but be smarter:
+Pythelix tells us explicitly: the method expects a `character` argument. Same thing if we pass too many:
 
 ```
-animal.call(client=client)
-```
-
-This time, the console displays nothing (except for the three `>>>` prompts). In our client, however, we've received the message:
-
-```
-The animal calls... don't know what.
-```
-
-What's the difference? When we called our method, we specified a keyword argument (`keyword=value`). This creates a variable in our method named `client`, which is exactly what the method needs.
-
-> Why isn't the `client` variable magically transmitted to our method?
-
-At first glance, it might seem odd to require explicitly passing variables. But when you have tens or hundreds of method calls, if each had to guess its variables (and could modify them), your life would become complicated. This choice aligns with Python too, where methods have a specific scope and arguments must be transmitted explicitly.
-
-Note: For advanced Python developers, it's partially true that references could be handled by the method and mutate the calling scope, and that closures exist. But it's best to keep scopes separate.
-
-> Okay, I see why I need to send the client to the method, but why can't I just do something like:
-
-```
-animal.call(client)
-```
-
-That's a good question. Short answer: you can. But we need to dive into arguments. Nothing too complicated, don't worry.
-
-## Method arguments
-
-You might want to play with our method: what happens if we send it a `client` containing not a client, but a string?
-
-```
->>> animal.call(client="ok")
+> py npc.greet(1, 2, 3)
 Traceback most recent call last:
   <stdin>, line 1
-    animal.call(client="ok")
-  !animal!, method call, line 1
-    client.msg("The animal calls... don't know what.")
+    npc.greet(1, 2, 3)
 
-AttributeError: 'string' object has no attribute 'msg'
->>>
+TypeError: expected at most 1 arguments, got 3
 ```
 
-The error is a bit strange. It tries to find `msg` on a string and, of course, fails. Thanks to a good traceback. But it could be made more explicit.
+## Accessing the entity with self
 
-Our `call` method should take one and only one argument: the client. To enforce that, we simply update our method definition in our worldlet. Replace it with these lines:
-
-```
-!animal!
-height = None
-weight = None
-
-def call(client):
-client.msg("The animal calls... don't know what.")
-```
-
-We just modified the method definition. Now, between parentheses after the method name, we add the arguments. Here we have one: `client`. We could of course have several, separated by commas.
-
-You can apply this change by saving the worldlet file and executing in your scripting console the `apply()` function:
-
-    apply()
-
-No need to restart the server or even disconnect any player.
+Our NPC sends a fixed message. But what if the NPC should introduce itself by name? For that, the method needs to access the entity it belongs to. This is what `self` does when used as the first argument of a method:
 
 ```
-animal.call(client)
+!generic/npc!
+name = "stranger"
+
+def greet(self, character):
+    character.msg(f"{self.name} says: Hello, traveler.")
 ```
 
-Upon executing the third line, you should see the text displayed in your MUD client.
-
-We specified that the command takes exactly one argument: `client`. Now, if you try to call it with more or fewer arguments, it will fail clearly:
+When you call `npc.greet(my_character)`, Pythelix sets `self` to the NPC entity and `character` to whatever you pass. You still only pass one argument — `self` is filled in automatically:
 
 ```
->>> animal.call()
-Traceback most recent call last:
-  <stdin>, line 1
-    animal.call()
-
-TypeError: expected positional argument client
->>>
+> py npc = !generic/npc!
+> py npc.greet(self)
 ```
 
-Or if you enter more:
+In your MUD client:
 
 ```
->>> animal.call(1, 2, 3)
-Traceback most recent call last:
-  <stdin>, line 1
-    animal.call(1, 2, 3)
-
-TypeError: expected at most 1 argument, got 3
->>>
+stranger says: Hello, traveler.
 ```
+
+> Why is `self` special?
+
+When `self` is the first argument in a method definition, Pythelix automatically passes the entity the method belongs to. You don't include it yourself when calling the method — it's filled in for you. This is the same convention as Python's instance methods.
+
+> Wait, `self` was my character before — now it's the NPC?
+
+Don't confuse the two: in the `py` command, `self` is a special variable that always refers to your character. In a method definition, `self` as the first argument means "the entity this method belongs to". They share the same name by convention, but they live in different scopes.
 
 ## Typed arguments
 
-But you can still do something like `animal.call("ok")`. Nothing prevents you from doing it. You'll get an error later, but this doesn't make it obvious what went wrong.
+You can still do something like `npc.greet("oops")`. Nothing prevents you from passing a string instead of a character. You'll get an error further down the line, but it won't be obvious what went wrong.
 
-Enter type hints: they're called type hints (or annotations) because that's the name in Python. In Pythelix, they're not mandatory (you can omit them), but if you specify them, that's a contract. A type hint is set after the argument name followed by a colon (and a space for readability). For example:
+Enter type hints: they're called type hints (or annotations) because that's the name in Python. In Pythelix, they're not mandatory (you can omit them), but if you specify them, that's a contract. A type hint is set after the argument name, followed by a colon (and a space for readability). For example:
 
 ```
 def add(a: int, b: int):
 ```
 
-In our case, we want to make sure the first argument is a client.
-
-Clients are entities. Every client has a parent of `generic/client`. So we need to enforce that the first argument inherits (directly or indirectly) from `generic/client`. Doing so is simple, especially if you're used to type hints in Python:
+In our case, we want to make sure the argument is a character. Characters are entities. Every character has a parent of `generic/character`. So we need to enforce that the argument inherits (directly or indirectly) from `generic/character`. Doing so is simple, especially if you're used to type hints in Python:
 
 ```
-def call(client: Entity["generic/client"]):
+def greet(self, character: Entity["generic/character"]):
 ```
 
 The syntax might look a bit strange at first: the type hint contains the class name (`Entity` with a capital `E`), followed by square brackets, with the entity key as a string, then a closing bracket.
 
 Pythelix will make sure:
 
-1. The first argument is an entity.
-2. The first argument inherits from `generic/client`.
+1. The argument is an entity.
+2. The argument inherits from `generic/character`.
 
-Here's our new method (only the method part is shown, not the full entity):
-
-```
-def call(client: Entity["generic/client"]):
-client.msg("The animal calls... don't know what.")
-```
-
-If you apply it (use the `apply()` function in your Pythello console) and try again:
+Here's our updated method:
 
 ```
->>> animal.call(5)
+!generic/npc!
+name = "stranger"
+
+def greet(self, character: Entity["generic/character"]):
+    character.msg(f"{self.name} says: Hello, traveler.")
+```
+
+If you apply it and try passing the wrong type:
+
+```
+> py npc = !generic/npc!
+> py npc.greet(5)
 Traceback most recent call last:
   <stdin>, line 1
-    animal.call(5)
+    npc.greet(5)
 
-TypeError: argument client expects value of type entity inheriting from "generic/client"
->>> client = !client/1!
->>> animal.call(client)
->>>
+TypeError: argument character expects value of type entity inheriting from "generic/character"
 ```
+
+With `self` (our character, which inherits from `generic/character`), the call succeeds as expected.
 
 ## Should you use type hints?
 
-You can definitely skip type hints or use the bare minimum (just a signature like before). But there are advantages to using type hints:
+You can definitely skip type hints or use the bare minimum. But there are advantages to using type hints:
 
 - They make debugging easier if something goes wrong.
 - They make error messages more explicit.
@@ -258,16 +165,108 @@ You can definitely skip type hints or use the bare minimum (just a signature lik
 
 For these reasons, it's highly recommended to use type hints as much as possible. Typing them might take slightly more time but can save much time when debugging.
 
-## Type hints and commands
+## Inheritance
 
-You might remember: in Pythelix, [commands are entities](./entities.md). The command behavior (the code executed when the command is called) is defined by methods. The most common method for commands is `run`, followed by `refine`, which is less used. Both methods take the parsed arguments as method arguments. So, if you have a command syntax like:
+So far, our generic NPC sends the same greeting to every character. But different NPCs should behave differently: a merchant should welcome customers, a guard should be stern.
+
+This is where inheritance shines. Let's create a merchant NPC:
 
 ```
-<object> from <source>
+!npc/merchant!
+parent = "generic/npc"
+name = "merchant"
+
+def greet(self, character: Entity["generic/character"]):
+    character.msg(f"{self.name} says: Welcome! Care to browse my wares?")
 ```
 
-... you'll get `object` and `source` as arguments.
+The merchant inherits from `generic/npc` (via `parent = "generic/npc"`). It overrides two things: the `name` attribute and the `greet` method.
 
-Should you use type hints? It might sound silly to type-hint information which is automatically sent to your command by Pythelix.
+Apply and test:
 
-But type hints can be useful here, too: if your command syntax changes and you forget to update the `run` method (yes, it happens), they will warn you or, at the very least, provide a useful error message if things go wrong. So while type hints on command methods might sound less useful, they can help. Using them is, as always, your choice.
+```
+> py merchant = !npc/merchant!
+> py merchant.greet(self)
+```
+
+You see:
+
+```
+merchant says: Welcome! Care to browse my wares?
+```
+
+And the generic NPC still works as before:
+
+```
+> py npc = !generic/npc!
+> py npc.greet(self)
+```
+
+```
+stranger says: Hello, traveler.
+```
+
+Same method name, different behavior — that's the power of method overriding.
+
+## Chain of calls
+
+In practice, you'll often want shared behavior in the parent with only small differences in children. Rather than copying the entire method, you can split the behavior: one method handles the shared logic and calls another method that each child can override.
+
+Let's refactor. The generic NPC will have two methods: `greet` handles the common logic (formatting and sending the message), while `greeting` returns the text itself:
+
+```
+!generic/npc!
+name = "stranger"
+
+def greet(self, character: Entity["generic/character"]):
+    character.msg(f"{self.name} says: {self.greeting()}")
+
+def greeting(self):
+    return "Hello, traveler."
+```
+
+Now the merchant only needs to override `greeting` — it inherits `greet` from the parent for free:
+
+```
+!npc/merchant!
+parent = "generic/npc"
+name = "merchant"
+
+def greeting(self):
+    return "Welcome! Care to browse my wares?"
+```
+
+We can add a guard just as easily:
+
+```
+!npc/guard!
+parent = "generic/npc"
+name = "guard"
+
+def greeting(self):
+    return "Move along, citizen."
+```
+
+Let's test all three:
+
+```
+> py npc = !generic/npc!
+> py npc.greet(self)
+stranger says: Hello, traveler.
+> py merchant = !npc/merchant!
+> py merchant.greet(self)
+merchant says: Welcome! Care to browse my wares?
+> py guard = !npc/guard!
+> py guard.greet(self)
+guard says: Move along, citizen.
+```
+
+Here's what happens when you call `merchant.greet(self)`:
+
+1. Pythelix looks for `greet` on `npc/merchant`. It's not there.
+2. It follows the parent chain to `generic/npc` and finds `greet`.
+3. `greet` calls `self.greeting()`. Since `self` is the merchant, Pythelix looks for `greeting` on `npc/merchant` — and finds it there.
+4. The merchant's `greeting` returns its custom text.
+5. Back in `greet`, the result is formatted and sent to the character.
+
+This is the chain of calls: the parent's `greet` method delegates to `greeting`, which each child can override independently. You write the shared logic once and only customize what differs. As your game grows, this pattern saves a lot of repetition.

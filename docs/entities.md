@@ -20,10 +20,10 @@ Attributes are easier to understand: they are simply named data values on your e
 Here is an example of [a worldlet file](./worldlets.md):
 
 ```
-!bakery!
-parent = "room"
+!room/bakery!
+parent = "generic/room"
 title = "A bakery"
-description = """
+description = Description("""
 The warm, inviting scent of freshly baked bread and sweet pastries fills
 the air upon entering this cozy little shop. A fine dusting of flour clings
 lightly to the wooden floorboards and countertops. Shelves and display cases
@@ -32,10 +32,10 @@ and confections in all shapes and sizes. Icing glistens under soft lighting,
 while nuts, berries, and chocolate chips adorn many of the treats with artistic
 precision. At the back of the shop, an antique wooden cash register rests
 atop a counter, its brass details dulled slightly with age and use.
-"""
+""")
 ```
 
-For now, note that an entity begins with a line between exclamation marks (`!bakery!`). All attributes follow this syntax:
+For now, note that an entity begins with a line between exclamation marks (`!room/bakery!`). All attributes follow this syntax:
 
     attribute_name = attribute_value
 
@@ -102,7 +102,7 @@ On the other hand, there are issues with modeling exits as entities:
 What alternatives do we have? We can just set exits on the room as an attribute:
 
 ```
-!bakery!
+!room/bakery!
 title = "A bakery"
 description = "..."
 exits = {

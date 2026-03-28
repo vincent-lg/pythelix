@@ -22,27 +22,3 @@ def look(self, viewer: Entity):
     description = self.description.format_for(viewer)
     lines.extend(description.splitlines())
     return "\n".join(lines)
-
-!room/bakery!
-parent = "generic/room"
-title = "A bakery"
-description = Description("""
-The warm, inviting scent of freshly baked bread and sweet pastries fills
-the air upon entering this cozy little shop. A fine dusting of flour clings
-lightly to the wooden floorboards and countertops. Shelves and display cases
-brim with golden-baked goods—loaves of crusty bread, delicate pastries,
-and confections in all shapes and sizes. Icing glistens under soft lighting,
-while nuts, berries, and chocolate chips adorn many of the treats with artistic
-precision.
-
-At the back of the shop, an antique wooden cash register rests
-atop a counter, its brass details dulled slightly with age and use.
-""")
-
-!room/sidewalk!
-parent = "generic/room"
-title = "The sidewalk"
-description = Description("""
-This is just a bare, dumb sidewalk with tons of cracks in the concrete.
-Fascinating, isn't it?
-""")

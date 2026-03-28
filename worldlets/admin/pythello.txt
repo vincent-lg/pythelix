@@ -1,11 +1,30 @@
 !command/pythello!
-parent = "generic/char_command"
+parent = "generic/admin_command"
 name = "pythello"
-syntax = ""
+category = "Administrator"
+syntax = "<text>"
 
-def run(character):
-    character.game_modes.add("menu/pythello", character.id)
-    character.msg("Pythello console")
+def run(character, text):
+    console = getattr(character, "pycode", None)
+
+    if console is None:
+        character.pycode = code.Console({"self": character, "location": character.location})
+    endif
+
+    result = character.pycode.push(text)
+    if result["status"] == "complete":
+        value = result["value"]
+        if value is not None:
+            character.msg(value)
+        endif
+    elif result["status"] == "need_more":
+        character.msg("...")
+    elif result["status"] == "error":
+        character.msg(result["error"])
+    endif
+
+    #character.game_modes.add("menu/pythello", character.id)
+    #character.msg("Pythello console")
 
 !menu/pythello!
 parent = "generic/menu"

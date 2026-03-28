@@ -1,11 +1,11 @@
-!StatsHandler!
-parent = "SubEntity"
-
-def __init__(a: int):
-self.a = a
-
 !generic/character!
+permissions = {}
+
 def msg(self, text):
-for client in clients.controlling(self):
-    client.msg(text)
-done
+    for client in clients.controlling(self):
+        client.msg(text)
+    done
+
+!generic/player!
+parent = "generic/character"
+permissions = {"player"}

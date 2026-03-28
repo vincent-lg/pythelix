@@ -197,7 +197,7 @@ Of course, we can do many powerful things with Pythello, but the principle will 
 
 ### Entities
 
-Pythelix uses two important concepts: one is [entities](../entities.md).
+Pythelix uses two important concepts: one is [entities](./entities.md).
 
 An entity in Pythelix is a piece of the world or the gameplay. A room is an entity. A NPC is an entity. A character is an entity. So are more surprising things, like menus, commands... and even clients (individual connections). If you are familiar with LambdaMOO, you can think of entities as objects: they have pretty much the same behavior, though the term entities has been chosen to avoid confusion.
 
@@ -246,7 +246,7 @@ Let's examine the concept more closely with worldlets.
 
 ### Worldlets
 
-A [worldlet](../worldlets.md) is just a file (a text file). It specifies the entities that should always be present. Maybe you didn't wonder where the `room/bakery` entity came from: the answer is from a worldlet.
+A [worldlet](./worldlets.md) is just a file (a text file). It specifies the entities that should always be present. Maybe you didn't wonder where the `room/bakery` entity came from: the answer is from a worldlet.
 
 Specifically: open the `worldlets` directory.
 
@@ -451,7 +451,7 @@ Try it a few times — you'll get different results each time. You should also s
 
 This is the general pattern for adding behavior in Pythelix: define an entity in a worldlet, add methods to it, apply, and test. Methods are inherited just like attributes: if you define a parent command with shared behavior, all child commands get it for free. You only override what needs to be different.
 
-To learn more about methods (arguments, type hints, return types, default values), see the [methods documentation](../methods.md).
+To learn more about methods (arguments, type hints, return types, default values), see the [methods documentation](./methods.md).
 
 ## Wehre to go from here?
 
@@ -461,16 +461,18 @@ So you have enough knowledge to pick a particular topic that interests you. Each
 
 Explore one of these tutorials freely, in the order you like:
 
-- [Adding a working command](./command.md): learn to add a command and handle common use cases (commands with arguments, commands that pause...).
-- [Understanding methods and nested method calls](./method.md): examples to better understand how methods work and what their role is.
+- [All about commands](./commands.md): learn to add a command and handle common use cases (commands with arguments, commands that pause...).
+- [Read more about entities](./entitiess.md): a more thorough explanation about entities including some less-known concepts (virtual entities, sub-entities...).
+- [Read more about worldlets](./worldlets.md): a more detailed explanation of worldlets syntax for curiosity's sake.
+- [Understanding methods and nested method calls](/methods.md): examples to better understand how methods work and what their role is.
 - [Adding custom messages depending on who views the player](./names.md): learn how to have entity names (like player names) that are different depending on who views them.
-- [Understanding menus](./menu.md): how to add, update and extend the login menus or in-game menus.
+- [Understanding menus](./menus.md): how to add, update and extend the login menus or in-game menus.
 - [Creating, changing, removing the prompt](./prompt.md): learn how to customize the prompt (the line that appears under every message).
 - [Matching and searching](./match.md): learn how to search in a room or in the entire world using simple methods.
 - [Using game modes to handle parallel game environments](./modes.md): learn about game modes and how to use them to have several in-game menus opened at the same time (useful, in particular for builders).
-- [Manipulating real and game-specific time](../time.md): learn how to handle real time and game-specific time.
-- [Stackable entities for coins, bills, crafting resources](./stackable.md): learn how to handle entities that are meant to be stacked in great quantity (not unique), particularly useful for coins.
+- [Manipulating real and game-specific time](./time.md): learn how to handle real time and game-specific time.
+- [Stackable entities for coins, bills, crafting resources](./stackables.md): learn how to handle entities that are meant to be stacked in great quantity (not unique), particularly useful for coins.
 - [Randomly-generated strings for realism](./rangen.md): learn how to use rangen to create random phone numbers, licence plates, Social security fake codes and so on.
 - [Handling passwords safely](./password.md): learn how to manipulate passwords safely to avoid storing them directly in your entities.
 - [Understanding client and client controllers](./controls.md): learn about the transition between client (a connection) and a character (the controller).
-- [Altering encoding for a client](../encoding.md): learn how to alter the way accented characters appear for a single connection or for everyone (useful for some games using a non-English world).
+- [Altering encoding for a client](./encoding.md): learn how to alter the way accented characters appear for a single connection or for everyone (useful for some games using a non-English world).

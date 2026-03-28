@@ -12,7 +12,7 @@ This feature may seem simple, but the key point is "create and update". For exam
 
 > Why is this useful?
 
-Suppose you've created several rooms but repeatedly made the same spelling mistake in their descriptions. Normally, you'd have to manually update the description in each room—assuming you have an efficient way to edit them—one by one, which can be time-consuming.
+Suppose you've created several rooms but repeatedly made the same spelling error in their descriptions. Normally, you'd have to manually update the description in each room—assuming you have an efficient way to edit them—one by one, which can be time-consuming.
 
 If your rooms are defined in worldlets, you only need to open the relevant files in your favorite editor, perform a "find and replace" (most editors support this across multiple files), then save and apply the worldlets. Voilà!
 
@@ -38,42 +38,58 @@ These strategies illustrate how worldlets support collaboration.
 
 Worldlets follow specific rules and are intended primarily for world deployment (think lore only, not the complete game). For example, player accounts are created in your database and should not be included in worldlets. They are not backups; they exist to simplify world deployment.
 
+<details markdown="1">
+<summary>Explain the difference between worldlet and database in details</summary>
+
+The database is a tool to save your game. When you modify an entity (say, a room), you save this modification in the database. When you create a player account, you do so in the database.
+
+Worldlets are just files: for each entry in a worldlet, the game asks: "does this entity already exist in database? If not, create it. If so, update it".
+
+That's why player accounts aren't found in the worldlet: players create their account in game. The worldlet knows nothing about which player accounts exist. It contains menus, commands, rooms, objects, NPCs and probably other things, but it doesn't store everything from a game: it's not a storage. The database stores. The worldlet is applied to affect storage. Never the other way around.
+
+If you are confused, think of worldlets as blueprints: they don't hold the game but help to recreate it. A game, however, is everything which has been stored, not just a simple blueprint.
+</details>
+
 ## Where to find worldlets and how to edit them?
 
 Worldlets are located in the server code under the `worldlets` directory. This directory contains both subdirectories and `.txt` files. When the server starts, it reads every worldlet file in the directory and its subdirectories and applies them.
 
 By default, the directory includes some example files:
 
-- `commands.txt`: worldlet containing your commands. You can split this into multiple files if needed.
-- `demo.txt`: a basic demonstration with rooms and characters.
-- `base.txt`: basic creation of parent entities.
+- `command.txt`: worldlet containing your commands. You can split this into multiple files if needed.
+- `room.txt`: worldlet containing your rooms.
+- `character.txt`: worldlet containing character-related entities.
+- `menu.txt`: worldlet containing menus (login, account creation, etc.).
+- `admin`: directory containing worldlets for administrators.
 
 Your game world consists of [entities](./entities.md). An entity is a single piece of information (a room, item, character, vehicle, etc.). Entities can be practical or logical (e.g., a race, event, skill, or spell).
 
-Here's an example from `demo.txt` (open `worldlets/demo.txt` in your favorite editor):
+Here's an example from `room.txt` (open `worldlets/room.txt` in your favorite editor):
 
 ```
-!bakery!
-parent = "room"
+!room/bakery!
+parent = "generic/room"
 title = "A bakery"
-description = """
+description = Description("""
 The warm, inviting scent of freshly baked bread and sweet pastries fills
 the air upon entering this cozy little shop. A fine dusting of flour clings
 lightly to the wooden floorboards and countertops. Shelves and display cases
 brim with golden-baked goods—loaves of crusty bread, delicate pastries,
 and confections in all shapes and sizes. Icing glistens under soft lighting,
 while nuts, berries, and chocolate chips adorn many of the treats with artistic
-precision. At the back of the shop, an antique wooden cash register rests
+precision.
+
+At the back of the shop, an antique wooden cash register rests
 atop a counter, its brass details dulled slightly with age and use.
-"""
+""")
 ```
 
 Let's break it down:
 
-- The entity key is between exclamation marks at the top (`!bakery!` here). Each entity key is unique (defining an entity with an existing key updates it). Sometimes, using a path-like key such as `!room/demo/bakery!` helps avoid conflicts. Here, `room/demo/bakery` is the key and slashes act as path separators; you can use another separator as long as you're consistent.
-- `parent = "room"` indicates that this entity has a parent with key `"room"` (defined elsewhere, e.g., `worldlets/base.txt`). To learn more, see the [entities documentation](./entities.md).
+- The entity key is between exclamation marks at the top (`!room/bakery!` here). Each entity key is unique (defining an entity with an existing key updates it). Using a path-like key such as `!room/bakery!` helps avoid conflicts. Here, `room/bakery` is the key and the slash acts as a path separator; you can use another separator as long as you're consistent.
+- `parent = "generic/room"` indicates that this entity has a parent with key `"generic/room"` (defined elsewhere). To learn more, see the [entities documentation](./entities.md).
 - `title = "A bakery"` sets the `title` attribute to `"A bakery"`. Note the quotation marks—they are needed because attribute values can be various types (text, numbers, lists, other entities, etc.).
-- `description = """ ... """` uses triple quotes to define a multiline string as the value of the `description` attribute.
+- `description = Description(""" ... """)` uses `Description()` to create a description object from a multiline string (triple quotes). This is a bit more advanced, but the point is, it creates an attribute on the room.
 
 A single file can contain many entities (noted by multiple `!entity key!` declarations).
 
@@ -87,9 +103,9 @@ To recap, the syntax for attributes is:
 
 Attribute values accept any value valid in [Pythello](./scripting.md), the scripting language. For example:
 
-- `price = 300` — integer value 300
-- `volume = 15.8` — floating-point number 15.8
-- `title = "some title"` — string
+- `price = 300` — integer value 300.
+- `volume = 15.8` — floating-point number 15.8.
+- `title = "some title"` — string.
 - `tips = """ ... on multiple lines ... """` — multiline string (triple quotes on opening and closing lines):
 
   ```txt
@@ -100,12 +116,12 @@ Attribute values accept any value valid in [Pythello](./scripting.md), the scrip
   ```
 
 - `friend = !room/demo/fruit_stand!` — reference to another entity with key `room/demo/fruit_stand`. The `!entity key!` syntax is a Pythello shortcut.
-- `food = ["white bread", "cookie", "croissant"]` — a list of strings (can be multiline, but the opening bracket must be on the starting line)
-- `info = {"price": 31, "weight": 72}` — a dictionary
+- `food = ["white bread", "cookie", "croissant"]` — a list of strings (can be multiline, but the opening bracket must be on the starting line).
+- `info = {"price": 31, "weight": 72}` — a dictionary.
 
 and so on.
 
-All valid scripting values (numbers, strings, lists, dictionaries, entities, function calls, operations, etc.) are valid attributes. Attributes are evaluated when the worldlet is applied, so be cautious with function calls. For example:
+All valid scripting values (numbers, strings, lists, dictionaries, entities, function calls, operations, times, durations, etc.) are valid attributes. Attributes are evaluated when the worldlet is applied, so be cautious with function calls. For example:
 
 ```
 choice = random.randint(1, 6)
@@ -129,30 +145,38 @@ attr1 = value1
 attr2 = value2
 ...
 
-def method_name:
-code on
-several
-lines
+def method_name():
+    code on
+    several
+    lines
 
-def another_method:
-Some
-other
-code
-...
+def another_method(value):
+    Some
+    other
+    code
+    ...
 ```
 
-To define a method, use the `def` keyword followed by the method name and a colon (e.g., `def greet:`), followed by the method's code on one or more lines. When Pythelix sees a line starting a new entity (`!another entity!`), starting a new method (`def another_method:`), or end-of-file, and considers the method body complete, it adds the method to the entity.
+To define a method, use:
+
+- The `def` keyword.
+- A space.
+- The method name;
+- The method arguments between parents (`()` to mean no argument).
+- A colon.
+
+Example: `def greet():`, followed by the method's code on one or more lines. When Pythelix sees a line starting a new entity (`!another entity!`), starting a new method (`def another_method():`), or end-of-file, and considers the method body complete, it adds the method to the entity.
 
 Example:
 
-```txt
-!bakery!
-parent = "room"
+```
+!room/bakery!
+parent = "generic/room"
 title = "A bakery"
 
-def spill:
-author.msg("You swipe the merchandise and throw it to the ground. How rude!")
-author.announce(f"{author} swipes the merchandise and throws it to the ground. Really!")
+def spill(author):
+    author.msg("You swipe the merchandise and throw it to the ground. How rude!")
+    author.location.announce(f"{author} swipes the merchandise and throws it to the ground. Really!")
 ```
 
 This `spill` method sends a message to the action's author and announces it to the room (excluding the author).
@@ -180,10 +204,10 @@ Now, `min` and `max` are expected to be integers. If called with incorrect argum
 Arguments can also be entities, with type hints:
 
 ```
-def spill(author: Entity["player"]):
+def spill(author: Entity["generic/player"]):
 ```
 
-This means `spill` expects `author` to be an entity whose parent (or ancestor) key is `"player"`. This syntax resembles Python’s typing but is designed to avoid confusion.
+This means `spill` expects `author` to be an entity whose parent (or ancestor) key is `"generic/player"`. This syntax resembles Python’s typing but is designed to avoid confusion.
 
 Specifying type hints is strongly recommended. You can also specify a return type:
 
@@ -195,11 +219,26 @@ This method takes two integers and returns a string, aiding error detection.
 
 Default argument values can be set with `=`:
 
-```txt
+```
 def roll_dice(min: int = 1, max: int = 6) -> str:
 ```
 
 Calling this method with no arguments uses defaults; you can override one or both arguments.
+
+Contrary to Python, the indentation is not necessary. The documentation usually provides it for clarity. But nothing prevents you from writing:
+
+```
+def spill(author, number):
+if number == 1:
+author.msg("You swipe the merchandise and throw it to the ground. How rude!")
+author.location.announce(f"{author} swipes the merchandise and throws it to the ground. Really!")
+else:
+author.msg("You swipe the merchandise and throw absolutely everything to the ground. How rude!")
+author.location.announce(f"{author} swipes the merchandise and throws everything to the ground. Really!")
+endif
+```
+
+That's why closing keywords (like `endif` and `done`) are necessary. The indentation in Pythello is not required.
 
 See [the methods documentation](./methods.md) for more details on syntax.
 
@@ -207,7 +246,13 @@ See [the methods documentation](./methods.md) for more details on syntax.
 
 As mentioned, all worldlets are applied automatically when the server starts. Often, though, you'd want to apply one or more worldlets without restarting.
 
-This is easy: Pythelix provides the `apply` (or `apply.bat`) scripts for this purpose.
+There are several options:
+
+From a logged-in administrator (probably the first character you created in Pythelix), you can simply enter the `apply` command.
+
+    > apply
+
+Alternatively, Pythelix provides the `apply` (or `apply.bat`) scripts for this purpose.
 
 If running the binary version, look inside the `bin` directory for `apply` (Unix) and `apply.bat` (Windows). You can use these in the command line, specifying the file or directory to apply:
 
@@ -215,7 +260,7 @@ If running the binary version, look inside the `bin` directory for `apply` (Unix
 ./apply path/to/file/or/directory
 ```
 
-The path can point to a single `.txt` file or a directory (all worldlets inside will be applied). Upon success, the script reports how many entities were created or updated. If errors occur, Pythelix still tries to apply as many worldlets as possible.
+The path can point to a single `.txt` file or a directory (all worldlets inside will be applied). Upon success, the script reports how many entities were created or updated. If errors occur, Pythelix will not apply but will report the problem and, whenever possible, the line.
 
 You can also double-click on the script (or execute it with no argument). All worldlets will be applied.
 
@@ -225,6 +270,10 @@ If running from source, run:
 mix apply path/to/worldlet
 ```
 
-In both cases, the server must be running (`server` or `server.bat` for the binary, or `mix phx.server` from source). `apply` queues the task in the server. Worldlets are applied between commands, ensuring the game remains consistent during the process.
+In both cases, the server must be running (`./pythelix` or `pythelix.bat` for the binary, or `./dev` / `dev.bat` from source). `apply` queues the task in the server. Worldlets are applied between commands, ensuring the game remains consistent during the process.
 
 If you have started a Pythello console (with `script`, `script.bat` or `mix script`), you can also use the `apply` function. It's a builtin, so you can type in your console `apply()` to apply all worldlets (note the parenthesis).
+
+That also means you can, from the game (with an administrator account), run it like this:
+
+    > py apply()
