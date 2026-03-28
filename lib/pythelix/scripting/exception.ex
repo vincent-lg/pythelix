@@ -22,6 +22,7 @@ defmodule Pythelix.Scripting.Exception do
     RuntimeError => Exception,
     SyntaxError => Exception,
     StopIteration => Exception,
+    RefineError => Exception,
     Exception => BaseException
   }
 

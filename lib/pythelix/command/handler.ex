@@ -8,7 +8,7 @@ defmodule Pythelix.Command.Handler do
   alias Pythelix.Method
   alias Pythelix.Scripting.Interpreter.Script
   alias Pythelix.Scripting.Object.Dict
-  alias Pythelix.Scripting.{Runner, Store}
+  alias Pythelix.Scripting.{Runner, Store, Traceback}
 
   require Logger
 
@@ -87,9 +87,16 @@ defmodule Pythelix.Command.Handler do
     execute_method(command, "run", script, client, start_time, owner_entity)
   end
 
-  def handle_refine_completion(:error, _script, command, client, _start_time, owner_entity) do
-    # Refine failed, handle error
-    handle_refine_error(command, "", client, owner_entity)
+  def handle_refine_completion(:error, script, command, client, _start_time, owner_entity) do
+    case script.error do
+      %Traceback{exception: RefineError} ->
+        # RefineError: silently stop, don't call run or report an error
+        :ok
+
+      _ ->
+        # Other error: handle as refine error
+        handle_refine_error(command, "", client, owner_entity)
+    end
   end
 
   @doc """

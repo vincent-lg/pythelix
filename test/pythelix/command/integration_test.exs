@@ -496,6 +496,40 @@ defmodule Pythelix.Command.IntegrationTest do
       assert_receive {:message, msg}, 1000
       assert String.contains?(msg, "Refine failed")
     end
+
+    test "RefineError in refine silently stops without calling run", %{
+      client: client,
+      menu: menu
+    } do
+      {:ok, syntax_pattern, "", _, _, _} = Parser.syntax("<message>")
+
+      {:ok, _} = Record.create_entity(key: "command/refine_stop", virtual: true)
+      {_, args} = Signature.constraints("refine(client, message)")
+
+      Record.set_method(
+        "command/refine_stop",
+        "refine",
+        args,
+        "client.msg(f'Cannot find {message}.')\nraise RefineError"
+      )
+
+      {_, run_args} = Signature.constraints("run(client, message)")
+      Record.set_method("command/refine_stop", "run", run_args, "client.msg('run was called')")
+
+      Record.set_attribute("command/refine_stop", "syntax_pattern", syntax_pattern)
+
+      existing_commands = Record.get_attribute(menu, "commands")
+      updated_commands = Map.put(existing_commands, "refine_stop", "command/refine_stop")
+      Record.set_attribute("menu/test", "commands", updated_commands)
+
+      run_command_via_handler(client, menu, "refine_stop sword")
+
+      # The message from refine (before the raise) should be received
+      assert_receive {:message, "Cannot find sword."}, 1000
+
+      # run should NOT be called, so no "run was called" message
+      refute_receive {:message, "run was called"}, 300
+    end
   end
 
   describe "command permission (can_run)" do
