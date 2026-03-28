@@ -690,6 +690,6 @@ As said, matching is a complex topic and this is just an overview. To learn more
 
   This design choice enhances clarity and maintainability without limiting your ability to build rich interactions.
 
-</details>
+  </details>
 
 This covers the basics of creating and handling commands in Pythelix, including attributes, methods, syntax, argument parsing, and refinements. For more detailed scripting, see the [scripting documentation](./scripting.md). You might also want to check the [documentation on methods](./methods.md) which explains in greater details the concept of method signature and default arguments.
