@@ -68,25 +68,3 @@ def run(character):
     client = clients.owning(character)
     client.msg("Good bye!")
     client.disconnect()
-
-!command/eye!
-parent = "generic/char_command"
-category = "General"
-name = "eye"
-
-def run(character):
-    colors = ("blue", "green", "brown", "orange", "black", "white")
-    choices = {}
-    prompt = "Enter the eye color as a number:"
-    i = 1
-
-    for color in colors:
-        choices[str(i)] = color
-        prompt += f"\n  {i} for {color}"
-        i += 1
-    done
-
-    prompt += f"\nEnter a number between 1 and {len(colors)}:"
-    retry = "Enter a valid number."
-    color = choice(character, choices, prompt=prompt, retry=retry)
-    character.msg(f"You have chosen the eye color {color}.")

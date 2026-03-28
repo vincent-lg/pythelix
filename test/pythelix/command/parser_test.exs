@@ -105,4 +105,22 @@ defmodule Pythelix.Command.ParserTest do
       assert obtained == {:ok, expected}
     end
   end
+
+  describe "parse/2 with a simple string arg pattern" do
+    setup do
+      %{pattern: [arg: [{:string, "message"}]]}
+    end
+
+    test "parses a single-character argument", %{pattern: pattern} do
+      assert Parser.parse(pattern, "a") == {:ok, %{"message" => "a"}}
+    end
+
+    test "parses a multi-character argument", %{pattern: pattern} do
+      assert Parser.parse(pattern, "hello world") == {:ok, %{"message" => "hello world"}}
+    end
+
+    test "reports missing argument for empty input", %{pattern: pattern} do
+      assert Parser.parse(pattern, "") == {:mandatory, "message"}
+    end
+  end
 end

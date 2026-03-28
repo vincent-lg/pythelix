@@ -218,8 +218,9 @@ defmodule Pythelix.Command.Parser do
   defp find_gaps(anchors, len) do
     [{0, 0, :start} | anchors ++ [{len, len, :end}]]
     |> Enum.chunk_every(2, 1, :discard)
-    |> Enum.map(fn [{_start1, end1, _}, {start2, _end2, _}] ->
-      if end1 + 1 < start2, do: [end1, start2], else: nil
+    |> Enum.map(fn [{_start1, end1, tag}, {start2, _end2, _}] ->
+      min_gap = if tag == :start, do: 0, else: 1
+      if end1 + min_gap < start2, do: [end1, start2], else: nil
     end)
     |> Enum.reject(&is_nil/1)
   end
