@@ -27,13 +27,13 @@ This directory contains several files to start the game. You can:
 In any case:
 
 1. First, run `migrate.bat`: this script runs the database migrations. If you check in the parent directory, you might see a file called `pythelix.db`. This is your database (you don't need to open it).
-2. Then, start the game, by running `pythelix.bat`. This should start the server. You should see several messages to indicate the server has started.
+2. Then, start the game, by running `server.bat`. This should start the server. You should see several messages to indicate the server has started.
 
 Now you can open your favorite MUD client (zMUD, VIPMud, CocoMUD...) and connect to hostname `localhost`, port 4000.
 
 You should see the welcome message for Pythelix.
 
-To shutdown the server, just go back to the console where you started `pythelix.bat` and press CTRL + C twice (maybe three times on Windows, depending).
+To shutdown the server, just go back to the console where you started `server.bat` and press CTRL + C twice (maybe three times on Windows, depending).
 
 </details>
 
@@ -55,7 +55,7 @@ The archive contains several directories, like `bin`, `lib`, `release`, `worldle
 This directory contains several files to start the game.
 
 1. First, run `./migrate`: this script runs the database migrations. If you check in the parent directory, you might see a file called `pythelix.db`. This is your database (you don't need to open it).
-2. Then, start the game, by running `./pythelix`. This should start the server. You should see several messages to indicate the server has started.
+2. Then, start the game, by running `./server`. This should start the server. You should see several messages to indicate the server has started.
 
 Now you can open your favorite MUD client (Telnet, TinTin++...) and connect to hostname `localhost`, port 4000.
 
@@ -63,7 +63,7 @@ Now you can open your favorite MUD client (Telnet, TinTin++...) and connect to h
 
 You should see the welcome message for Pythelix.
 
-To shutdown the server, just go back to the console where you started `./pythelix` and press CTRL + C twice.
+To shutdown the server, just go back to the console where you started `./server` and press CTRL + C twice.
 
 </details>
 

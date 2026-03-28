@@ -270,7 +270,7 @@ If running from source, run:
 mix apply path/to/worldlet
 ```
 
-In both cases, the server must be running (`./pythelix` or `pythelix.bat` for the binary, or `./dev` / `dev.bat` from source). `apply` queues the task in the server. Worldlets are applied between commands, ensuring the game remains consistent during the process.
+In both cases, the server must be running (`./server` or `server.bat` for the binary, or `./dev` / `dev.bat` from source). `apply` queues the task in the server. Worldlets are applied between commands, ensuring the game remains consistent during the process.
 
 If you have started a Pythello console (with `script`, `script.bat` or `mix script`), you can also use the `apply` function. It's a builtin, so you can type in your console `apply()` to apply all worldlets (note the parenthesis).
 
