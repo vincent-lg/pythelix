@@ -453,7 +453,7 @@ This is the general pattern for adding behavior in Pythelix: define an entity in
 
 To learn more about methods (arguments, type hints, return types, default values), see the [methods documentation](./methods.md).
 
-## Wehre to go from here?
+## Where to go from here?
 
 You've learned how to start the Pythelix server, how to modify and add entities (rooms and commands in particular), how to manipulate attributes and methods. The good news is: most of Pythelix uses these very concepts.
 
