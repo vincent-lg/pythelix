@@ -123,4 +123,68 @@ defmodule Pythelix.Command.ParserTest do
       assert Parser.parse(pattern, "") == {:mandatory, "message"}
     end
   end
+
+  describe "parse/2 with delimiter pattern" do
+    setup do
+      # Pattern for: <object>, <container>
+      %{pattern: [arg: [{:string, "object"}], delimiter: [","], arg: [{:string, "container"}]]}
+    end
+
+    test "parses with delimiter and spaces", %{pattern: pattern} do
+      assert Parser.parse(pattern, "red apple, fig tree") ==
+               {:ok, %{"object" => "red apple", "container" => "fig tree"}}
+    end
+
+    test "parses with delimiter and no spaces", %{pattern: pattern} do
+      assert Parser.parse(pattern, "red apple,fig tree") ==
+               {:ok, %{"object" => "red apple", "container" => "fig tree"}}
+    end
+
+    test "parses with delimiter and extra spaces", %{pattern: pattern} do
+      assert Parser.parse(pattern, "red apple , fig tree") ==
+               {:ok, %{"object" => "red apple", "container" => "fig tree"}}
+    end
+
+    test "parses single-char args around delimiter", %{pattern: pattern} do
+      assert Parser.parse(pattern, "a,b") == {:ok, %{"object" => "a", "container" => "b"}}
+    end
+
+    test "parses single-char args with spaces around delimiter", %{pattern: pattern} do
+      assert Parser.parse(pattern, "a, b") == {:ok, %{"object" => "a", "container" => "b"}}
+    end
+  end
+
+  describe "syntax classification" do
+    alias Pythelix.Command.Syntax.Parser, as: SyntaxParser
+
+    test "multi-char token surrounded by spaces is a keyword" do
+      {:ok, pattern, "", _, _, _} = SyntaxParser.syntax("<object> from <container>")
+      pattern = SyntaxParser.classify("<object> from <container>", pattern)
+      assert Enum.any?(pattern, &match?({:keyword, ["from"]}, &1))
+    end
+
+    test "single-char token surrounded by spaces is a keyword" do
+      {:ok, pattern, "", _, _, _} = SyntaxParser.syntax("<object> f <container>")
+      pattern = SyntaxParser.classify("<object> f <container>", pattern)
+      assert Enum.any?(pattern, &match?({:keyword, ["f"]}, &1))
+    end
+
+    test "single-char token not surrounded by spaces is a delimiter" do
+      {:ok, pattern, "", _, _, _} = SyntaxParser.syntax("<object>, <container>")
+      pattern = SyntaxParser.classify("<object>, <container>", pattern)
+      assert Enum.any?(pattern, &match?({:delimiter, [","]}, &1))
+    end
+
+    test "single-char token adjacent on both sides is a delimiter" do
+      {:ok, pattern, "", _, _, _} = SyntaxParser.syntax("<object>f<container>")
+      pattern = SyntaxParser.classify("<object>f<container>", pattern)
+      assert Enum.any?(pattern, &match?({:delimiter, ["f"]}, &1))
+    end
+
+    test "multi-char token adjacent on both sides is still a keyword" do
+      {:ok, pattern, "", _, _, _} = SyntaxParser.syntax("<object>fr<container>")
+      pattern = SyntaxParser.classify("<object>fr<container>", pattern)
+      assert Enum.any?(pattern, &match?({:keyword, ["fr"]}, &1))
+    end
+  end
 end

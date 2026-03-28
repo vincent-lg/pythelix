@@ -25,6 +25,11 @@ defmodule Pythelix.Command.Parser do
     split_keywords(rest, string, acc)
   end
 
+  defp split_keywords([{:delimiter, [d]} | rest], string, acc) do
+    acc = find_delimiter(string, d, acc)
+    split_keywords(rest, string, acc)
+  end
+
   defp split_keywords([{:opt, branch} | rest], string, acc) do
     {:ok, acc} = split_keywords(branch, string, acc)
     split_keywords(rest, string, acc)
@@ -56,6 +61,16 @@ defmodule Pythelix.Command.Parser do
           :nomatch ->
             acc
         end
+    end
+  end
+
+  defp find_delimiter(string, delim, acc) do
+    case :binary.match(string, delim) do
+      {start, len} ->
+        [{start, start + len, {:delimiter, delim}} | acc]
+
+      :nomatch ->
+        acc
     end
   end
 
@@ -154,6 +169,7 @@ defmodule Pythelix.Command.Parser do
     branch
     |> Enum.flat_map(fn
       {:keyword, [kw]} -> [kw]
+      {:delimiter, [d]} -> [d]
       {:opt, inner} -> collect_branch_keywords(inner)
       _ -> []
     end)
@@ -162,6 +178,7 @@ defmodule Pythelix.Command.Parser do
   defp keyword_matched?(kw, anchors) do
     Enum.any?(anchors, fn
       {_start, _end, {:keyword, matched_kw}} -> matched_kw == kw
+      {_start, _end, {:delimiter, matched_d}} -> matched_d == kw
       _ -> false
     end)
   end
@@ -172,6 +189,7 @@ defmodule Pythelix.Command.Parser do
     anchors
     |> Enum.filter(fn
       {_start, _end, {:keyword, kw}} -> kw in keywords
+      {_start, _end, {:delimiter, d}} -> d in keywords
       {_start, _end, _anything} -> false
       {_start, _end, _anything, _data} -> false
     end)
@@ -219,7 +237,13 @@ defmodule Pythelix.Command.Parser do
     [{0, 0, :start} | anchors ++ [{len, len, :end}]]
     |> Enum.chunk_every(2, 1, :discard)
     |> Enum.map(fn [{_start1, end1, tag}, {start2, _end2, _}] ->
-      min_gap = if tag == :start, do: 0, else: 1
+      min_gap =
+        case tag do
+          :start -> 0
+          {:delimiter, _} -> 0
+          _ -> 1
+        end
+
       if end1 + min_gap < start2, do: [end1, start2], else: nil
     end)
     |> Enum.reject(&is_nil/1)

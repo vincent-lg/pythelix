@@ -44,7 +44,7 @@ defmodule Pythelix.Command.Syntax.Parser do
 
   defcombinatorp(
     :keyword_or_symbol,
-    utf8_string([not: ?\s, not: ?(, not: ?)], min: 1)
+    utf8_string([not: ?\s, not: ?(, not: ?), not: ?<, not: ?>, not: ?#], min: 1)
     |> tag(:keyword)
   )
 
@@ -89,4 +89,69 @@ defmodule Pythelix.Command.Syntax.Parser do
   )
 
   defparsec(:syntax, parsec(:full_syntax))
+
+  @doc """
+  Classify keywords vs delimiters in a parsed syntax pattern.
+
+  A token is a keyword if it is more than one character long OR surrounded
+  by spaces in the syntax string. Otherwise it is a delimiter.
+  """
+  def classify(syntax_string, tokens) do
+    {classified, _pos} = do_classify(syntax_string, tokens, 0)
+    classified
+  end
+
+  defp do_classify(_string, [], pos), do: {[], pos}
+
+  defp do_classify(string, [{:arg, [{:string, _}]} = token | rest], pos) do
+    pos = skip_spaces(string, pos)
+    {end_pos, 1} = :binary.match(string, ">", [{:scope, {pos, byte_size(string) - pos}}])
+    {rest_classified, final_pos} = do_classify(string, rest, end_pos + 1)
+    {[token | rest_classified], final_pos}
+  end
+
+  defp do_classify(string, [{:arg, [{:int, _}]} = token | rest], pos) do
+    pos = skip_spaces(string, pos)
+    {first_hash, 1} = :binary.match(string, "#", [{:scope, {pos, byte_size(string) - pos}}])
+    {second_hash, 1} = :binary.match(string, "#", [{:scope, {first_hash + 1, byte_size(string) - first_hash - 1}}])
+    {rest_classified, final_pos} = do_classify(string, rest, second_hash + 1)
+    {[token | rest_classified], final_pos}
+  end
+
+  defp do_classify(string, [{:keyword, [kw]} | rest], pos) do
+    pos = skip_spaces(string, pos)
+    kw_size = byte_size(kw)
+    after_pos = pos + kw_size
+
+    before_is_space = pos == 0 or :binary.at(string, pos - 1) == ?\s
+    after_is_space = after_pos >= byte_size(string) or :binary.at(string, after_pos) == ?\s
+
+    tag =
+      if kw_size > 1 or (before_is_space and after_is_space) do
+        :keyword
+      else
+        :delimiter
+      end
+
+    {rest_classified, final_pos} = do_classify(string, rest, after_pos)
+    {[{tag, [kw]} | rest_classified], final_pos}
+  end
+
+  defp do_classify(string, [{:opt, branch} | rest], pos) do
+    pos = skip_spaces(string, pos)
+    # Skip opening paren
+    {classified_branch, pos} = do_classify(string, branch, pos + 1)
+    # Skip closing paren
+    pos = skip_spaces(string, pos)
+    {rest_classified, final_pos} = do_classify(string, rest, pos + 1)
+    {[{:opt, classified_branch} | rest_classified], final_pos}
+  end
+
+  defp skip_spaces(string, pos) do
+    if pos < byte_size(string) and :binary.at(string, pos) == ?\s do
+      skip_spaces(string, pos + 1)
+    else
+      pos
+    end
+  end
 end

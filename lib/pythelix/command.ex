@@ -57,6 +57,7 @@ defmodule Pythelix.Command do
   defp build_pattern_for(command, syntax) do
     case Syntax.Parser.syntax(syntax) do
       {:ok, pattern, "", _, _, _} ->
+        pattern = Syntax.Parser.classify(syntax, pattern)
         Record.set_attribute(command.key, "syntax_pattern", pattern)
 
       error ->
