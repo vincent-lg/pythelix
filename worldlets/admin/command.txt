@@ -1,0 +1,29 @@
+!command/apply!
+parent = "generic/admin_command"
+name = "apply"
+syntax = ""
+category = "Administrator"
+
+def run(character):
+    character.msg(apply())
+
+!command/system!
+parent = "generic/admin_command"
+name = "system"
+syntax = ""
+category = "Administrator"
+
+def run(character):
+    text = f"""
+    System statistics:
+      Host processors: {stats.number_of_processors} (in {stats.number_of_schedulers} schedulers)
+      Erlang BEAM machine:
+        Total memory used: {stats.human_size(stats.memory_used)}
+        Number of processes: {stats.number_of_processes}
+        Number of ports: {stats.number_of_ports}
+        Number of active TCP connections: {stats.number_of_tcp_connections}
+      Pythello virtual machine:
+        Running scripts: {stats.number_of_scripts} using {stats.human_size(stats.memory_of_scripts)} of memory
+        Active references: {stats.number_of_references} using {stats.human_size(stats.memory_of_references)} of memory
+    """
+    character.msg(text)
