@@ -170,12 +170,13 @@ General
 Information
   help
 Administrator
-  pythello       system
+  apply          pythello       system
 ```
 
-The output can of course be different. The important point though is that... there aren't many commands. Especially administrator commands. We have two:
+The output can of course be different. The important point though is that... there aren't many commands. Especially administrator commands. We have three:
 
-- pythello: run Pythello code ;
+- apply: apply worldlets (see below);
+- pythello: run Pythello code;
 - system: see system information.
 
 You can run the system command. It gives quite technical details about the Pythelix system currently running. This information can become useful to debug or make sure the server isn't drowning under a lot of players.
@@ -320,11 +321,11 @@ Save the file. Nothing should happen. From your MUD client, if you query the tit
 "A bakery"
 ```
 
-... that's the old value. Now let's apply. From the MUD client, you can call the `apply()` function:
+... that's the old value. Now let's apply. From the MUD client, you can use the `apply` command:
 
 ```
-> py apply()
-"Worldlet applied from ...\\pythelix\\worldlets: 34 entities were added or updated."
+> apply
+Worldlet applied from ...\pythelix\worldlets: 34 entities were added or updated.
 > py location.title
 "A brightly-lit bakery"
 ```
@@ -435,7 +436,7 @@ Then comes the method:
 Save the file and apply the worldlet:
 
 ```
-> py apply()
+> apply
 ```
 
 Now you can test your new command:
