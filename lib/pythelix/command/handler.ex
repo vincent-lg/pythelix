@@ -218,10 +218,19 @@ defmodule Pythelix.Command.Handler do
         Pythelix.Game.Hub.mark_client_with_message(client_id, "Invalid command arguments.", pid)
 
       method ->
-        # Execute parse_error method asynchronously
-        %Script{id: Store.new_script(), bytecode: method.bytecode}
-        |> Script.write_variable("client", entity_for_script)
-        |> Script.write_variable("args", args)
+        keyword_vars = relevant_method_vars(%{"args" => args}, method)
+
+        Method.fetch_script(method)
+        |> Method.check_args(
+          method,
+          entity_positional_args(method, entity_for_script),
+          Dict.new(keyword_vars),
+          "#{command.key}, method parse_error"
+        )
+        |> then(fn {method_script, namespace} ->
+          Method.write_arguments(method_script, Enum.to_list(namespace))
+        end)
+        |> Script.write_variable("self", command)
         |> Runner.run(method.code, "parse_error", sync: true)
     end
   end
@@ -236,10 +245,19 @@ defmodule Pythelix.Command.Handler do
         Pythelix.Game.Hub.mark_client_with_message(client_id, "Command refinement failed.", pid)
 
       method ->
-        # Execute refine_error method asynchronously
-        %Script{id: Store.new_script(), bytecode: method.bytecode}
-        |> Script.write_variable("client", entity_for_script)
-        |> Script.write_variable("args", args)
+        keyword_vars = relevant_method_vars(%{"args" => args}, method)
+
+        Method.fetch_script(method)
+        |> Method.check_args(
+          method,
+          entity_positional_args(method, entity_for_script),
+          Dict.new(keyword_vars),
+          "#{command.key}, method refine_error"
+        )
+        |> then(fn {method_script, namespace} ->
+          Method.write_arguments(method_script, Enum.to_list(namespace))
+        end)
+        |> Script.write_variable("self", command)
         |> Runner.run(method.code, "refine_error", sync: true)
     end
   end
