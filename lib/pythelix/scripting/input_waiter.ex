@@ -12,7 +12,7 @@ defmodule Pythelix.Scripting.InputWaiter do
   """
 
   alias Pythelix.Scripting.Interpreter.Script
-  alias Pythelix.Scripting.Object.InputState
+  alias Pythelix.Scripting.Object.{Dict, InputState}
   alias Pythelix.Task.Persistent, as: Task
 
   require Logger
@@ -188,8 +188,6 @@ defmodule Pythelix.Scripting.InputWaiter do
     end)
   end
 
-  # --- private ---
-
   defp process_input(task, client_id, input) do
     input_state = task.script.input
 
@@ -198,13 +196,18 @@ defmodule Pythelix.Scripting.InputWaiter do
         resume_with_input(task, client_id, input)
         :handled
 
-      %InputState{choices: choices, error_msg: error_msg, client_pid: pid} ->
-        if input in choices do
-          resume_with_input(task, client_id, input)
-          :handled
-        else
-          Pythelix.Game.Hub.mark_client_with_message(client_id, error_msg, pid)
-          :handled
+      %InputState{choices: choices, error_msg: retry_msg, client_pid: pid} ->
+        case Dict.get(choices, input, :not_found) do
+          :not_found ->
+            if retry_msg do
+              Pythelix.Game.Hub.mark_client_with_message(client_id, retry_msg, pid)
+            end
+
+            :handled
+
+          value ->
+            resume_with_input(task, client_id, value)
+            :handled
         end
     end
   end

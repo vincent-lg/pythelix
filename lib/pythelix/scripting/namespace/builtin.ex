@@ -287,26 +287,32 @@ defmodule Pythelix.Scripting.Namespace.Builtin do
 
   deffun choice(script, namespace), [
     {:entity, index: 0, type: :entity},
-    {:error_msg, index: 1, type: :str},
-    {:choices, index: 2, args: true}
+    {:choices, index: 1, type: :dict},
+    {:prompt, index: 2, keyword: "prompt", type: :str, default: nil},
+    {:retry, index: 3, keyword: "retry", type: :str, default: nil}
   ] do
     entity = Store.get_value(namespace.entity)
-    error_msg = Format.String.format(namespace.error_msg)
-    choices = Enum.map(namespace.choices, &Format.String.format/1)
+    choices = Store.get_value(namespace.choices)
+    prompt = namespace.prompt && Format.String.format(namespace.prompt)
+    retry = namespace.retry && Format.String.format(namespace.retry)
 
     case resolve_client(entity) do
       nil ->
         {script, :none}
 
       {client_id, pid, entity_id_or_key} ->
+        if prompt do
+          Pythelix.Game.Hub.mark_client_with_message(client_id, prompt, pid)
+        end
+
         input_state = %InputState{
           client_id: client_id,
           client_pid: pid,
           entity_id_or_key: entity_id_or_key,
-          prompt: nil,
+          prompt: prompt,
           timeout: nil,
           choices: choices,
-          error_msg: error_msg
+          error_msg: retry
         }
 
         {%{script | pause: :input, input: input_state}, :none}

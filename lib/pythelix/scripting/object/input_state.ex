@@ -28,8 +28,8 @@ defmodule Pythelix.Scripting.Object.InputState do
     (nil when asking a client entity directly, e.g. at login time).
   * `prompt` - optional prompt message to send to the client.
   * `timeout` - optional timeout in seconds; if nil, wait indefinitely.
-  * `choices` - nil for `ask`, list of valid strings for `choice`.
-  * `error_msg` - error message to send on invalid choice (only for `choice`).
+  * `choices` - nil for `ask`, Dict of valid inputs → return values for `choice`.
+  * `error_msg` - message sent on invalid choice (retry prompt); only for `choice`.
   * `task_id` - the persistent task ID (set by the runner after saving).
   """
   @type t() :: %__MODULE__{
@@ -38,7 +38,7 @@ defmodule Pythelix.Scripting.Object.InputState do
           entity_id_or_key: nil | integer() | String.t(),
           prompt: nil | String.t(),
           timeout: nil | number(),
-          choices: nil | [String.t()],
+          choices: nil | Pythelix.Scripting.Object.Dict.t(),
           error_msg: nil | String.t(),
           task_id: nil | integer()
         }

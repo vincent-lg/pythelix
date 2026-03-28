@@ -128,15 +128,17 @@ defmodule Pythelix.Game.Hub do
     try do
       Record.Diff.apply()
     rescue
-      e -> Logger.error("Record.Diff.apply/0 failed: #{Exception.message(e)}")
+      _ -> :ok
+    catch
+      _, _ -> :ok
     end
 
     try do
       send_prompts_to_clients_with_messages(data)
     rescue
-      e ->
-        Logger.error("send_prompts_to_clients_with_messages/1 failed: #{Exception.message(e)}")
-        %{data | clients_with_messages: MapSet.new()}
+      _ -> %{data | clients_with_messages: MapSet.new()}
+    catch
+      _, _ -> %{data | clients_with_messages: MapSet.new()}
     end
   end
 

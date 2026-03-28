@@ -158,30 +158,33 @@ defmodule Pythelix.Scripting.Namespace.AskChoiceTest do
   end
 
   describe "choice" do
-    test "choice accepts valid input", %{client: _client} do
+    test "choice accepts valid input and returns mapped value", %{client: _client} do
       code = """
-      answer = choice(!test_client!, "Please answer yes or no.", "yes", "no")
+      choices = {"yes": True, "no": False}
+      answer = choice(!test_client!, choices, prompt="Are you sure?", retry="Please answer yes or no.")
       return answer
       """
 
       script = Pythelix.Scripting.run(code, call: false)
       Runner.run(script, code, "choice_test", step: {__MODULE__, :self_send, [self()]})
 
-      # Give time for the script to pause
-      Process.sleep(200)
+      # Should receive the prompt
+      assert_receive {:message, "Are you sure?"}, 1000
 
       # Script should be waiting
+      Process.sleep(100)
       assert InputWaiter.waiting?(999) != nil
 
-      # Send valid input
+      # Send valid input — returns the mapped value (True)
       simulate_input(999, "yes")
 
-      assert_receive {:result, "yes"}, 1000
+      assert_receive {:result, true}, 1000
     end
 
     test "choice rejects invalid input and re-asks", %{client: _client} do
       code = """
-      answer = choice(!test_client!, "Please answer yes or no.", "yes", "no")
+      choices = {"yes": True, "no": False}
+      answer = choice(!test_client!, choices, retry="Please answer yes or no.")
       return answer
       """
 
@@ -194,17 +197,37 @@ defmodule Pythelix.Scripting.Namespace.AskChoiceTest do
       # Send invalid input
       simulate_input(999, "maybe")
 
-      # Should receive error message
+      # Should receive retry message
       assert_receive {:message, "Please answer yes or no."}, 1000
 
       # Script should still be waiting
       Process.sleep(100)
       assert InputWaiter.waiting?(999) != nil
 
-      # Send valid input
+      # Send valid input — returns the mapped value (False)
       simulate_input(999, "no")
 
-      assert_receive {:result, "no"}, 1000
+      assert_receive {:result, false}, 1000
+    end
+
+    test "choice with numeric keys returns correct value", %{client: _client} do
+      code = """
+      choices = {"1": "blue", "2": "green", "3": "orange"}
+      color = choice(!test_client!, choices, prompt="Pick a color:\\n1. Blue\\n2. Green\\n3. Orange", retry="Invalid choice.")
+      return color
+      """
+
+      script = Pythelix.Scripting.run(code, call: false)
+      Runner.run(script, code, "choice_test", step: {__MODULE__, :self_send, [self()]})
+
+      assert_receive {:message, _}, 1000
+
+      Process.sleep(100)
+      assert InputWaiter.waiting?(999) != nil
+
+      simulate_input(999, "2")
+
+      assert_receive {:result, "green"}, 1000
     end
   end
 end

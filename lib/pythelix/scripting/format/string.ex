@@ -1,6 +1,12 @@
 defmodule Pythelix.Scripting.Format.String do
   @moduledoc """
   A string, ready to be formatted.
+
+  Internally, an f-string is stored as a list of segments, where each segment
+  is a `{template, variables}` tuple.  This preserves the variable snapshot
+  taken at the point each f-string literal was created, even when f-strings
+  are concatenated inside loops (where the same variable names take different
+  values on each iteration).
   """
 
   alias Pythelix.Entity
@@ -12,17 +18,66 @@ defmodule Pythelix.Scripting.Format.String do
   alias Pythelix.Scripting.Format.Spec
   alias Pythelix.Scripting.Interpreter.Script
 
-  @enforce_keys [:string, :variables]
-  defstruct [:string, :variables]
+  @enforce_keys [:segments]
+  defstruct [:segments]
 
-  @typedoc "a formatted string (f-string)"
-  @type t() :: %Format.String{string: binary(), variables: map()}
+  @typedoc """
+  A formatted string (f-string).
+
+  Each segment is a `{template, variables}` pair so that concatenated
+  f-strings keep independent variable snapshots.
+  """
+  @type segment() :: {binary(), map()}
+  @type t() :: %Format.String{segments: [segment()]}
 
   @spec new(Script.t(), binary()) :: t()
   def new(%Script{} = script, string) do
     variables = script.variables
 
-    %Format.String{string: string, variables: variables}
+    %Format.String{segments: [{string, variables}]}
+  end
+
+  @doc """
+  Create a Format.String from a plain string (no variables).
+  """
+  @spec from_plain(binary()) :: t()
+  def from_plain(string) when is_binary(string) do
+    %Format.String{segments: [{string, %{}}]}
+  end
+
+  @doc """
+  Concatenate two Format.Strings (or a mix of plain and format strings).
+  """
+  @spec concat(t(), t()) :: t()
+  def concat(%Format.String{segments: a}, %Format.String{segments: b}) do
+    %Format.String{segments: a ++ b}
+  end
+
+  def concat(%Format.String{segments: segs}, b) when is_binary(b) do
+    %Format.String{segments: segs ++ [{b, %{}}]}
+  end
+
+  def concat(a, %Format.String{segments: segs}) when is_binary(a) do
+    %Format.String{segments: [{a, %{}} | segs]}
+  end
+
+  @doc """
+  Repeat an f-string n times.
+  """
+  @spec repeat(t(), non_neg_integer()) :: t()
+  def repeat(%Format.String{segments: segs}, n) when is_integer(n) and n >= 0 do
+    repeated = List.duplicate(segs, n) |> List.flatten()
+    %Format.String{segments: repeated}
+  end
+
+  @doc """
+  Return the raw template string (all segments joined).
+
+  Used for display / inspection purposes only.
+  """
+  @spec template(t()) :: binary()
+  def template(%Format.String{segments: segments}) do
+    segments |> Enum.map(fn {s, _} -> s end) |> Enum.join()
   end
 
   @doc """
@@ -35,11 +90,15 @@ defmodule Pythelix.Scripting.Format.String do
   @spec format(Format.String.t()) :: String.t()
   def format(string) when is_binary(string), do: string
 
-  def format(%Format.String{} = format_string) do
-    script = %Script{id: "format", bytecode: [], variables: format_string.variables}
+  def format(%Format.String{segments: segments}) do
+    segments
+    |> Enum.map(fn {string, variables} ->
+      script = %Script{id: "format", bytecode: [], variables: variables}
 
-    do_split(String.graphemes(format_string.string), [], "", :text)
-    |> maybe_format(script)
+      do_split(String.graphemes(string), [], "", :text)
+      |> maybe_format(script)
+    end)
+    |> Enum.join()
   end
 
   defp do_split([], acc, buffer, :text),
@@ -74,11 +133,22 @@ defmodule Pythelix.Scripting.Format.String do
   """
   def format_for(string, _viewer) when is_binary(string), do: {string, MapSet.new()}
 
-  def format_for(%Format.String{} = format_string, viewer) do
-    script = %Script{id: "format", bytecode: [], variables: format_string.variables}
+  def format_for(%Format.String{segments: segments}, viewer) do
+    {parts, entities} =
+      Enum.reduce(segments, {[], MapSet.new()}, fn {string, variables}, {acc_parts, acc_entities} ->
+        script = %Script{id: "format", bytecode: [], variables: variables}
 
-    do_split(String.graphemes(format_string.string), [], "", :text)
-    |> maybe_format_for(script, viewer)
+        case do_split(String.graphemes(string), [], "", :text) do
+          {:ok, _} = result ->
+            {text, ents} = maybe_format_for(result, script, viewer)
+            {[text | acc_parts], MapSet.union(acc_entities, ents)}
+
+          {:error, _} = error ->
+            {[Kernel.inspect(error) | acc_parts], acc_entities}
+        end
+      end)
+
+    {parts |> Enum.reverse() |> Enum.join(), entities}
   end
 
   @doc """
@@ -106,7 +176,7 @@ defmodule Pythelix.Scripting.Format.String do
             |> format_with_spec(spec_str)
 
           {:error, error} ->
-            inspect(error)
+            Kernel.inspect(error)
         end
 
       plain ->
@@ -114,6 +184,8 @@ defmodule Pythelix.Scripting.Format.String do
     end)
     |> Enum.join()
   end
+
+  defp maybe_format({:error, _}, _script), do: ""
 
   defp maybe_format_for({:ok, pattern}, script, viewer) do
     {parts, entities} =
@@ -139,7 +211,7 @@ defmodule Pythelix.Scripting.Format.String do
               {[display | parts], entities}
 
             {:error, error} ->
-              {[inspect(error) | parts], entities}
+              {[Kernel.inspect(error) | parts], entities}
           end
 
         plain, {parts, entities} ->
@@ -149,9 +221,6 @@ defmodule Pythelix.Scripting.Format.String do
     {parts |> Enum.reverse() |> Enum.join(), entities}
   end
 
-  defp maybe_format_for({:error, _} = error, _script, _viewer) do
-    {inspect(error), MapSet.new()}
-  end
 
   # --- Expression splitting (extract conversion and format spec) ---
 
@@ -244,7 +313,7 @@ defmodule Pythelix.Scripting.Format.String do
 
   defp apply_conversion(value, "r", script) do
     case Display.repr(script, value) do
-      {:traceback, _} -> inspect(value)
+      {:traceback, _} -> Kernel.inspect(value)
       result -> result
     end
   end
@@ -296,7 +365,7 @@ defmodule Pythelix.Scripting.Format.String do
   defp resolve_entity_name(entity, nil) do
     case Record.get_attribute(entity, "name") do
       name when is_binary(name) -> name
-      _ -> inspect(entity)
+      _ -> Kernel.inspect(entity)
     end
   end
 
@@ -308,7 +377,7 @@ defmodule Pythelix.Scripting.Format.String do
       _ ->
         case Record.get_attribute(entity, "name") do
           name when is_binary(name) -> name
-          _ -> inspect(entity)
+          _ -> Kernel.inspect(entity)
         end
     end
   end
@@ -317,7 +386,7 @@ defmodule Pythelix.Scripting.Format.String do
     import Inspect.Algebra
 
     def inspect(%Format.String{} = format_string, opts) do
-      concat(["f", to_doc(format_string.string, opts)])
+      concat(["f", to_doc(Format.String.template(format_string), opts)])
     end
   end
 end

@@ -836,18 +836,15 @@ defmodule Pythelix.Scripting.Namespace.String do
   end
 
   defp string_concat(%Format.String{} = a, %Format.String{} = b) do
-    %Format.String{
-      string: a.string <> b.string,
-      variables: Map.merge(a.variables, b.variables)
-    }
+    Format.String.concat(a, b)
   end
 
   defp string_concat(%Format.String{} = a, b) when is_binary(b) do
-    %Format.String{string: a.string <> b, variables: a.variables}
+    Format.String.concat(a, b)
   end
 
   defp string_concat(a, %Format.String{} = b) when is_binary(a) do
-    %Format.String{string: a <> b.string, variables: b.variables}
+    Format.String.concat(a, b)
   end
 
   defp string_concat(a, b) when is_binary(a) and is_binary(b) do
@@ -855,10 +852,7 @@ defmodule Pythelix.Scripting.Namespace.String do
   end
 
   defp string_repeat(%Format.String{} = s, n) do
-    %Format.String{
-      string: String.duplicate(s.string, n),
-      variables: s.variables
-    }
+    Format.String.repeat(s, n)
   end
 
   defp string_repeat(s, n) when is_binary(s) do

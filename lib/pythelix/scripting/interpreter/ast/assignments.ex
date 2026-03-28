@@ -36,6 +36,7 @@ defmodule Pythelix.Scripting.Interpreter.AST.Assignments do
             |> replace({:unset, before}, fn _code -> {:goto, end_pos} end)
             |> replace({:unset, after_ref}, fn code -> {:goto, length_code(code)} end)
             |> add({:call, 2})
+            |> add({:pop, nil})
 
           {item, _}, code ->
             code
@@ -137,6 +138,7 @@ defmodule Pythelix.Scripting.Interpreter.AST.Assignments do
             |> replace({:unset, before}, fn _code -> {:goto, end_pos} end)
             |> replace({:unset, after_ref}, fn code -> {:goto, length_code(code)} end)
             |> add({:call, 2})
+            |> add({:pop, nil})
 
           {item, _}, code ->
             code
