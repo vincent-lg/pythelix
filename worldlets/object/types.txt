@@ -1,0 +1,3 @@
+!object/type/coin!
+parent = "generic/object"
+stackable = True

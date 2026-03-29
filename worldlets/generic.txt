@@ -22,3 +22,5 @@ def look(self, viewer: Entity):
     description = self.description.format_for(viewer)
     lines.extend(description.splitlines())
     return "\n".join(lines)
+
+!generic/object!

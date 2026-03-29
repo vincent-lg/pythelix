@@ -27,3 +27,28 @@ def run(character):
         Active references: {stats.number_of_references} using {stats.human_size(stats.memory_of_references)} of memory
     """
     character.msg(text)
+
+!command/spawn!
+parent = "generic/admin_command"
+category = "Administrator"
+name = "spawn"
+syntax = "(#number#) <entity_key>"
+
+def run(character, entity_key, number=1):
+    to_spawn = entity(key=entity_key.lower())
+
+    if to_spawn is None:
+        character.msg(f"The specified entity key {entity_key!r} cannot be found.")
+    elif not getattr(to_spawn, "stackable", False):
+        character.msg(f"The entity {entity_key!r} isn't a stackable, cannot spawn.")
+    elif number > 1:
+        stack = stackable(to_spawn, number)
+        stack.location = character.location
+        names.notify(character, f"{stack!c} appear at your feet.")
+        names.broadcast(character.location, f"{stack!c} appear at the feet of {character}.")
+    else:
+        stack = stackable(to_spawn, 1)
+        stack.location = character.location
+        names.notify(character, f"{stack!c} appears at your feet.")
+        names.broadcast(character.location, f"{stack!c} appears at the feet of {character}.")
+    endif

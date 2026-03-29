@@ -17,6 +17,7 @@ defmodule Pythelix.Scripting.Format.String do
   alias Pythelix.Scripting.Format
   alias Pythelix.Scripting.Format.Spec
   alias Pythelix.Scripting.Interpreter.Script
+  alias Pythelix.Stackable
 
   @enforce_keys [:segments]
   defstruct [:segments]
@@ -202,6 +203,14 @@ defmodule Pythelix.Scripting.Format.String do
 
               {[display | parts], MapSet.put(entities, entity)}
 
+            {:ok, %Stackable{entity: entity, quantity: quantity}} ->
+              display =
+                entity
+                |> apply_conversion_for(conv, script, viewer, quantity)
+                |> format_with_spec(spec_str)
+
+              {[display | parts], entities}
+
             {:ok, value} ->
               display =
                 value
@@ -339,6 +348,16 @@ defmodule Pythelix.Scripting.Format.String do
   defp apply_conversion_for(entity, conv, script, _viewer),
     do: apply_conversion(entity, conv, script)
 
+  # Quantity-aware conversions for stackables in format_for
+  defp apply_conversion_for(entity, nil, _script, viewer, quantity),
+    do: resolve_entity_name(entity, viewer, quantity)
+
+  defp apply_conversion_for(entity, "c", _script, viewer, quantity),
+    do: capitalize_first(resolve_entity_name(entity, viewer, quantity))
+
+  defp apply_conversion_for(entity, conv, script, _viewer, _quantity),
+    do: apply_conversion(entity, conv, script)
+
   # --- Format spec application ---
 
   defp format_with_spec(value, nil), do: to_string(value)
@@ -373,6 +392,45 @@ defmodule Pythelix.Scripting.Format.String do
     case Method.call_entity(entity, "__namefor__", [viewer]) do
       result when is_binary(result) ->
         result
+
+      _ ->
+        case Record.get_attribute(entity, "name") do
+          name when is_binary(name) -> name
+          _ -> Kernel.inspect(entity)
+        end
+    end
+  end
+
+  # With no viewer, quantity is irrelevant — skip __namefor__ as usual.
+  defp resolve_entity_name(entity, nil, _quantity),
+    do: resolve_entity_name(entity, nil)
+
+  # Inspects the __namefor__ method signature to decide whether to pass quantity:
+  #   - 2+ positional args (excl. self) → call with [viewer, quantity]
+  #   - 1 positional arg, or :free args  → call with [viewer] / [viewer, quantity]
+  # Falls back to the name attribute if the hook is absent or errors.
+  defp resolve_entity_name(entity, viewer, quantity) do
+    result =
+      case Record.get_method(entity, "__namefor__") do
+        %Method{args: :free} ->
+          Method.call_entity(entity, "__namefor__", [viewer, quantity])
+
+        %Method{args: constraints} when is_list(constraints) ->
+          positional_count =
+            constraints
+            |> Enum.reject(fn {name, _opts} -> name == "self" end)
+            |> Enum.count(fn {_name, opts} -> opts[:index] != nil end)
+
+          args = if positional_count >= 2, do: [viewer, quantity], else: [viewer]
+          Method.call_entity(entity, "__namefor__", args)
+
+        _ ->
+          nil
+      end
+
+    case result do
+      r when is_binary(r) ->
+        r
 
       _ ->
         case Record.get_attribute(entity, "name") do
