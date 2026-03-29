@@ -1,6 +1,6 @@
 !room/bakery!
 parent = "generic/room"
-title = "A brightly-lit bakery"
+title = "A bakery"
 description = Description("""
 The warm, inviting scent of freshly baked bread and sweet pastries fills
 the air upon entering this cozy little shop. A fine dusting of flour clings
