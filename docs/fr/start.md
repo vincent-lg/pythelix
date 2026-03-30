@@ -326,11 +326,11 @@ Sauvegardez le fichier. Rien ne devrait se passer. Depuis votre client MUD, si v
 "Une boulangerie"
 ```
 
-... c'est l'ancienne valeur. Maintenant, appliquons. Depuis le client MUD, vous pouvez appeler la fonction `apply()` :
+... c'est l'ancienne valeur. Maintenant, appliquons. Depuis le client MUD, vous pouvez appeler la commande `apply` :
 
 ```
-> py apply()
-"Worldlet applied from ...\\pythelix\\worldlets: 34 entities were added or updated."
+> apply
+Worldlet applied from ...\\pythelix\\worldlets: 34 entities were added or updated.
 > py location.title
 "Une boulangerie lumineuse"
 ```
@@ -350,7 +350,7 @@ C'est aussi la raison pour laquelle deux entités ne peuvent pas avoir la même 
 
 ### Modifier les entités depuis le jeu
 
-Comme nous l'avons vu, il est assez simple de modifier les entités dans les worldlets : il suffit de modifier le fichier texte, de le sauvegarder et d'exécuter la fonction `apply()`.
+Comme nous l'avons vu, il est assez simple de modifier les entités dans les worldlets : il suffit de modifier le fichier texte, de le sauvegarder et d'exécuter la commande `apply`.
 
 Mais vous vous demandez peut-être : est-il possible de modifier l'entité depuis le jeu, avec la commande `py` ?
 
