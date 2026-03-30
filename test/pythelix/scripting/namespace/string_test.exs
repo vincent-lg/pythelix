@@ -816,6 +816,43 @@ defmodule Pythelix.Scripting.Namespace.StringTest do
 
       assert traceback.exception == TypeError
     end
+
+    test "join list with f-strings" do
+      script =
+        run("""
+        i = 3
+        l = ["This is i", f"{i}"]
+        s = "\\n".join(l)
+        """)
+
+      value = Script.get_variable_value(script, "s")
+      assert %Pythelix.Scripting.Format.String{} = value
+      assert Pythelix.Scripting.Format.String.format(value) == "This is i\n3"
+    end
+
+    test "join list with mixed strings and f-strings" do
+      script =
+        run("""
+        name = "world"
+        l = ["hello", f"{name}", "!"]
+        s = ", ".join(l)
+        """)
+
+      value = Script.get_variable_value(script, "s")
+      assert %Pythelix.Scripting.Format.String{} = value
+      assert Pythelix.Scripting.Format.String.format(value) == "hello, world, !"
+    end
+
+    test "join list with only plain strings returns plain string" do
+      script =
+        run("""
+        s = ", ".join(["a", "b"])
+        """)
+
+      value = Script.get_variable_value(script, "s")
+      assert is_binary(value)
+      assert value == "a, b"
+    end
   end
 
   describe "ljust" do

@@ -146,20 +146,26 @@ defmodule Pythelix.Scripting.Namespace.String do
   ] do
     Store.get_value(namespace.iterable, recursive: false)
     |> Enum.with_index()
-    |> Enum.reduce_while({script, []}, fn {element, index}, {script, items} ->
-      if is_binary(element) do
-        {:cont, {script, [element | items]}}
-      else
-        message = "sequence item #{index}: expected str"
-        {:halt, {Script.raise(script, TypeError, message), nil}}
+    |> Enum.reduce_while({script, [], false}, fn {element, index},
+                                                 {script, items, has_fstring} ->
+      cond do
+        is_binary(element) ->
+          {:cont, {script, [element | items], has_fstring}}
+
+        match?(%Format.String{}, element) ->
+          {:cont, {script, [element | items], true}}
+
+        true ->
+          message = "sequence item #{index}: expected str"
+          {:halt, {Script.raise(script, TypeError, message), nil}}
       end
     end)
     |> then(fn
       {%Script{error: error} = script, _} when error != nil ->
         {script, :none}
 
-      {script, iterable} ->
-        {script, string_join(namespace.self, Enum.reverse(iterable))}
+      {script, iterable, has_fstring} ->
+        {script, string_join(namespace.self, Enum.reverse(iterable), has_fstring)}
     end)
   end
 
@@ -627,11 +633,9 @@ defmodule Pythelix.Scripting.Namespace.String do
     has_cased and string == String.upcase(string)
   end
 
-  defp string_join(separator, iterable) do
-    list = iterable
-
+  defp string_join(separator, iterable, false) do
     string_list =
-      Enum.map(list, fn item ->
+      Enum.map(iterable, fn item ->
         case item do
           str when is_binary(str) -> str
           _ -> inspect(item)
@@ -639,6 +643,14 @@ defmodule Pythelix.Scripting.Namespace.String do
       end)
 
     Enum.join(string_list, separator)
+  end
+
+  defp string_join(separator, iterable, true) do
+    iterable
+    |> Enum.intersperse(separator)
+    |> Enum.reduce(%Format.String{segments: []}, fn element, acc ->
+      Format.String.concat(acc, element)
+    end)
   end
 
   defp string_removeprefix(string, prefix) do
