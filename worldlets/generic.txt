@@ -1,4 +1,6 @@
-!account!
+!generic/account!
+username = None
+players = []
 
 !Description!
 parent = "SubEntity"
@@ -21,6 +23,34 @@ def look(self, viewer: Entity):
     lines = [self.title]
     description = self.description.format_for(viewer)
     lines.extend(description.splitlines())
+
+    # Soirt content.
+    objects = []
+    characters = []
+    for content in self.contents:
+        if content is not viewer and isinstance(content, !generic/character!):
+            characters.append(content)
+        elif isinstance(content, !generic/object!):
+            objects.append(content)
+        endif
+    done
+
+    # Display other characters
+    if characters:
+        lines.append("")
+        grouped = names.group(characters, viewer=viewer)
+        text = "- " + "\n- ".join(grouped)
+        lines.extend(text.splitlines())
+    endif
+
+    # Display objects
+    if objects:
+        lines.append("")
+        grouped = names.group(objects, viewer=viewer)
+        text = "+ " + "\n+ ".join(grouped)
+        lines.extend(text.splitlines())
+    endif
+
     return "\n".join(lines)
 
 !generic/object!

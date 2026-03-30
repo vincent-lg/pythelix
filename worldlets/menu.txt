@@ -22,7 +22,8 @@ Enter your username or 'new' to create a new one.
 """
 
 def unknown_input(client, input):
-    account = search.one(!account!, username=input.strip().lower())
+    account = search.one(!generic/account!, username=input.strip().lower())
+
     if account:
         client.account = account
         client.location = !menu/password!
@@ -44,13 +45,11 @@ text = """
 Enter the password for this account.
 """
 
-def input(client, input):
+def unknown_input(client, input):
     account = client.account
+
     if account.password.verify(input):
-        character = account.character
-        client.owner = account.character
-        client.controls.add(account.character)
-        client.location = !menu/game!
+        client.location = !menu/account!
     else:
         client.location = !menu/invalid/password!
     endif
@@ -76,13 +75,14 @@ Welcome, new user! Enter your new username.
 
 def input(client, input):
     username = input.strip().lower()
-    account = search.one(!account!, username=username)
-    if not username:
+    account = search.one(!generic/account!, username=username)
+
+    if len(username) < 3:
         client.msg("This username isn't valid. Choose another one.")
     elif account:
         client.msg("This account already exists. Try a new one.")
     else:
-        account = Entity(parent=!account!)
+        account = Entity(parent=!generic/account!)
         account.username = username
         client.account = account
         client.location = !menu/new/password!
@@ -95,18 +95,101 @@ Enter your new account's password.
 """
 
 def input(client, input):
-    has_players = len(!generic/player!.children) > 0
     client.account.password = password.hash(input)
-    character = Entity(parent=!generic/player!)
+    client.location = !menu/account!
 
-    if not has_players:
-        log(f"{client.account.username!r} (#{client.account.id}) becomes an administrator")
-        character.permissions.add("admin")
+!menu/account!
+parent = "generic/menu"
+
+def enter(client):
+    account = client.account
+
+    if len(account.players) == 0:
+        client.location = !menu/new/character!
+    else:
+        client.location = !menu/characters!
     endif
 
-    character.former_location = !room/bakery!
-    client.location = !menu/username!
-    client.account.character = character
+!menu/characters!
+parent = "generic/menu"
+
+def get_text(client):
+    account = client.account
+
+    lines = [
+        f"Welcome to your account, {account.username}!",
+        "",
+    ]
+
+    i = 1
+    for player in account.players:
+        lines.append(f"  {i} to play {player.name}")
+        i += 1
+    done
+
+    lines.append("  C to create a new character in this account.")
+
+    if account.players:
+        lines.append("  D to delete a character from this account.")
+    endif
+
+    return "\n".join(lines)
+
+def unknown_input(client, input):
+    account = client.account
+    log(f"Account with {account.username!r}: {account.players!r}")
+
+    i = 1
+    for player in account.players:
+        if input == str(i):
+            client.player = player
+            client.location = !menu/near_game!
+            return None
+        endif
+        i += 1
+    done
+
+    client.msg("Unknown input.")
+
+!command/characters/create!
+parent = "generic/command"
+name = "c"
+location = "menu/characters"
+
+def run(client):
+    client.location = !menu/new/character!
+
+!menu/new/character!
+parent = "generic/menu"
+text = "To create a character in this account, enter the character's name"
+prompt = "Enter the character's name:"
+
+def unknown_input(client, input):
+    account = client.account
+    has_players = len(!generic/player!.children) > 0
+    player = Entity(parent=!generic/player!)
+    player.name = input
+    player.account = account
+    account.players.append(player)
+
+    if not has_players:
+        log(f"{player.name!r} (#{player.id}) becomes an administrator")
+        player.permissions.add("admin")
+    endif
+
+    player.former_location = !room/bakery!
+    client.player = player
+    client.location = !menu/near_game!
+
+!menu/near_game!
+parent = "generic/menu"
+
+def enter(client):
+    player = client.player
+    player.location = player.former_location
+    client.owner = player
+    client.controls.add(player)
+    client.location = !menu/game!
 
 !menu/game!
 parent = "generic/menu"

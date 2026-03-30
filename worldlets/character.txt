@@ -8,4 +8,9 @@ def msg(self, text):
 
 !generic/player!
 parent = "generic/character"
+account = None
+name = None
 permissions = {"player"}
+
+def __namefor__(self, character, quantity=1):
+    return self.name
