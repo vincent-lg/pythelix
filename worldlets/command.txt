@@ -37,6 +37,7 @@ def run(character):
     for category in categories.keys():
         commands = categories[category]
         if commands:
+            commands.sort()
             hgroup = hlist.add_group(category)
             for command in commands:
                 hgroup.add_entry(command)
@@ -68,3 +69,49 @@ def run(character):
     client = clients.owning(character)
     client.msg("Good bye!")
     client.disconnect()
+
+!command/get!
+parent = "generic/char_command"
+name = "get"
+category = "General"
+syntax = "(#quantity#) <object>"
+
+def refine(character, object, quantity=1):
+    to_pick = search.match(character.location, object, viewer=character, limit=quantity)
+
+    if not to_pick:
+        character.msg("You don't see that around.")
+        raise RefineError
+    endif
+
+def run(character, to_pick):
+    for object in to_pick:
+        object.location = character
+    done
+
+    for name in names.group(to_pick, viewer=character):
+        character.msg(f"You pick up {name}.")
+    done
+
+!command/drop!
+parent = "generic/char_command"
+name = "drop"
+category = "General"
+syntax = "(#quantity#) <object>"
+
+def refine(character, object, quantity=1):
+    to_drop = search.match(character, object, viewer=character, limit=quantity)
+
+    if not to_drop:
+        character.msg("You don't see that around.")
+        raise RefineError
+    endif
+
+def run(character, to_drop):
+    for object in to_drop:
+        object.location = character.location
+    done
+
+    for name in names.group(to_drop, viewer=character):
+        character.msg(f"You drop {name} on the ground.")
+    done
