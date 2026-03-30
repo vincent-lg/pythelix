@@ -599,7 +599,12 @@ defmodule Pythelix.Record.Cache do
     # Add entity from its location contained.
     Cachex.get_and_update(:px_cache, {:contents, location_id_or_key}, fn
       nil -> {:commit, [entity_id_or_key]}
-      contained -> {:commit, contained ++ [entity_id_or_key]}
+      contained ->
+        if entity_id_or_key in contained do
+          {:ignore, contained}
+        else
+          {:commit, contained ++ [entity_id_or_key]}
+        end
     end)
 
     # Add location from the entity.

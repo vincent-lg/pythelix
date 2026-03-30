@@ -307,7 +307,7 @@ defmodule Pythelix.Scripting.Store do
 
     case :ets.lookup(@reference_table, value) do
       [{^value, _value, _owner, parent}] -> parent
-      _ -> raise inspect(ref)
+      _ -> nil
     end
   end
 
