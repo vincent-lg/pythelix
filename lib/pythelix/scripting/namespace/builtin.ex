@@ -7,7 +7,7 @@ defmodule Pythelix.Scripting.Namespace.Builtin do
 
   require Logger
 
-  alias Pythelix.{Entity, Record}
+  alias Pythelix.{Entity, Record, SubEntity}
   alias Pythelix.Scripting.Callable
   alias Pythelix.Scripting.Display
   alias Pythelix.Scripting.Format
@@ -167,6 +167,106 @@ defmodule Pythelix.Scripting.Namespace.Builtin do
     {:object, index: 0, type: :any}
   ] do
     {script, Display.to_bool(script, namespace.object)}
+  end
+
+  deffun int(script, namespace), [
+    {:object, index: 0, type: :any}
+  ] do
+    object = Store.get_value(namespace.object)
+
+    case object do
+      int when is_integer(int) ->
+        {script, int}
+
+      float when is_float(float) ->
+        {script, trunc(float)}
+
+      true ->
+        {script, 1}
+
+      false ->
+        {script, 0}
+
+      str when is_binary(str) ->
+        case Integer.parse(str) do
+          {int, ""} -> {script, int}
+          _ -> {Script.raise(script, ValueError, "invalid literal for int(): '#{str}'"), :none}
+        end
+
+      _ ->
+        {Script.raise(script, TypeError, "int() argument must be a string or a number"), :none}
+    end
+  end
+
+  deffun float(script, namespace), [
+    {:object, index: 0, type: :any}
+  ] do
+    object = Store.get_value(namespace.object)
+
+    case object do
+      float when is_float(float) ->
+        {script, float}
+
+      int when is_integer(int) ->
+        {script, int * 1.0}
+
+      true ->
+        {script, 1.0}
+
+      false ->
+        {script, 0.0}
+
+      str when is_binary(str) ->
+        case Float.parse(str) do
+          {float, ""} -> {script, float}
+          _ -> {Script.raise(script, ValueError, "could not convert string to float: '#{str}'"), :none}
+        end
+
+      _ ->
+        {Script.raise(script, TypeError, "float() argument must be a string or a number"), :none}
+    end
+  end
+
+  deffun list(script, namespace), [
+    {:iterable, index: 0, type: :any, default: nil}
+  ] do
+    case namespace.iterable do
+      nil ->
+        {script, []}
+
+      iterable ->
+        iterable = Store.get_value(iterable)
+
+        case iterable do
+          list when is_list(list) ->
+            {script, list}
+
+          %Tuple{elements: elements} ->
+            {script, elements}
+
+          %MapSet{} = set ->
+            {script, MapSet.to_list(set)}
+
+          %Dict{} = dict ->
+            {script, Dict.keys(dict)}
+
+          str when is_binary(str) ->
+            {script, String.graphemes(str)}
+
+          _ ->
+            {Script.raise(script, TypeError, "argument is not iterable"), :none}
+        end
+    end
+  end
+
+  deffun isinstance(script, namespace), [
+    {:object, index: 0, type: :any},
+    {:classinfo, index: 1, type: :any}
+  ] do
+    object = Store.get_value(namespace.object)
+    classinfo = Store.get_value(namespace.classinfo)
+
+    {script, check_isinstance(object, classinfo)}
   end
 
   deffun repr(script, namespace), [
@@ -346,4 +446,51 @@ defmodule Pythelix.Scripting.Namespace.Builtin do
         {client_id, pid, nil}
     end
   end
+
+  # isinstance: tuple of types — check if object matches any
+  defp check_isinstance(object, %Tuple{elements: elements}) do
+    Enum.any?(elements, &check_isinstance(object, Store.get_value(&1)))
+  end
+
+  # isinstance: builtin type callable (str, int, bool, dict, etc.)
+  defp check_isinstance(object, %Callable{module: Namespace.Builtin, name: name}) do
+    case name do
+      :f_str -> is_binary(object)
+      :f_int -> is_integer(object)
+      :f_float -> is_float(object)
+      :f_bool -> is_boolean(object)
+      :f_list -> is_list(object)
+      :f_dict -> match?(%Dict{}, object)
+      :f_set -> match?(%MapSet{}, object)
+      :f_tuple -> match?(%Tuple{}, object)
+      :f_function_Entity -> match?(%Entity{}, object)
+      :f_stackable -> match?(%Stackable{}, object)
+      _ -> false
+    end
+  end
+
+  # isinstance: entity vs entity — check ancestry
+  defp check_isinstance(%Entity{} = entity, %Entity{} = parent) do
+    Entity.get_id_or_key(entity) == Entity.get_id_or_key(parent) or
+      Record.has_parent?(entity, parent)
+  end
+
+  # isinstance: stackable vs entity — check underlying entity ancestry
+  defp check_isinstance(%Stackable{entity: stack_entity}, %Entity{} = parent) do
+    Entity.get_id_or_key(stack_entity) == Entity.get_id_or_key(parent) or
+      Record.has_parent?(stack_entity, parent)
+  end
+
+  # isinstance: sub-entity vs entity — check base entity ancestry
+  defp check_isinstance(%SubEntity{base: base}, %Entity{} = parent) do
+    Entity.get_id_or_key(base) == Entity.get_id_or_key(parent) or
+      Record.has_parent?(base, parent)
+  end
+
+  # isinstance: uppercase EntityName resolves as {:sub_entity, entity}
+  defp check_isinstance(object, {:sub_entity, %Entity{} = entity}) do
+    check_isinstance(object, entity)
+  end
+
+  defp check_isinstance(_, _), do: false
 end
