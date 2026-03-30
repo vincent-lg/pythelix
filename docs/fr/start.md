@@ -169,11 +169,11 @@ Voyons d'abord les commandes auxquelles nous avons accès en tant qu'administrat
 ```
 > help
 General
-  look           quit
+  drop           get            look           quit
 Information
   help
-Administrateur
-  pythello       system
+Administrator
+  apply          pythello       spawn          system
 ```
 
 Le résultat peut bien sûr être différent. Le point important est que... il n'y a pas beaucoup de commandes. Surtout en administration. Nous en avons trois :

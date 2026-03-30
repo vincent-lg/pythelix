@@ -166,11 +166,11 @@ First, let's see the commands we have access as administrator:
 ```
 > help
 General
-  look           quit
+  drop           get            look           quit
 Information
   help
 Administrator
-  apply          pythello       system
+  apply          pythello       spawn          system
 ```
 
 The output can of course be different. The important point though is that... there aren't many commands. Especially administrator commands. We have three:
