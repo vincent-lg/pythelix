@@ -100,6 +100,7 @@ defmodule Pythelix.Scripting.Store do
 
   def new_reference(%Entity{} = entity, owner, parent) do
     id_or_key = Entity.get_id_or_key(entity)
+    entity = Record.get_entity(id_or_key) || entity
 
     case :ets.lookup(@entities_table, id_or_key) do
       [{^id_or_key, ref}] ->
