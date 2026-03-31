@@ -1,8 +1,29 @@
 !command/pythello!
 parent = "generic/admin_command"
-name = "pythello"
 category = "Administrator"
+name = "pythello"
 syntax = "<text>"
+help = """
+Execute Pythello script and see its result.
+
+Syntax:
+    py <code>
+
+Executes some code in Pyhello and see the result.
+
+Examples:
+    py 30 * 5
+    py self.contents
+    py location.title = "Something else"
+    py variable = 3
+    py variable * 4
+
+You can also enter several lines at once (useful for conditions and loops):
+
+    py if variable > 0:
+    py self.msg("That would be more than 0.")
+    py endif
+"""
 
 def run(character, text):
     console = getattr(character, "pycode", None)

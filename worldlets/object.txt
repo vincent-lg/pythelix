@@ -1,12 +1,10 @@
 !object/gold_coin!
 parent = "object/type/coin"
-singular = "gold coin"
+singular = "a gold coin"
 plural = "gold coins"
 value = 1
 
-def __namefor__(viewer: Entity, quantity: int = 1):
-    if quantity == 1:
-        return f"a {self.singular}"
-    endif
-
-    return f"{quantity} {self.plural}"
+!object/red_apple!
+parent = "generic/object"
+singular = "a red apple"
+plural = "red apples"

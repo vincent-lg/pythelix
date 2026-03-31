@@ -54,3 +54,12 @@ def look(self, viewer: Entity):
     return "\n".join(lines)
 
 !generic/object!
+singular = "a thing"
+plural = "things"
+
+def __namefor__(viewer: Entity, quantity: int = 1):
+    if quantity == 1:
+        return self.singular
+    endif
+
+    return f"{quantity} {self.plural}"

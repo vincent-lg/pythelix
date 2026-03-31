@@ -1,17 +1,33 @@
 !command/apply!
 parent = "generic/admin_command"
+category = "Administrator"
 name = "apply"
 syntax = ""
-category = "Administrator"
+help = """
+Apply all the worldlets.
+
+Syntax:
+    apply
+
+Apply all the worldlet files containing all your blueprints for entities
+(menus, commands, objects, zones and so on).
+"""
 
 def run(character):
     character.msg(apply())
 
 !command/system!
 parent = "generic/admin_command"
-name = "system"
-syntax = ""
 category = "Administrator"
+name = "system"
+help = """
+Show system information.
+
+Syntax:
+    system
+
+Show the server statistics.
+"""
 
 def run(character):
     text = f"""
@@ -33,22 +49,44 @@ parent = "generic/admin_command"
 category = "Administrator"
 name = "spawn"
 syntax = "(#number#) <entity_key>"
+help = """
+Spawn one or more objects in the current location.
+
+Syntax:
+    spawn <entity key>
+    spawn <quantity> <entity key>
+
+This command is used to spawn one or several things in the room
+(the character's location). You have to specify an entity key to spawn,
+like spawn object/gold_coin for instance. You can also specify a number
+to spawn, like spawn 100 object/gold_coin .
+
+If you try and spawn a non-stackable entity (like object/red_apple), you cannot
+spawn more than one. This is to avoid accidentally creating a lot of entities
+with a single command. Behind the scenes, it will create a new entity
+with parent of object/red_apple (in this example) and place it in the room.
+"""
 
 def run(character, entity_key, number=1):
     to_spawn = entity(key=entity_key.lower())
 
     if to_spawn is None:
         character.msg(f"The specified entity key {entity_key!r} cannot be found.")
-    elif not getattr(to_spawn, "stackable", False):
-        character.msg(f"The entity {entity_key!r} isn't a stackable, cannot spawn.")
-    elif number > 1:
-        stack = stackable(to_spawn, number)
-        stack.location = character.location
-        names.notify(character, f"{stack!c} appear at your feet.")
-        names.broadcast(character.location, f"{stack!c} appear at the feet of {character}.")
+    elif getattr(to_spawn, "stackable", False):
+        if number > 1:
+            stack = stackable(to_spawn, number)
+            stack.location = character.location
+            names.notify(character, f"{stack!c} appear at your feet.")
+            names.broadcast(character.location, f"{stack!c} appear at the feet of {character}.")
+        else:
+            stack = stackable(to_spawn, 1)
+            stack.location = character.location
+            names.notify(character, f"{stack!c} appears at your feet.")
+            names.broadcast(character.location, f"{stack!c} appears at the feet of {character}.")
+        endif
     else:
-        stack = stackable(to_spawn, 1)
-        stack.location = character.location
-        names.notify(character, f"{stack!c} appears at your feet.")
-        names.broadcast(character.location, f"{stack!c} appears at the feet of {character}.")
+        new = Entity(parent=to_spawn)
+        new.location = character.location
+        names.notify(character, f"{new!c} appears at your feet.")
+        names.broadcast(character.location, f"{new!c} appears at the feet of {character}.")
     endif

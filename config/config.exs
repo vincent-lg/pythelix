@@ -69,8 +69,8 @@ config :libcluster,
   ]
 
 config :codepagex, :encodings, [
-  ~r[iso8859]i,
-  "VENDORS/MICSFT/WINDOWS/CP1252"
+  :"ISO8859/8859-15",
+  :"VENDORS/MICSFT/WINDOWS/CP1252"
 ]
 
 config :pythelix,

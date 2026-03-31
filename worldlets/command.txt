@@ -17,51 +17,102 @@ def can_run(self, character):
 parent = "generic/char_command"
 name = "help"
 category = "Information"
+syntax = "(<command_name>)"
+help = """
+Display all commands or the help of a specific command or topic.
 
-def run(character):
+Syntax:
+    help
+    help <command name>
+
+Without arguments, the help command is used to display a list of commands
+that can be used by the current character. It is also possible to give
+the help command a command name as argument to see the help of this specific
+command.
+"""
+
+def run(character, command_name=""):
     commands = !menu/game!.get_commands(character)
-    categories = {
-        "General": [],
-        "Information": [],
-        "Administrator": [],
-    }
 
-    for command in commands:
-        category = command.category
-        if category in categories:
-            categories[category].append(command.name)
-        endif
-    done
+    if command_name:
+        command_name = command_name.lower()
+        for command in commands:
+            aliases = getattr(command, "aliases", [])
+            if command.name.lower() == command_name or command_name in aliases:
+                help = getattr(command, "help", "No help available for this command.")
+                character.msg(help)
+            endif
+        done
+    else:
+        categories = {
+            "General": [],
+            "Information": [],
+            "Administrator": [],
+        }
 
-    hlist = display.HorizontalList(columns=4, col_width=15)
-    for category in categories.keys():
-        commands = categories[category]
-        if commands:
-            commands.sort()
-            hgroup = hlist.add_group(category)
-            for command in commands:
-                hgroup.add_entry(command)
-            done
-        endif
-    done
+        for command in commands:
+            category = command.category
+            if category in categories:
+                categories[category].append(command.name)
+            endif
+        done
 
-    character.msg(hlist.format())
+        hlist = display.HorizontalList(columns=4, col_width=15)
+        for category in categories.keys():
+            commands = categories[category]
+            if commands:
+                commands.sort()
+                hgroup = hlist.add_group(category)
+                for command in commands:
+                    hgroup.add_entry(command)
+                done
+            endif
+        done
+
+        character.msg(hlist.format())
+    endif
 
 !command/look!
 parent = "generic/char_command"
+category = "General"
 name = "look"
 aliases = ["l"]
-category = "General"
+syntax = "(<what>)"
+help = """
+Look in a room of something specific.
 
-def run(character):
+Syntax:
+    look
+    look <object name>
+
+Without arguments, displays the current room. You can also specify
+an argument to indicate what to look.
+"""
+
+def refine(character, what=""):
+    if what:
+        what = names.match(character.location, what, viewer=character)
+        if not what:
+            character.msg("You don't see that here.")
+            raise RefineError
+        endif
+    endif
+
+def run(character, what=None):
     text = character.location.look(character)
     character.msg(text)
 
 !command/quit!
 parent = "generic/player_command"
-name = "quit"
-syntax = ""
 category = "General"
+name = "quit"
+help = """
+Quit the game.
+
+This command will quit the game. If your character is not busy, you can
+quit at any time. Your character will leave the world and not be
+visible by anyone, until you log back in of course;.
+"""
 
 def run(character):
     character.former_location = character.location
@@ -72,9 +123,20 @@ def run(character):
 
 !command/get!
 parent = "generic/char_command"
-name = "get"
 category = "General"
+name = "get"
 syntax = "(#quantity#) <object>"
+help = """
+Get an object.
+
+Syntax:
+    get <object name>
+    get <quantity> <object name>
+
+Get one or several objects from the current room (character location)
+to the character's inventory (character's contents). You can specify
+a number of objects to get, like get 3 apples.
+"""
 
 def refine(character, object, quantity=1):
     to_pick = search.match(character.location, object, viewer=character, limit=quantity)
@@ -95,9 +157,20 @@ def run(character, to_pick):
 
 !command/drop!
 parent = "generic/char_command"
-name = "drop"
 category = "General"
+name = "drop"
 syntax = "(#quantity#) <object>"
+help = """
+Drop one or several objects.
+
+Syntax:
+    drop <object name>
+    drop <quantity> <object name>
+
+Drop one or several objects from the inventory (characters' contents)
+to the room (character location). You can specify the object name
+or a quantity followed by the object name.
+"""
 
 def refine(character, object, quantity=1):
     to_drop = search.match(character, object, viewer=character, limit=quantity)
