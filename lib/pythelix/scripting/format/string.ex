@@ -94,7 +94,7 @@ defmodule Pythelix.Scripting.Format.String do
   def format(%Format.String{segments: segments}) do
     segments
     |> Enum.map(fn {string, variables} ->
-      script = %Script{id: "format", bytecode: [], variables: variables}
+      script = %Script{id: "format", bytecode: [], variables: variables, immediate: true}
 
       do_split(String.graphemes(string), [], "", :text)
       |> maybe_format(script)
@@ -137,7 +137,7 @@ defmodule Pythelix.Scripting.Format.String do
   def format_for(%Format.String{segments: segments}, viewer) do
     {parts, entities} =
       Enum.reduce(segments, {[], MapSet.new()}, fn {string, variables}, {acc_parts, acc_entities} ->
-        script = %Script{id: "format", bytecode: [], variables: variables}
+        script = %Script{id: "format", bytecode: [], variables: variables, immediate: true}
 
         case do_split(String.graphemes(string), [], "", :text) do
           {:ok, _} = result ->
