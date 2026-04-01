@@ -374,6 +374,108 @@ defmodule Pythelix.Scripting.Namespace.StackableTest do
     end
   end
 
+  describe "search.match — list of candidates" do
+    test "matches from a list of entities" do
+      {:ok, room} = Record.create_entity(key: "lm_room")
+      {:ok, sword} = Record.create_entity(key: "lm_sword", location: room)
+      Record.set_attribute("lm_sword", "name", "iron sword")
+      {:ok, shield} = Record.create_entity(key: "lm_shield", location: room)
+      Record.set_attribute("lm_shield", "name", "iron shield")
+
+      script =
+        run("""
+        results = search.match(!lm_room!.contents, "iron")
+        """)
+
+      results = Script.get_variable_value(script, "results")
+      assert length(results) == 2
+      ids = Enum.map(results, & &1.id)
+      assert sword.id in ids
+      assert shield.id in ids
+    end
+
+    test "matches from a filtered list (excluding an entity)" do
+      {:ok, room} = Record.create_entity(key: "lmf_room")
+      {:ok, _char} = Record.create_entity(key: "lmf_char", location: room)
+      Record.set_attribute("lmf_char", "name", "a hero")
+      {:ok, npc} = Record.create_entity(key: "lmf_npc", location: room)
+      Record.set_attribute("lmf_npc", "name", "a villain")
+
+      script =
+        run("""
+        candidates = !lmf_room!.contents
+        candidates.remove(!lmf_char!)
+        results = search.match(candidates, "a")
+        """)
+
+      results = Script.get_variable_value(script, "results")
+      assert length(results) == 1
+      assert hd(results).id == npc.id
+    end
+
+    test "matches stackables from a list" do
+      {:ok, room} = Record.create_entity(key: "lms_room")
+      {:ok, _coin} = Record.create_entity(key: "lms_coin")
+      Record.set_attribute("lms_coin", "name", "gold coin")
+      Record.add_stackable(room, Record.get_entity("lms_coin"), 50)
+
+      script =
+        run("""
+        results = search.match(!lms_room!.contents, "gold")
+        """)
+
+      results = Script.get_variable_value(script, "results")
+      assert length(results) == 1
+      assert %Stackable{quantity: 50} = hd(results)
+    end
+
+    test "matches from a concatenated list" do
+      {:ok, room} = Record.create_entity(key: "lmc_room")
+      {:ok, sword} = Record.create_entity(key: "lmc_sword", location: room)
+      Record.set_attribute("lmc_sword", "name", "iron sword")
+      {:ok, bag} = Record.create_entity(key: "lmc_bag")
+      {:ok, dagger} = Record.create_entity(key: "lmc_dagger", location: bag)
+      Record.set_attribute("lmc_dagger", "name", "iron dagger")
+
+      script =
+        run("""
+        results = search.match(!lmc_room!.contents + !lmc_bag!.contents, "iron")
+        """)
+
+      results = Script.get_variable_value(script, "results")
+      assert length(results) == 2
+      ids = Enum.map(results, & &1.id)
+      assert sword.id in ids
+      assert dagger.id in ids
+    end
+
+    test "entity argument still works (uses entity contents)" do
+      {:ok, room} = Record.create_entity(key: "lme_room")
+      {:ok, _coin} = Record.create_entity(key: "lme_coin")
+      Record.set_attribute("lme_coin", "name", "gold coin")
+      Record.add_stackable(room, Record.get_entity("lme_coin"), 100)
+
+      script =
+        run("""
+        results = search.match(!lme_room!, "gold")
+        """)
+
+      results = Script.get_variable_value(script, "results")
+      assert length(results) == 1
+      assert %Stackable{quantity: 100} = hd(results)
+    end
+
+    test "empty list returns no results" do
+      script =
+        run("""
+        results = search.match([], "anything")
+        """)
+
+      results = Script.get_variable_value(script, "results")
+      assert results == []
+    end
+  end
+
   describe "search.match — index selection" do
     test "index=1 returns the first matching item" do
       {:ok, room} = Record.create_entity(key: "idx_room")

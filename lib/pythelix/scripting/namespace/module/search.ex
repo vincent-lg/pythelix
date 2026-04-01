@@ -55,7 +55,7 @@ defmodule Pythelix.Scripting.Namespace.Module.Search do
   end
 
   defmet match(script, namespace), [
-    {:container, index: 0, type: :entity},
+    {:container, index: 0, type: :any},
     {:text, index: 1, type: :str},
     {:viewer, keyword: "viewer", type: :entity, default: nil},
     {:limit, keyword: "limit", type: :int, default: nil},
@@ -74,7 +74,14 @@ defmodule Pythelix.Scripting.Namespace.Module.Search do
     normalizer = build_normalizer()
     normalized_text = normalizer.(text)
 
-    contents = Record.get_contained(container)
+    {contents, limit_container} =
+      case container do
+        %Entity{} = entity ->
+          {Record.get_contained(entity), entity}
+
+        candidates when is_list(candidates) ->
+          {candidates, nil}
+      end
 
     results =
       contents
@@ -84,7 +91,7 @@ defmodule Pythelix.Scripting.Namespace.Module.Search do
         attr_value != nil && matches_normalized?(normalizer.(attr_value), normalized_text)
       end)
       |> maybe_select_index(match_index)
-      |> apply_limit(limit, container)
+      |> apply_limit(limit, limit_container)
 
     {script, results}
   end
