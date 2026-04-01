@@ -8,7 +8,6 @@
   },
   "documents": {
     "docs/start.md": {
-      "last_committed": "2026-04-01T07:51:50.969502400Z",
       "file_hash": "3934e8d55f69d73e1e4467d7cdfb267cf48130f80de6854abccfc0b34fd9af61",
       "blocks": [
         {
@@ -1182,7 +1181,6 @@
     "fr": {
       "docs/start.md": {
         "file_path": "docs/fr/start.md",
-        "last_committed": "2026-04-01T08:39:33.303101600Z",
         "file_hash": "237b68cce6f1255d675c0e9d92f01897f8aafd55d4897ba519a0c8fb6a1e1d8a",
         "status": "committed",
         "mappings": [
