@@ -460,6 +460,14 @@ You've learned how to start the Pythelix server, how to modify and add entities 
 
 So you have enough knowledge to pick a particular topic that interests you. Each topic assumes you have read this guide, so understanding what entities, worldlets, attributes, methods and inheritance means is critical.
 
+There are three types of documentation:
+
+- About: learn more about a concept.
+- Why: explain why a feature has been implemented in such a way in the default worldlets.
+- How: how to add a specific feature.
+
+### About
+
 Explore one of these tutorials freely, in the order you like:
 
 - [All about commands](./commands.md): learn to add a command and handle common use cases (commands with arguments, commands that pause...).
@@ -468,7 +476,6 @@ Explore one of these tutorials freely, in the order you like:
 - [Understanding methods and nested method calls](/methods.md): examples to better understand how methods work and what their role is.
 - [Adding custom messages depending on who views the player](./names.md): learn how to have entity names (like player names) that are different depending on who views them.
 - [Understanding menus](./menus.md): how to add, update and extend the login menus or in-game menus.
-- [Creating, changing, removing the prompt](./prompt.md): learn how to customize the prompt (the line that appears under every message).
 - [Matching and searching](./match.md): learn how to search in a room or in the entire world using simple methods.
 - [Using game modes to handle parallel game environments](./modes.md): learn about game modes and how to use them to have several in-game menus opened at the same time (useful, in particular for builders).
 - [Manipulating real and game-specific time](./time.md): learn how to handle real time and game-specific time.
@@ -476,4 +483,14 @@ Explore one of these tutorials freely, in the order you like:
 - [Randomly-generated strings for realism](./rangen.md): learn how to use rangen to create random phone numbers, licence plates, Social security fake codes and so on.
 - [Handling passwords safely](./password.md): learn how to manipulate passwords safely to avoid storing them directly in your entities.
 - [Understanding client and client controllers](./controls.md): learn about the transition between client (a connection) and a character (the controller).
+
+### Why
+
+The following documents explain the reasons for a feature, or for the way it was implemented by default.
+
+### How
+
+This documentation focuses on questions: how to implement something.
+
+- [Creating, changing, removing the prompt](./prompt.md): learn how to customize the prompt (the line that appears under every message).
 - [Altering encoding for a client](./encoding.md): learn how to alter the way accented characters appear for a single connection or for everyone (useful for some games using a non-English world).

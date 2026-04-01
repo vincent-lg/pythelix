@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "next_id": 186,
+  "next_id": 206,
   "config": {
     "docs_path": "docs",
     "docs_structure": "{lang}/{path}",
@@ -8,7 +8,8 @@
   },
   "documents": {
     "docs/start.md": {
-      "last_committed": "2026-03-30T17:45:14.460005200Z",
+      "last_committed": "2026-04-01T07:51:50.969502400Z",
+      "file_hash": "3934e8d55f69d73e1e4467d7cdfb267cf48130f80de6854abccfc0b34fd9af61",
       "blocks": [
         {
           "id": "b0001",
@@ -1025,100 +1026,154 @@
           "sequence": 168
         },
         {
+          "id": "b0196",
+          "block_type": "paragraph",
+          "hash": "c42d3b839190608871de48cca1813ef179aa8398d6746b0cdaa697e0446779d0",
+          "sequence": 169
+        },
+        {
+          "id": "b0197",
+          "block_type": "list_item",
+          "hash": "a7d516dd22e1b5706fad7202f678e288e453ba880fe1bec195d922bb807f8212",
+          "sequence": 170
+        },
+        {
+          "id": "b0198",
+          "block_type": "list_item",
+          "hash": "49eba78bbd2ecfb9913f9296a10ad1e3cf2145551c51aaae152e4ddb06e4f087",
+          "sequence": 171
+        },
+        {
+          "id": "b0199",
+          "block_type": "list_item",
+          "hash": "b16834330cee4afc2e048bf0412c30046bddc4f26f1b95ef7196ad75a2a4d519",
+          "sequence": 172
+        },
+        {
+          "id": "b0200",
+          "block_type": "heading",
+          "hash": "4efca0d10c5feb8e9b35eb1d994f2905bb71714e6a271f511d713b539ea5faa1",
+          "sequence": 173
+        },
+        {
           "id": "b0170",
           "block_type": "paragraph",
           "hash": "6608e16d99cbd44d5b3bfc36ce839d2dc69af40bc4ffba3bee606aceb3e291b4",
-          "sequence": 169
+          "sequence": 174
         },
         {
           "id": "b0171",
           "block_type": "list_item",
           "hash": "f7697d204f7b00b4c902d59e4e9acf6a5bf7dbc27236af16c5c9f047b9279292",
-          "sequence": 170
+          "sequence": 175
         },
         {
           "id": "b0172",
           "block_type": "list_item",
           "hash": "2fd31629fb43289513d7dac65d94335c29dd4026f050ab4f1a5014e7f3e1d788",
-          "sequence": 171
+          "sequence": 176
         },
         {
           "id": "b0173",
           "block_type": "list_item",
           "hash": "9fb041461803e1a72d744b8a5fe2f1c2d1138f4f1adb77b836edbc2e9be85be4",
-          "sequence": 172
+          "sequence": 177
         },
         {
           "id": "b0174",
           "block_type": "list_item",
           "hash": "26e7771f4c00fcc41a6a27de1840be2c972a624b8b4633a01cfd5d6c0ee4760c",
-          "sequence": 173
+          "sequence": 178
         },
         {
           "id": "b0175",
           "block_type": "list_item",
           "hash": "d31080e4ccbbbd75837a915bab9f48ff7c4a70635073478b29fb363f3f278808",
-          "sequence": 174
+          "sequence": 179
         },
         {
           "id": "b0176",
           "block_type": "list_item",
           "hash": "ca389b4369f86e062cf629dfe449755affbb595d67cea8c8b849b10ae22033ff",
-          "sequence": 175
-        },
-        {
-          "id": "b0177",
-          "block_type": "list_item",
-          "hash": "6e2d74fe3584ee78d6ab73603ca74e470a192295e1abfac728beb5c0aa34c3d8",
-          "sequence": 176
+          "sequence": 180
         },
         {
           "id": "b0178",
           "block_type": "list_item",
           "hash": "7939f15c3c004ffdca22e86837e77d81c9511a67d60488001bcd0db5783632f8",
-          "sequence": 177
+          "sequence": 181
         },
         {
           "id": "b0179",
           "block_type": "list_item",
           "hash": "4239afd38966e746f30f3f3e672f056d98672556fb957eaa3efec275729041e6",
-          "sequence": 178
+          "sequence": 182
         },
         {
           "id": "b0180",
           "block_type": "list_item",
           "hash": "46bfbac8203233efda416aec88e997e15a33e7d041e1d007fa4c00edd1313d37",
-          "sequence": 179
+          "sequence": 183
         },
         {
           "id": "b0181",
           "block_type": "list_item",
           "hash": "e9952105babcbc4b2f87c05a9506b07a7638bf141611a4828c313c029b52a838",
-          "sequence": 180
+          "sequence": 184
         },
         {
           "id": "b0182",
           "block_type": "list_item",
           "hash": "7ca2e34597fcdcbaae13924382579be8101339207f5dd087fa258d383e874ba1",
-          "sequence": 181
+          "sequence": 185
         },
         {
           "id": "b0183",
           "block_type": "list_item",
           "hash": "fec0a031382962983cd7f8dfe9ef1be366394de6a7ffbe6c8b230144fa1d707e",
-          "sequence": 182
+          "sequence": 186
         },
         {
           "id": "b0184",
           "block_type": "list_item",
           "hash": "ea03e6e564a1f72a80e3748901a28d5fe115f7154533ac45473b73937faa97b2",
-          "sequence": 183
+          "sequence": 187
+        },
+        {
+          "id": "b0201",
+          "block_type": "heading",
+          "hash": "d3ae14a50bfe463f804c73c9fd16e88c36bf5a0bf4a56f98ae696a91eb2de149",
+          "sequence": 188
+        },
+        {
+          "id": "b0202",
+          "block_type": "paragraph",
+          "hash": "dc86fb6813bf17e2c50882798f859554b7b10f1798ce1e3405cb9c74b8e14443",
+          "sequence": 189
+        },
+        {
+          "id": "b0203",
+          "block_type": "heading",
+          "hash": "7470bd3bc2abfe497af32ee4ccf845cb2aba14878d55c970d38d99629ab5d6a3",
+          "sequence": 190
+        },
+        {
+          "id": "b0204",
+          "block_type": "paragraph",
+          "hash": "ce6aa8f0fbd003b1bf48845145573d54d3a1ca579e8c13e485ce0b71583da8f7",
+          "sequence": 191
+        },
+        {
+          "id": "b0205",
+          "block_type": "list_item",
+          "hash": "6e2d74fe3584ee78d6ab73603ca74e470a192295e1abfac728beb5c0aa34c3d8",
+          "sequence": 192
         },
         {
           "id": "b0185",
           "block_type": "list_item",
           "hash": "724e05036f7dcece528b28e17f15f8c4e3c85787a2412850172c651e471aa569",
-          "sequence": 184
+          "sequence": 193
         }
       ]
     }
@@ -1127,7 +1182,8 @@
     "fr": {
       "docs/start.md": {
         "file_path": "docs/fr/start.md",
-        "last_committed": "2026-03-30T17:47:58.349263600Z",
+        "last_committed": "2026-04-01T08:39:33.303101600Z",
+        "file_hash": "237b68cce6f1255d675c0e9d92f01897f8aafd55d4897ba519a0c8fb6a1e1d8a",
         "status": "committed",
         "mappings": [
           {
@@ -2145,6 +2201,36 @@
             "status": "up_to_date"
           },
           {
+            "source_block_id": "b0196",
+            "target_hash": "836944933000bda4b39b79516e53534740d4999ee7a9225a7fa76846bbcc0ace",
+            "source_hash_at_commit": "c42d3b839190608871de48cca1813ef179aa8398d6746b0cdaa697e0446779d0",
+            "status": "up_to_date"
+          },
+          {
+            "source_block_id": "b0197",
+            "target_hash": "9a570b57ec069c570f5b79b11c40c5a77c6116564fccf1e40fc9d1acad1803b4",
+            "source_hash_at_commit": "a7d516dd22e1b5706fad7202f678e288e453ba880fe1bec195d922bb807f8212",
+            "status": "up_to_date"
+          },
+          {
+            "source_block_id": "b0198",
+            "target_hash": "4c3a089f4f248f058944f4d07257671aae8c5de24b777a66a3080925b9e66cd5",
+            "source_hash_at_commit": "49eba78bbd2ecfb9913f9296a10ad1e3cf2145551c51aaae152e4ddb06e4f087",
+            "status": "up_to_date"
+          },
+          {
+            "source_block_id": "b0199",
+            "target_hash": "6dff78a898b166ff4b98dc78454b0b214afe085824af91392140c000c30ebfeb",
+            "source_hash_at_commit": "b16834330cee4afc2e048bf0412c30046bddc4f26f1b95ef7196ad75a2a4d519",
+            "status": "up_to_date"
+          },
+          {
+            "source_block_id": "b0200",
+            "target_hash": "307ef284ba576615fa72dc9a25e2102cd12ea9f7e1aa36f3843232dd6265c5ea",
+            "source_hash_at_commit": "4efca0d10c5feb8e9b35eb1d994f2905bb71714e6a271f511d713b539ea5faa1",
+            "status": "up_to_date"
+          },
+          {
             "source_block_id": "b0170",
             "target_hash": "c158b3cd763f3bbf3907ac96df9746572714ce7751247429f049a24e3f726576",
             "source_hash_at_commit": "6608e16d99cbd44d5b3bfc36ce839d2dc69af40bc4ffba3bee606aceb3e291b4",
@@ -2187,12 +2273,6 @@
             "status": "up_to_date"
           },
           {
-            "source_block_id": "b0177",
-            "target_hash": "5a08be47121a88706bdc6b426a82c57bf4be48a95195c2ddfc3ca081daf86b63",
-            "source_hash_at_commit": "6e2d74fe3584ee78d6ab73603ca74e470a192295e1abfac728beb5c0aa34c3d8",
-            "status": "up_to_date"
-          },
-          {
             "source_block_id": "b0178",
             "target_hash": "7acea55d6ab2f418c187d0c9782f5e0730ce7b55a275909a599e96dd3f61c422",
             "source_hash_at_commit": "7939f15c3c004ffdca22e86837e77d81c9511a67d60488001bcd0db5783632f8",
@@ -2232,6 +2312,36 @@
             "source_block_id": "b0184",
             "target_hash": "0c9b41cb254c77d298b4740570f0c45657831d7cdd40b4d5aa32bc8fedc8658a",
             "source_hash_at_commit": "ea03e6e564a1f72a80e3748901a28d5fe115f7154533ac45473b73937faa97b2",
+            "status": "up_to_date"
+          },
+          {
+            "source_block_id": "b0201",
+            "target_hash": "d2b63ab064dad2d145c27d1aa1e75cd746e4b8443c6a63fa2870b1c5f7dae70b",
+            "source_hash_at_commit": "d3ae14a50bfe463f804c73c9fd16e88c36bf5a0bf4a56f98ae696a91eb2de149",
+            "status": "up_to_date"
+          },
+          {
+            "source_block_id": "b0202",
+            "target_hash": "c12191d3e4f8b403ce8ed48657e8da08d7149dd9a0adf7ee29ae288b83a8e4c3",
+            "source_hash_at_commit": "dc86fb6813bf17e2c50882798f859554b7b10f1798ce1e3405cb9c74b8e14443",
+            "status": "up_to_date"
+          },
+          {
+            "source_block_id": "b0203",
+            "target_hash": "44f5e3fbec57be75ebfb2e42caf7f5ee1542f84748a0380b6f20238c4a257e1b",
+            "source_hash_at_commit": "7470bd3bc2abfe497af32ee4ccf845cb2aba14878d55c970d38d99629ab5d6a3",
+            "status": "up_to_date"
+          },
+          {
+            "source_block_id": "b0204",
+            "target_hash": "e97f42b1ec41151142f7b30b5f21b873d46176e3b900ee4c3508c9f3102aeec0",
+            "source_hash_at_commit": "ce6aa8f0fbd003b1bf48845145573d54d3a1ca579e8c13e485ce0b71583da8f7",
+            "status": "up_to_date"
+          },
+          {
+            "source_block_id": "b0205",
+            "target_hash": "5a08be47121a88706bdc6b426a82c57bf4be48a95195c2ddfc3ca081daf86b63",
+            "source_hash_at_commit": "6e2d74fe3584ee78d6ab73603ca74e470a192295e1abfac728beb5c0aa34c3d8",
             "status": "up_to_date"
           },
           {

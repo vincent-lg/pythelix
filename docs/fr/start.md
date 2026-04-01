@@ -465,6 +465,14 @@ Vous avez appris comment lancer le serveur Pythelix. Vous savez comment créer o
 
 Vous avez donc assez d'information pour choisir un sujet qui vous intéresse en particulier. Chacun de ces sujets part du principe que vous avez lu ce tutoriel, donc la compréhension des entités, worldlets, attributs, méthodes et héritage est très importante.
 
+Il existe trois types de documentation disponibles :
+
+- À propos : en apprendre plus sur un sujet précis ;
+- Pourquoi : expliquer pourquoi une fonctionnalité a été implémentée de cette façon dans les worldlets d'origine ;
+- Comment : comment implémenter une fonctionnalité précise.
+
+### À propos
+
 Lisez les tutoriels qui suivent, dans l'ordre que vous voulez :
 
 - [Tout savoir sur les commandes](./commands.md) : apprendre à ajouter des commandes et gérer les cas les plus fréquents (gestion des paramètres, mise en pause...) ;
@@ -473,7 +481,6 @@ Lisez les tutoriels qui suivent, dans l'ordre que vous voulez :
 - [Comprendre les méthodes et les appels de méthodes imbriqués](/methods.md) : des exemples concrets pour mieux comprendre les méthodes et la façon dont elles sont utilisées ;
 - [Ajouter des messages qui varient en fonction de qui les voit](./names.md) : apprendre à créer des noms d'entités (comme des noms de joueur) qui varient en fonction de celui qui les voit ;
 - [Comprendre les menus](./menus.md) : comment étendre ou modifier le menu de connexion (ou de futurs menus en jeu) ;
-- [Créer, changer et supprimer le prompt](./prompt.md) : apprendre à personnaliser le prompt (la ligne présente sous chaque message) ;
 - [Correspondance par match et search](./match.md): apprendre à trouver des entités dans le monde entier ou dans une salle spécifique en fonction de son nom ;
 - [Utiliser les modes de jeu pour mettre en place des environnements de jeu parallèles](./modes.md) : apprendre à utiliser les modes de jeu afin d'avoir plusieurs menus ouverts simultanément pour un joueur (généralement un bâtisseur) ;
 - [Manipuler le temps réel et le temps de jeu](./time.md) : apprendre à manipuler le temps réel et un temps spécifique au jeu ;
@@ -481,4 +488,14 @@ Lisez les tutoriels qui suivent, dans l'ordre que vous voulez :
 - [Les chaînes de caractères aléatoirement générées](./rangen.md) : apprendre à utiliser un générateur de chaîne de caractères aléatoires mais uniques (utile pour créer des numéros de téléphone, plaques d'immatriculation, numéro de sécurité sociale...) ;
 - [Gérer les mots de passe de façon simples](./password.md) : apprendre à gérer les mots de passe de façon simples pour ne pas les stocker tel quel dans les entités ;
 - [Comprendre comment fonctionne les clients et contrôleurs](./controls.md) : comprendre les clients et le lient entre clients et autres entités (comme des joueurs) ;
+
+### Pourquoi
+
+Les documents dans cette section expliquent pourquoi une fonctionnalité a été implémentée de cette façon et décrivent le worldlet par défaut.
+
+### Comment
+
+Les documents dans cette section se concentrent sur une question : comment implémenter telle ou telle fonctionnalité.
+
+- [Créer, changer et supprimer le prompt](./prompt.md) : apprendre à personnaliser le prompt (la ligne présente sous chaque message) ;
 - [Gérer l'encodage pour un client](./encoding.md) : apprendre à utiliser la notion d'encodage pour afficher les caractères accentués différemment pour tous ou un client.
