@@ -16,7 +16,9 @@ defmodule Pythelix.Scripting.Namespace.Module.Names do
   alias Pythelix.Method
   alias Pythelix.Record
   alias Pythelix.Scripting.Format
+  alias Pythelix.Scripting.Namespace.Module.Clients
   alias Pythelix.Scripting.Namespace.Module.Search
+  alias Pythelix.Scripting.Object.Dict
   alias Pythelix.Stackable
 
   defmet group(script, namespace), [
@@ -64,14 +66,7 @@ defmodule Pythelix.Scripting.Namespace.Module.Names do
   ] do
     entity = Store.get_value(namespace.entity)
     text = namespace.text
-
-    case Record.get_method(entity, "msg") do
-      %Method{} ->
-        do_notify(entity, text, namespace.only_visible)
-
-      _ ->
-        nil
-    end
+    do_notify(entity, text, namespace.only_visible)
 
     {script, :none}
   end
@@ -95,29 +90,36 @@ defmodule Pythelix.Scripting.Namespace.Module.Names do
 
     contents = Record.get_contained(location)
 
+    # Build a map of entity id/key -> [client] for all active clients once,
+    # to avoid re-scanning all clients for each entity in the location.
+    controls_map = build_controls_map()
+
     for item <- contents do
       entity = get_content_entity(item)
+      id_or_key = Entity.get_id_or_key(entity)
+      clients = Map.get(controls_map, id_or_key, [])
 
-      case Record.get_method(entity, "msg") do
-        %Method{} ->
-          excluded = auto_exclude && MapSet.member?(referenced_ids, entity.id)
+      unless clients == [] do
+        excluded = auto_exclude && MapSet.member?(referenced_ids, entity.id)
 
-          unless excluded do
-            should_send =
-              if only_visible do
-                Enum.all?(referenced, fn e -> entity_visible?(e, entity) end)
-              else
-                true
-              end
+        unless excluded do
+          should_send =
+            if only_visible do
+              Enum.all?(referenced, fn e -> entity_visible?(e, entity) end)
+            else
+              true
+            end
 
-            if should_send do
-              {formatted, _} = Format.String.format_for(text, entity)
-              Method.call_entity(entity, "msg", [formatted])
+          if should_send do
+            {formatted, _} = Format.String.format_for(text, entity)
+
+            for client <- clients do
+              client_id = Record.get_attribute(client, "client_id")
+              pid = Record.get_attribute(client, "pid")
+              hub().mark_client_with_message(client_id, formatted, pid)
             end
           end
-
-        _ ->
-          nil
+        end
       end
     end
 
@@ -135,8 +137,30 @@ defmodule Pythelix.Scripting.Namespace.Module.Names do
       end
 
     if should_send do
-      Method.call_entity(entity, "msg", [formatted])
+      send_to_controlling_clients(entity, formatted)
     end
+  end
+
+  defp send_to_controlling_clients(entity, text) do
+    id_or_key = Entity.get_id_or_key(entity)
+
+    for client <- Clients.controlling(id_or_key) do
+      client_id = Record.get_attribute(client, "client_id")
+      pid = Record.get_attribute(client, "pid")
+      hub().mark_client_with_message(client_id, text, pid)
+    end
+  end
+
+  defp build_controls_map do
+    Clients.active()
+    |> Enum.reduce(%{}, fn client, acc ->
+      controls = Record.get_attribute(client, "controls")
+      controlled = Dict.get(controls.data, "__controls", MapSet.new())
+
+      Enum.reduce(controlled, acc, fn id_or_key, acc ->
+        Map.update(acc, id_or_key, [client], &[client | &1])
+      end)
+    end)
   end
 
   defp entity_visible?(entity, viewer) do
@@ -222,4 +246,6 @@ defmodule Pythelix.Scripting.Namespace.Module.Names do
 
   defp get_item_quantity(%Stackable{quantity: qty}), do: qty
   defp get_item_quantity(%Entity{}), do: 1
+
+  defp hub, do: Application.get_env(:pythelix, :game_hub, Pythelix.Game.Hub)
 end

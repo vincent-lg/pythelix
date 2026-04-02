@@ -19,6 +19,9 @@ def format_for(self, viewer: Entity):
 !generic/room!
 description = None
 
+def announce(self, text):
+    names.broadcast(self, text)
+
 def look(self, viewer: Entity):
     lines = [self.title]
     description = self.description.format_for(viewer)

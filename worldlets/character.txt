@@ -2,9 +2,7 @@
 permissions = {}
 
 def msg(self, text):
-    for client in clients.controlling(self):
-        client.msg(text)
-    done
+    names.notify(self, text)
 
 !generic/player!
 parent = "generic/character"

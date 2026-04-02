@@ -5,7 +5,30 @@ defmodule Pythelix.Scripting.Namespace.Module.NamesTest do
 
   use Pythelix.ScriptingCase
 
+  alias Pythelix.Entity
   alias Pythelix.Record
+  alias Pythelix.Scripting.Object.Dict
+  alias Pythelix.SubEntity
+
+  # Creates a client entity that controls the given character entity.
+  # Sets client_id to the entity key so the HubStub can route messages
+  # back to `last_msg` on the entity for assertion.
+  defp setup_test_client(client_key, character_key) do
+    unless Record.get_entity("generic/client") do
+      {:ok, _} = Record.create_entity(key: "generic/client", virtual: true)
+    end
+
+    parent = Record.get_entity("generic/client")
+    {:ok, _} = Record.create_entity(key: client_key, virtual: true, parent: parent)
+
+    entity = Record.get_entity(character_key)
+    id_or_key = Entity.get_id_or_key(entity)
+
+    controls_dict = Dict.put(Dict.new(), "__controls", MapSet.new([id_or_key]))
+    controls = %SubEntity{base: nil, data: controls_dict}
+    Record.set_attribute(client_key, "controls", controls)
+    Record.set_attribute(client_key, "client_id", client_key)
+  end
 
   describe "names.group — basic" do
     test "groups entities with the same name into a single entry" do
@@ -411,23 +434,17 @@ defmodule Pythelix.Scripting.Namespace.Module.NamesTest do
   end
 
   describe "names.notify" do
-    test "sends a plain string message to an entity with msg" do
+    test "sends a plain string message to an entity's controlling client" do
       {:ok, room} = Record.create_entity(key: "nn_room")
       {:ok, _char} = Record.create_entity(key: "nn_char", location: room)
       Record.set_attribute("nn_char", "name", "Alice")
-
-      Record.set_method(
-        "nn_char",
-        "msg",
-        [{"text", [index: 0, type: :str]}],
-        ~s(self.last_msg = text)
-      )
+      setup_test_client("nn_client", "nn_char")
 
       run_ok("""
       names.notify(!nn_char!, "Hello there")
       """)
 
-      assert Record.get_attribute(Record.get_entity("nn_char"), "last_msg") == "Hello there"
+      assert Record.get_attribute(Record.get_entity("nn_client"), "last_msg") == "Hello there"
     end
 
     test "resolves entity names in f-strings for the viewer" do
@@ -436,21 +453,14 @@ defmodule Pythelix.Scripting.Namespace.Module.NamesTest do
       {:ok, _receiver} = Record.create_entity(key: "nn_fstr_receiver", location: room)
       Record.set_attribute("nn_fstr_giver", "name", "Alice")
       Record.set_attribute("nn_fstr_receiver", "name", "Bob")
-
-      # receiver gets a msg method that stores the text
-      Record.set_method(
-        "nn_fstr_receiver",
-        "msg",
-        [{"text", [index: 0, type: :str]}],
-        ~s(self.last_msg = text)
-      )
+      setup_test_client("nn_fstr_client", "nn_fstr_receiver")
 
       run_ok("""
       giver = !nn_fstr_giver!
       names.notify(!nn_fstr_receiver!, f"{giver} gives you a sword.")
       """)
 
-      assert Record.get_attribute(Record.get_entity("nn_fstr_receiver"), "last_msg") ==
+      assert Record.get_attribute(Record.get_entity("nn_fstr_client"), "last_msg") ==
                "Alice gives you a sword."
     end
 
@@ -467,27 +477,27 @@ defmodule Pythelix.Scripting.Namespace.Module.NamesTest do
         ~s(return "a mysterious figure")
       )
 
-      Record.set_method(
-        "nn_nf_viewer",
-        "msg",
-        [{"text", [index: 0, type: :str]}],
-        ~s(self.last_msg = text)
-      )
+      setup_test_client("nn_nf_client", "nn_nf_viewer")
 
       run_ok("""
       actor = !nn_nf_actor!
       names.notify(!nn_nf_viewer!, f"{actor} waves at you.")
       """)
 
-      assert Record.get_attribute(Record.get_entity("nn_nf_viewer"), "last_msg") ==
+      assert Record.get_attribute(Record.get_entity("nn_nf_client"), "last_msg") ==
                "a mysterious figure waves at you."
     end
 
-    test "does nothing if entity has no msg method" do
+    test "does nothing if entity has no controlling client" do
       {:ok, _obj} = Record.create_entity(key: "nn_nomsg_obj")
       Record.set_attribute("nn_nomsg_obj", "name", "rock")
 
-      # Should not raise
+      # Ensure generic/client exists so Clients.active() works
+      unless Record.get_entity("generic/client") do
+        {:ok, _} = Record.create_entity(key: "generic/client", virtual: true)
+      end
+
+      # Should not raise — entity has no controlling client
       run_ok("""
       names.notify(!nn_nomsg_obj!, "Hello")
       """)
@@ -507,12 +517,7 @@ defmodule Pythelix.Scripting.Namespace.Module.NamesTest do
         ~s(return False)
       )
 
-      Record.set_method(
-        "nn_vis_viewer",
-        "msg",
-        [{"text", [index: 0, type: :str]}],
-        ~s(self.last_msg = text)
-      )
+      setup_test_client("nn_vis_client", "nn_vis_viewer")
 
       run_ok("""
       actor = !nn_vis_actor!
@@ -520,7 +525,7 @@ defmodule Pythelix.Scripting.Namespace.Module.NamesTest do
       """)
 
       # Message should NOT have been sent
-      assert Record.get_attribute(Record.get_entity("nn_vis_viewer"), "last_msg") == nil
+      assert Record.get_attribute(Record.get_entity("nn_vis_client"), "last_msg") == nil
     end
 
     test "sends when only_visible=False even if entity is not visible" do
@@ -536,46 +541,34 @@ defmodule Pythelix.Scripting.Namespace.Module.NamesTest do
         ~s(return False)
       )
 
-      Record.set_method(
-        "nn_novis_viewer",
-        "msg",
-        [{"text", [index: 0, type: :str]}],
-        ~s(self.last_msg = text)
-      )
+      setup_test_client("nn_novis_client", "nn_novis_viewer")
 
       run_ok("""
       actor = !nn_novis_actor!
       names.notify(!nn_novis_viewer!, f"{actor} whispers.", only_visible=False)
       """)
 
-      assert Record.get_attribute(Record.get_entity("nn_novis_viewer"), "last_msg") ==
+      assert Record.get_attribute(Record.get_entity("nn_novis_client"), "last_msg") ==
                "Ghost whispers."
     end
   end
 
   describe "names.broadcast" do
-    test "sends message to all entities with msg in a location" do
+    test "sends message to all entities with controlling clients in a location" do
       {:ok, room} = Record.create_entity(key: "nb_room")
       {:ok, _c1} = Record.create_entity(key: "nb_char1", location: room)
       {:ok, _c2} = Record.create_entity(key: "nb_char2", location: room)
       Record.set_attribute("nb_char1", "name", "Alice")
       Record.set_attribute("nb_char2", "name", "Bob")
-
-      for key <- ["nb_char1", "nb_char2"] do
-        Record.set_method(
-          key,
-          "msg",
-          [{"text", [index: 0, type: :str]}],
-          ~s(self.last_msg = text)
-        )
-      end
+      setup_test_client("nb_client1", "nb_char1")
+      setup_test_client("nb_client2", "nb_char2")
 
       run_ok("""
       names.broadcast(!nb_room!, "A bell rings.")
       """)
 
-      assert Record.get_attribute(Record.get_entity("nb_char1"), "last_msg") == "A bell rings."
-      assert Record.get_attribute(Record.get_entity("nb_char2"), "last_msg") == "A bell rings."
+      assert Record.get_attribute(Record.get_entity("nb_client1"), "last_msg") == "A bell rings."
+      assert Record.get_attribute(Record.get_entity("nb_client2"), "last_msg") == "A bell rings."
     end
 
     test "auto-excludes entities referenced in the f-string" do
@@ -584,15 +577,8 @@ defmodule Pythelix.Scripting.Namespace.Module.NamesTest do
       {:ok, _listener} = Record.create_entity(key: "nb_excl_listener", location: room)
       Record.set_attribute("nb_excl_speaker", "name", "Alice")
       Record.set_attribute("nb_excl_listener", "name", "Bob")
-
-      for key <- ["nb_excl_speaker", "nb_excl_listener"] do
-        Record.set_method(
-          key,
-          "msg",
-          [{"text", [index: 0, type: :str]}],
-          ~s(self.last_msg = text)
-        )
-      end
+      setup_test_client("nb_excl_cl_speaker", "nb_excl_speaker")
+      setup_test_client("nb_excl_cl_listener", "nb_excl_listener")
 
       run_ok("""
       speaker = !nb_excl_speaker!
@@ -600,9 +586,9 @@ defmodule Pythelix.Scripting.Namespace.Module.NamesTest do
       """)
 
       # Speaker is auto-excluded, should NOT get the message
-      assert Record.get_attribute(Record.get_entity("nb_excl_speaker"), "last_msg") == nil
+      assert Record.get_attribute(Record.get_entity("nb_excl_cl_speaker"), "last_msg") == nil
       # Listener should get the message with speaker's name resolved
-      assert Record.get_attribute(Record.get_entity("nb_excl_listener"), "last_msg") ==
+      assert Record.get_attribute(Record.get_entity("nb_excl_cl_listener"), "last_msg") ==
                "Alice says: hello!"
     end
 
@@ -612,15 +598,8 @@ defmodule Pythelix.Scripting.Namespace.Module.NamesTest do
       {:ok, _listener} = Record.create_entity(key: "nb_noexcl_listener", location: room)
       Record.set_attribute("nb_noexcl_speaker", "name", "Alice")
       Record.set_attribute("nb_noexcl_listener", "name", "Bob")
-
-      for key <- ["nb_noexcl_speaker", "nb_noexcl_listener"] do
-        Record.set_method(
-          key,
-          "msg",
-          [{"text", [index: 0, type: :str]}],
-          ~s(self.last_msg = text)
-        )
-      end
+      setup_test_client("nb_noexcl_cl_speaker", "nb_noexcl_speaker")
+      setup_test_client("nb_noexcl_cl_listener", "nb_noexcl_listener")
 
       run_ok("""
       speaker = !nb_noexcl_speaker!
@@ -628,33 +607,28 @@ defmodule Pythelix.Scripting.Namespace.Module.NamesTest do
       """)
 
       # Both should get the message
-      assert Record.get_attribute(Record.get_entity("nb_noexcl_speaker"), "last_msg") != nil
-      assert Record.get_attribute(Record.get_entity("nb_noexcl_listener"), "last_msg") != nil
+      assert Record.get_attribute(Record.get_entity("nb_noexcl_cl_speaker"), "last_msg") != nil
+      assert Record.get_attribute(Record.get_entity("nb_noexcl_cl_listener"), "last_msg") != nil
     end
 
-    test "skips entities without msg method" do
+    test "skips entities without controlling clients" do
       {:ok, room} = Record.create_entity(key: "nb_nomsg_room")
       {:ok, _obj} = Record.create_entity(key: "nb_nomsg_obj", location: room)
       {:ok, _char} = Record.create_entity(key: "nb_nomsg_char", location: room)
       Record.set_attribute("nb_nomsg_obj", "name", "rock")
       Record.set_attribute("nb_nomsg_char", "name", "Alice")
 
-      # Only char has msg
-      Record.set_method(
-        "nb_nomsg_char",
-        "msg",
-        [{"text", [index: 0, type: :str]}],
-        ~s(self.last_msg = text)
-      )
+      # Only char has a controlling client
+      setup_test_client("nb_nomsg_client", "nb_nomsg_char")
 
       run_ok("""
       names.broadcast(!nb_nomsg_room!, "A bell rings.")
       """)
 
-      # Object has no msg, should be unaffected
+      # Object has no controlling client, should be unaffected
       assert Record.get_attribute(Record.get_entity("nb_nomsg_obj"), "last_msg") == nil
 
-      assert Record.get_attribute(Record.get_entity("nb_nomsg_char"), "last_msg") ==
+      assert Record.get_attribute(Record.get_entity("nb_nomsg_client"), "last_msg") ==
                "A bell rings."
     end
 
@@ -676,14 +650,8 @@ defmodule Pythelix.Scripting.Namespace.Module.NamesTest do
       return "a masked figure"
       """)
 
-      for key <- ["nb_nf_admin", "nb_nf_player"] do
-        Record.set_method(
-          key,
-          "msg",
-          [{"text", [index: 0, type: :str]}],
-          ~s(self.last_msg = text)
-        )
-      end
+      setup_test_client("nb_nf_cl_admin", "nb_nf_admin")
+      setup_test_client("nb_nf_cl_player", "nb_nf_player")
 
       run_ok("""
       actor = !nb_nf_actor!
@@ -691,11 +659,11 @@ defmodule Pythelix.Scripting.Namespace.Module.NamesTest do
       """)
 
       # Admin sees the real name
-      assert Record.get_attribute(Record.get_entity("nb_nf_admin"), "last_msg") ==
+      assert Record.get_attribute(Record.get_entity("nb_nf_cl_admin"), "last_msg") ==
                "Alice (disguised) waves."
 
       # Player sees the disguise
-      assert Record.get_attribute(Record.get_entity("nb_nf_player"), "last_msg") ==
+      assert Record.get_attribute(Record.get_entity("nb_nf_cl_player"), "last_msg") ==
                "a masked figure waves."
     end
 
@@ -707,15 +675,9 @@ defmodule Pythelix.Scripting.Namespace.Module.NamesTest do
       Record.set_attribute("nb_multi_giver", "name", "Alice")
       Record.set_attribute("nb_multi_receiver", "name", "Bob")
       Record.set_attribute("nb_multi_observer", "name", "Eve")
-
-      for key <- ["nb_multi_giver", "nb_multi_receiver", "nb_multi_observer"] do
-        Record.set_method(
-          key,
-          "msg",
-          [{"text", [index: 0, type: :str]}],
-          ~s(self.last_msg = text)
-        )
-      end
+      setup_test_client("nb_multi_cl_giver", "nb_multi_giver")
+      setup_test_client("nb_multi_cl_receiver", "nb_multi_receiver")
+      setup_test_client("nb_multi_cl_observer", "nb_multi_observer")
 
       run_ok("""
       giver = !nb_multi_giver!
@@ -724,10 +686,10 @@ defmodule Pythelix.Scripting.Namespace.Module.NamesTest do
       """)
 
       # Both giver and receiver are excluded
-      assert Record.get_attribute(Record.get_entity("nb_multi_giver"), "last_msg") == nil
-      assert Record.get_attribute(Record.get_entity("nb_multi_receiver"), "last_msg") == nil
+      assert Record.get_attribute(Record.get_entity("nb_multi_cl_giver"), "last_msg") == nil
+      assert Record.get_attribute(Record.get_entity("nb_multi_cl_receiver"), "last_msg") == nil
       # Observer gets the message with both names resolved
-      assert Record.get_attribute(Record.get_entity("nb_multi_observer"), "last_msg") ==
+      assert Record.get_attribute(Record.get_entity("nb_multi_cl_observer"), "last_msg") ==
                "Alice gives a sword to Bob."
     end
 
@@ -746,12 +708,7 @@ defmodule Pythelix.Scripting.Namespace.Module.NamesTest do
         ~s(return False)
       )
 
-      Record.set_method(
-        "nb_invis_viewer",
-        "msg",
-        [{"text", [index: 0, type: :str]}],
-        ~s(self.last_msg = text)
-      )
+      setup_test_client("nb_invis_client", "nb_invis_viewer")
 
       run_ok("""
       actor = !nb_invis_actor!
@@ -759,7 +716,7 @@ defmodule Pythelix.Scripting.Namespace.Module.NamesTest do
       """)
 
       # Viewer can't see actor, so message is not sent
-      assert Record.get_attribute(Record.get_entity("nb_invis_viewer"), "last_msg") == nil
+      assert Record.get_attribute(Record.get_entity("nb_invis_client"), "last_msg") == nil
     end
 
     test "only entities in f-string drive exclusion: unlisted entities always receive" do
@@ -774,14 +731,12 @@ defmodule Pythelix.Scripting.Namespace.Module.NamesTest do
 
       for key <- ~w(nb_abcd_a nb_abcd_b nb_abcd_c nb_abcd_d) do
         Record.set_attribute(key, "name", key)
-
-        Record.set_method(
-          key,
-          "msg",
-          [{"text", [index: 0, type: :str]}],
-          ~s(self.last_msg = text)
-        )
       end
+
+      setup_test_client("nb_abcd_cl_a", "nb_abcd_a")
+      setup_test_client("nb_abcd_cl_b", "nb_abcd_b")
+      setup_test_client("nb_abcd_cl_c", "nb_abcd_c")
+      setup_test_client("nb_abcd_cl_d", "nb_abcd_d")
 
       run_ok("""
       a = !nb_abcd_a!
@@ -791,10 +746,10 @@ defmodule Pythelix.Scripting.Namespace.Module.NamesTest do
       names.broadcast(!nb_abcd_room!, f"{b} gives something to {c}.")
       """)
 
-      assert Record.get_attribute(Record.get_entity("nb_abcd_a"), "last_msg") != nil
-      assert Record.get_attribute(Record.get_entity("nb_abcd_b"), "last_msg") == nil
-      assert Record.get_attribute(Record.get_entity("nb_abcd_c"), "last_msg") == nil
-      assert Record.get_attribute(Record.get_entity("nb_abcd_d"), "last_msg") != nil
+      assert Record.get_attribute(Record.get_entity("nb_abcd_cl_a"), "last_msg") != nil
+      assert Record.get_attribute(Record.get_entity("nb_abcd_cl_b"), "last_msg") == nil
+      assert Record.get_attribute(Record.get_entity("nb_abcd_cl_c"), "last_msg") == nil
+      assert Record.get_attribute(Record.get_entity("nb_abcd_cl_d"), "last_msg") != nil
     end
 
     test "visibility is per-recipient based on f-string entities, not the recipient's own visibility" do
@@ -824,14 +779,9 @@ defmodule Pythelix.Scripting.Namespace.Module.NamesTest do
         """
       )
 
-      for key <- ~w(nb_vis2_a nb_vis2_b nb_vis2_c) do
-        Record.set_method(
-          key,
-          "msg",
-          [{"text", [index: 0, type: :str]}],
-          ~s(self.last_msg = text)
-        )
-      end
+      setup_test_client("nb_vis2_cl_a", "nb_vis2_a")
+      setup_test_client("nb_vis2_cl_b", "nb_vis2_b")
+      setup_test_client("nb_vis2_cl_c", "nb_vis2_c")
 
       run_ok("""
       b = !nb_vis2_b!
@@ -839,11 +789,11 @@ defmodule Pythelix.Scripting.Namespace.Module.NamesTest do
       """)
 
       # A can see B → receives message
-      assert Record.get_attribute(Record.get_entity("nb_vis2_a"), "last_msg") == "Bob waves."
+      assert Record.get_attribute(Record.get_entity("nb_vis2_cl_a"), "last_msg") == "Bob waves."
       # B is in the f-string → excluded
-      assert Record.get_attribute(Record.get_entity("nb_vis2_b"), "last_msg") == nil
+      assert Record.get_attribute(Record.get_entity("nb_vis2_cl_b"), "last_msg") == nil
       # C cannot see B → does not receive message
-      assert Record.get_attribute(Record.get_entity("nb_vis2_c"), "last_msg") == nil
+      assert Record.get_attribute(Record.get_entity("nb_vis2_cl_c"), "last_msg") == nil
     end
   end
 end
