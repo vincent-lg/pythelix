@@ -373,7 +373,7 @@ This tells Pythelix that our bakery *inherits* from the entity with key `generic
 
 The chain can go further: a parent can itself have a parent. Attributes and methods are looked up along this chain — Pythelix checks the entity first, then its parent, then the parent's parent, and so on, until it finds a match.
 
-You can see this at work with commands. Open `worldlets/command.txt`. Near the top, you'll find:
+You can see this at work with commands. Open `worldlets/command/generic.txt`. Near the top, you'll find:
 
 ```
 !generic/char_command!
@@ -400,7 +400,7 @@ No. Each entity has at most one parent. This is a deliberate design choice to ke
 
 So far, we've only looked at attributes (data stored on entities). But entities can also have *methods* — these define behavior.
 
-Let's create a fun command to see methods in action. We'll add a `roll` command that rolls a die with a random result. Open `worldlets/command.txt` and add the following at the end of the file:
+Let's create a fun command to see methods in action. We'll add a `roll` command that rolls a die with a random result. Open `worldlets/command/general.txt` and add the following at the end of the file:
 
 ```
 !command/roll!

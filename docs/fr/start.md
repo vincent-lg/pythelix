@@ -378,7 +378,7 @@ Cela indique à Pythelix que notre boulangerie *hérite* de l'entité ayant pour
 
 La chaîne peut aller plus loin : un parent peut lui-même avoir un parent. Les attributs et méthodes sont recherchés le long de cette chaîne : Pythelix vérifie d'abord l'entité, puis son parent, puis le parent du parent, et ainsi de suite, jusqu'à trouver une correspondance.
 
-Vous pouvez le voir à l'œuvre avec les commandes. Ouvrez `worldlets/command.txt`. Près du début, vous trouverez :
+Vous pouvez le voir à l'œuvre avec les commandes. Ouvrez `worldlets/command/generic.txt`. Près du début, vous trouverez :
 
 ```
 !generic/char_command!
@@ -405,7 +405,7 @@ Non. Chaque entité a au plus un parent. C'est un choix de conception délibér�
 
 Jusqu'ici, nous n'avons examiné que les attributs (des données stockées sur les entités). Mais les entités peuvent aussi avoir des *méthodes*, qui définissent leur comportement.
 
-Créons une commande amusante pour voir les méthodes en action. Nous allons ajouter une commande `roll` qui lance un dé avec un résultat aléatoire. Ouvrez `worldlets/command.txt` et ajoutez ce qui suit à la fin du fichier :
+Créons une commande amusante pour voir les méthodes en action. Nous allons ajouter une commande `roll` qui lance un dé avec un résultat aléatoire. Ouvrez `worldlets/command/general.txt` et ajoutez ce qui suit à la fin du fichier :
 
 ```
 !command/roll!
