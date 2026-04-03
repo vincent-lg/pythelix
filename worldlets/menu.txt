@@ -137,7 +137,6 @@ def get_text(client):
 
 def unknown_input(client, input):
     account = client.account
-    log(f"Account with {account.username!r}: {account.players!r}")
 
     i = 1
     for player in account.players:
@@ -194,8 +193,15 @@ def enter(client):
 !menu/game!
 parent = "generic/menu"
 
-def enter(character):
-    character.location = character.former_location
+def input(character, input):
+    # Check exits.
+    exit = character.location.find_exit(input)
+    if exit is not None:
+        character.move_through(exit)
+        return True
+    endif
+
+    return False
 
 def get_text(client):
     character = client.owner

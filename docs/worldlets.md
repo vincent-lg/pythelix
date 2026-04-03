@@ -56,7 +56,7 @@ Worldlets are located in the server code under the `worldlets` directory. This d
 
 By default, the directory includes some example files:
 
-- `command.txt`: worldlet containing your commands. You can split this into multiple files if needed.
+- `command`: worldlet directory containing your commands. It has been split into multiple files.
 - `room.txt`: worldlet containing your rooms.
 - `character.txt`: worldlet containing character-related entities.
 - `menu.txt`: worldlet containing menus (login, account creation, etc.).

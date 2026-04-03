@@ -8,6 +8,7 @@ defmodule Pythelix.Scripting.Namespace.Module.Display do
 
   use Pythelix.Scripting.Module, name: "display"
 
+  alias Pythelix.Scripting.Format
   alias Pythelix.Scripting.Object.HorizontalList
 
   deffun function_HorizontalList(script, namespace), [
@@ -27,7 +28,7 @@ defmodule Pythelix.Scripting.Namespace.Module.Display do
   deffun dedent(script, namespace), [
     {:text, index: 0, type: :str}
   ] do
-    {script, dedent(namespace.text)}
+    {script, dedent(Format.String.format(namespace.text))}
   end
 
   deffun wrap(script, namespace), [
@@ -43,7 +44,8 @@ defmodule Pythelix.Scripting.Namespace.Module.Display do
     {:placeholder, keyword: "placeholder", type: :str, default: " [...]"}
   ] do
     lines =
-      do_wrap(namespace.text, %{
+      Format.String.format(namespace.text)
+      |> do_wrap(%{
         width: namespace.width,
         initial_indent: namespace.initial_indent,
         subsequent_indent: namespace.subsequent_indent,
@@ -72,6 +74,7 @@ defmodule Pythelix.Scripting.Namespace.Module.Display do
   ] do
     result =
       namespace.text
+      |> Format.String.format()
       |> do_wrap(%{
         width: namespace.width,
         initial_indent: namespace.initial_indent,

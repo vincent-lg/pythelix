@@ -1,0 +1,17 @@
+!command/say!
+parent = "generic/char_command"
+category = "Communication"
+name = "say"
+syntax = "<message>"
+help = """
+Say something in the room.
+
+Syntax:
+    say <message>
+
+Say something that will be heard by other characters in this room.
+"""
+
+def run(character, message):
+    character.msg(f"You say: {message}")
+    character.location.announce(f"{character} says: {message}")

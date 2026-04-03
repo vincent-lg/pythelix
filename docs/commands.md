@@ -48,7 +48,7 @@ In reality, Pythelix automatically creates one (and only one) command entity: `"
 
 > Then, why did we use `"generic/char_command"`?
 
-In your default worldlet, you have a few different sub-types of commands. If you open the "worldlets/command.txt" file, at the very top, you should see:
+In your default worldlet, you have a few different sub-types of commands. If you open the "worldlets/command/generic.txt" file, at the very top, you should see:
 
 ```
 !generic/char_command!
@@ -97,7 +97,7 @@ Also notice that we don't just define three entities — two of them also overri
 
 `"char_command"` also provides the attributes `category` (the command category name) and `help` (the command help text) but these are actually dependent on the way you set up your game. You might want a different help system. This is just a default.
 
-> **Tip:** Want to disable command abbreviations globally without repeating `can_shorten = False` in every command? Easy. You could add the attribute to the `"generic/char_command"` in your worldlet file. For instance, modify in your `worldlets/command.txt` the `"generic/char_command"` entry:
+> **Tip:** Want to disable command abbreviations globally without repeating `can_shorten = False` in every command? Easy. You could add the attribute to the `"generic/char_command"` in your worldlet file. For instance, modify in your `worldlets/command/generic.txt` the `"generic/char_command"` entry:
 
 ```
 !generic/char_command!

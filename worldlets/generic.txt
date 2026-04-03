@@ -8,24 +8,56 @@ parent = "SubEntity"
 def __init__(self, text: str):
     self.text = text
 
-def format_for(self, viewer: Entity):
+def format_for(self, location: Entity, viewer: Entity):
     """Format the text description in proper paragraphs."""
     lines = []
     for paragraph in self.text.split("\n\n"):
-        lines.extend(display.wrap(paragraph, width=75, initial_indent='   '))
+        formatted = self.build_dynamic(paragraph, location, viewer)
+        lines.extend(display.wrap(formatted, width=75, initial_indent='   '))
     done
+
     return "\n".join(lines)
+
+def build_dynamic(paragraph: str, location: Entity, viewer: Entity):
+    parts = []
+
+    for begin, _before, name, end in paragraph.scan_between("$", ",.?!- \n"):
+        parts.append(begin)
+
+        if name == "$":
+            parts.append(name)
+        else:
+            method = getattr(location, f"describe_{name}", None)
+
+            if method is not None:
+                text = method(viewer)
+                parts.append(text)
+            endif
+        endif
+
+        parts.append(end)
+    done
+
+    if len(parts) == 0:
+        return paragraph
+    else:
+        return "".join(parts)
+    endif
 
 !generic/room!
 description = None
+exits = []
 
 def announce(self, text):
     names.broadcast(self, text)
 
 def look(self, viewer: Entity):
     lines = [self.title]
-    description = self.description.format_for(viewer)
+    description = self.description.format_for(self, viewer)
     lines.extend(description.splitlines())
+
+    # Exits.
+    lines.append(self.look_exits(viewer))
 
     # Soirt content.
     objects = []
@@ -56,6 +88,39 @@ def look(self, viewer: Entity):
 
     return "\n".join(lines)
 
+def look_exits(self, character: Entity):
+    """Return a message showing the available exits for a given character."""
+    exits = []
+    is_admin = "admin" in character.permissions
+
+    for exit in self.exits:
+        if exit.hidden:
+            if is_admin:
+                exits.append(f"{exit.name}(i)")
+            endif
+        else:
+            exits.append(exit.name)
+        endif
+    done
+
+    if exits:
+        return "Obvious exits: " + ", ".join(exits) + "."
+    else:
+        return "There is no obvious exit here."
+    endif
+
+def find_exit(self, name: str, allow_partial: bool = False):
+    """Find an exit depending on a name."""
+    exits = self.exits
+
+    for exit in exits:
+        if exit.match_name(name, allow_partial=allow_partial):
+            return exit
+        endif
+    done
+
+    return None
+
 !generic/object!
 singular = "a thing"
 plural = "things"
@@ -66,3 +131,38 @@ def __namefor__(viewer: Entity, quantity: int = 1):
     endif
 
     return f"{quantity} {self.plural}"
+
+!Exit!
+name = None
+destination = None
+
+def __init__(self, name: str, destination: Entity, aliases = None, hidden: bool = False):
+    self.name = name
+    self.destination = destination
+    self.aliases = aliases
+    self.hidden = hidden
+
+def match_name(self, name: str, allow_partial: bool = False):
+    """Check if the exit's name or aliases match the given name."""
+    name = name.lower()
+    aliases = self.aliases
+
+    if aliases is None:
+        aliases = []
+    endif
+
+    if name == self.name.lower() or name in aliases:
+        return True
+    elif not self.hidden and allow_partial:
+        if self.name.lower().startswith(name):
+            return True
+        endif
+
+        for alias in aliases:
+            if alias.lower().startswith(name):
+                return True
+            endif
+        done
+    endif
+
+    return False

@@ -1,0 +1,60 @@
+!command/help!
+parent = "generic/char_command"
+name = "help"
+category = "Information"
+syntax = "(<command_name>)"
+help = """
+Display all commands or the help of a specific command or topic.
+
+Syntax:
+    help
+    help <command name>
+
+Without arguments, the help command is used to display a list of commands
+that can be used by the current character. It is also possible to give
+the help command a command name as argument to see the help of this specific
+command.
+"""
+
+def run(character, command_name=""):
+    commands = !menu/game!.get_commands(character)
+
+    if command_name:
+        command_name = command_name.lower()
+        for command in commands:
+            aliases = getattr(command, "aliases", [])
+            if command.name.lower() == command_name or command_name in aliases:
+                help = getattr(command, "help", "No help available for this command.")
+                character.msg(help)
+            endif
+        done
+    else:
+        categories = {
+            "General": [],
+            "Object Manipulation": [],
+            "Communication": [],
+            "Information": [],
+            "Administrator": [],
+        }
+
+        for command in commands:
+            category = command.category
+            if category in categories:
+                categories[category].append(command.name)
+            endif
+        done
+
+        hlist = display.HorizontalList(columns=4, col_width=15)
+        for category in categories.keys():
+            commands = categories[category]
+            if commands:
+                commands.sort()
+                hgroup = hlist.add_group(category)
+                for command in commands:
+                    hgroup.add_entry(command)
+                done
+            endif
+        done
+
+        character.msg(hlist.format())
+    endif

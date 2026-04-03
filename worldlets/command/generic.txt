@@ -1,0 +1,15 @@
+!generic/char_command!
+parent = "generic/command"
+
+!generic/player_command!
+parent = "generic/command"
+
+def can_run(self, character):
+    return "player" in character.permissions
+
+!generic/admin_command!
+parent = "generic/command"
+
+def can_run(self, character):
+    return "admin" in character.permissions
+

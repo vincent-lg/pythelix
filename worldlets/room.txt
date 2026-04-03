@@ -12,7 +12,16 @@ precision.
 
 At the back of the shop, an antique wooden cash register rests
 atop a counter, its brass details dulled slightly with age and use.
+
+On the wall, you can see a clock with hands pointing to $clock.
 """)
+exits = [
+    Exit("south", !room/sidewalk!),
+]
+
+def describe_clock(viewer: Entity):
+    now = realtime.now()
+    return f"{now.hour:02}:{now.minute:02}"
 
 !room/sidewalk!
 parent = "generic/room"
@@ -21,3 +30,7 @@ description = Description("""
 This is just a bare, dumb sidewalk with tons of cracks in the concrete.
 Fascinating, isn't it?
 """)
+
+exits = [
+    Exit("north", !room/bakery!),
+]

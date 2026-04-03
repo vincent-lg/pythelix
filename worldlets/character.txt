@@ -4,6 +4,13 @@ permissions = {}
 def msg(self, text):
     names.notify(self, text)
 
+def move_through(exit):
+    """Move the character through an exit."""
+    self.location.announce(f"{self} leaves {exit.name}.")
+    self.location = exit.destination
+    self.msg(self.location.look(self))
+    self.location.announce(f"{self} arrives.")
+
 !generic/player!
 parent = "generic/character"
 account = None

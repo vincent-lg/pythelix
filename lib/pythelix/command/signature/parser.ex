@@ -25,6 +25,7 @@ defmodule Pythelix.Command.Signature.Parser do
       string("int") |> isolate() |> replace(:int),
       string("float") |> isolate() |> replace(:float),
       string("str") |> isolate() |> replace(:str),
+      string("bool") |> isolate() |> replace(:bool),
       parsec(:entity),
       string("Entity") |> isolate() |> replace(:entity)
     ])
