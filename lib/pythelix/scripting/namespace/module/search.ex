@@ -247,7 +247,8 @@ defmodule Pythelix.Scripting.Namespace.Module.Search do
 
         %Stackable{} = stackable, {acc, remaining} ->
           qty = min(stackable.quantity, remaining)
-          limited = %Stackable{entity: stackable.entity, quantity: qty, location: container}
+          location = container || stackable.location
+          limited = %Stackable{entity: stackable.entity, quantity: qty, location: location}
           {[limited | acc], remaining - qty}
 
         item, {acc, remaining} ->

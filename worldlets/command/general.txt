@@ -46,3 +46,34 @@ def run(character):
     client = clients.owning(character)
     client.msg("Good bye!")
     client.disconnect()
+
+!command/inventory!
+parent = "generic/char_command"
+category = "General"
+name = "inventory"
+aliases = ["i"]
+help = """
+Look at your inventory
+
+Syntax:
+    inventory
+    i
+
+See your inventory (the contents of the character).
+"""
+
+def run(character):
+    if character.contents:
+        lines = [
+            "Your inventory:",
+            "",
+        ]
+
+        for name in names.group(character.contents, viewer=character):
+            lines.append(f"  {name}")
+        done
+
+        character.msg("\n".join(lines))
+    else:
+        character.msg("You don't seem to have anything in your inventory right now.")
+    endif

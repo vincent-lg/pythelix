@@ -16,7 +16,7 @@ a number of objects to get, like get 3 apples.
 """
 
 def refine(character, object, quantity=1):
-    to_pick = search.match(character.location, object, viewer=character, limit=quantity)
+    to_pick = character.match(object, limit=quantity)
 
     if not to_pick:
         character.msg("You don't see that around.")
@@ -50,7 +50,7 @@ or a quantity followed by the object name.
 """
 
 def refine(character, object, quantity=1):
-    to_drop = search.match(character, object, viewer=character, limit=quantity)
+    to_drop = character.match(object, candidates=character.contents, limit=quantity)
 
     if not to_drop:
         character.msg("You don't see that around.")
@@ -66,3 +66,51 @@ def run(character, to_drop):
         character.msg(f"You drop {name} on the ground.")
     done
 
+!command/give!
+parent = "generic/char_command"
+category = "Object manipulation"
+name = "give"
+syntax = "(#quantity#) <object> to <person>"
+help = """
+Give one or several objects to someone else.
+
+Syntax:
+    give <object name> to <character name>
+    give <quantity> <object name> to <character name>
+
+Give one or more objects to someone else in the room. The given person
+must be a character present in the same room.
+"""
+
+def refine(character, object, person, quantity=1):
+    to_give = character.match(object, candidates=character.contents, limit=quantity)
+
+    if not to_give:
+        character.msg("You don't see that around.")
+        raise RefineError
+    endif
+
+    dest = character.match(person, limit=quantity)
+
+    if not dest:
+        character.msg("You don't see this person around.")
+        raise RefineError
+    endif
+
+    person = dest[0]
+
+    if not isinstance(person, !generic/character!):
+        character.msg(f"You cannot give anything to {person}.")
+        raise RefineError
+    endif
+
+def run(character, to_give, person):
+    for object in to_give:
+        object.location = person
+    done
+
+    for name in names.group(to_give, viewer=character):
+        character.msg(f"You give {name} to {person}.")
+        person.msg(f"{character} gives you {name}.")
+        character.location.announce(f"{character} gives {name} to {person}.")
+    done

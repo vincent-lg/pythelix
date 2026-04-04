@@ -1,6 +1,28 @@
 !generic/character!
 permissions = {}
 
+def match(self, string: str, exclude_self: bool = True, candidates = None, limit: int = None):
+    """Perform a match for this character."""
+    if candidates is None:
+        candidates = self.location.contents
+    endif
+
+    if exclude_self:
+        try:
+            candidates.remove(self)
+        except ValueError:
+            nothing = True
+        endtry
+    endif
+
+    if limit is None:
+        results = search.match(candidates, string, viewer=self)
+    else:
+        results = search.match(candidates, string, viewer=self, limit=limit)
+    endif
+
+    return results
+
 def msg(self, text):
     names.notify(self, text)
 
