@@ -201,6 +201,11 @@ def input(character, input):
         return True
     endif
 
+    # Check channels.
+    if !generic/channel!.match_name(character, input):
+        return True
+    endif
+
     return False
 
 def get_text(client):

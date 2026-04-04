@@ -1,0 +1,3 @@
+!channel/ooc!
+parent = "generic/channel"
+name = "ooc"

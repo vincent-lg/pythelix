@@ -166,3 +166,85 @@ def match_name(self, name: str, allow_partial: bool = False):
     endif
 
     return False
+
+!generic/channel!
+name = None
+aliases = []
+outside = set()
+permissions = set()
+
+def join(self, person: Entity):
+    self.outside.discard(person)
+
+def leave(self, person: Entity):
+    self.outside.add(person)
+
+def present(self, person: Entity):
+    return person not in self.outside
+
+def can_listen(self, person: Entity):
+    """Return True if this person can listen to this channel, False otherwise."""
+    for permission in self.permissions:
+        if permission not in person.permissions:
+            return False
+        endif
+    done
+
+    return True
+
+def broadcast(self, person: Entity, message: str):
+    """Broadcast a message to all members of the channel."""
+    to_sender = self.format_for_sender(person, message)
+    to_others = self.format_for_others(person, message)
+
+    # Send the message to the sender.
+    person.msg(to_sender)
+
+    # Browse the list of clients and build the list of others.
+    others = set()
+    for client in clients.active():
+        owner = getattr(client, "owner", None)
+        if owner is not None and owner is not person:
+            if self.present(owner) and self.can_listen(owner):
+                others.add(owner)
+            endif
+        endif
+    done
+
+    # Send the message to all other entities.
+    for other in others:
+        other.msg(to_others)
+    done
+
+def format_for_sender(self, person: Entity, message: str):
+    """Return the message to send to the sender."""
+    return f"[{self.name}] You say: {message}"
+
+def format_for_others(self, person: Entity, message: str):
+    """Return the message to send to other players."""
+    return f"[{self.name}] {person.name} says: {message}"
+
+def match_name(self, person: Entity, message: str):
+    """Returns whether the message has been broadcasted to any dhannel."""
+    if " " in message:
+        name, message = message.split(" ", 1)
+    else:
+        name = message
+        message = None
+    endif
+
+    name = name.lower()
+
+    # Look for a matching channel.
+    for channel in self.children:
+        if channel.name == name or name in channel.aliases:
+            if message:
+                channel.broadcast(person, message)
+            else:
+                person.msg("What do you want to say on this channel?")
+            endif
+            return True
+        endif
+    done
+
+    return False
