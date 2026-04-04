@@ -1,3 +1,8 @@
 !channel/ooc!
 parent = "generic/channel"
 name = "ooc"
+
+!channel/wiz!
+parent = "generic/channel"
+name = "wiz"
+permissions = {"admin"}
