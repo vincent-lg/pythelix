@@ -62,11 +62,12 @@ defmodule Pythelix.Scripting.Namespace.Module.Names do
   defmet notify(script, namespace), [
     {:entity, index: 0, type: :entity},
     {:text, index: 1, type: :str},
-    {:only_visible, keyword: "only_visible", type: :bool, default: true}
+    {:only_visible, keyword: "only_visible", type: :bool, default: true},
+    {:prompt, keyword: "prompt", type: :bool, default: true}
   ] do
     entity = Store.get_value(namespace.entity)
     text = namespace.text
-    do_notify(entity, text, namespace.only_visible)
+    do_notify(entity, text, namespace.only_visible, namespace.prompt)
 
     {script, :none}
   end
@@ -75,12 +76,14 @@ defmodule Pythelix.Scripting.Namespace.Module.Names do
     {:location, index: 0, type: :entity},
     {:text, index: 1, type: :str},
     {:auto_exclude, keyword: "auto_exclude", type: :bool, default: true},
-    {:only_visible, keyword: "only_visible", type: :bool, default: true}
+    {:only_visible, keyword: "only_visible", type: :bool, default: true},
+    {:prompt, keyword: "prompt", type: :bool, default: true}
   ] do
     location = Store.get_value(namespace.location)
     text = namespace.text
     auto_exclude = namespace.auto_exclude
     only_visible = namespace.only_visible
+    prompt = namespace.prompt
 
     # Evaluate the f-string once (viewer=nil) to discover which entities it
     # references. This single set drives both auto-exclusion and per-recipient
@@ -116,7 +119,7 @@ defmodule Pythelix.Scripting.Namespace.Module.Names do
             for client <- clients do
               client_id = Record.get_attribute(client, "client_id")
               pid = Record.get_attribute(client, "pid")
-              hub().mark_client_with_message(client_id, formatted, pid)
+              hub().mark_client_with_message(client_id, formatted, pid, prompt: prompt)
             end
           end
         end
@@ -126,7 +129,7 @@ defmodule Pythelix.Scripting.Namespace.Module.Names do
     {script, :none}
   end
 
-  defp do_notify(entity, text, only_visible) do
+  defp do_notify(entity, text, only_visible, prompt) do
     {formatted, entities} = Format.String.format_for(text, entity)
 
     should_send =
@@ -137,17 +140,17 @@ defmodule Pythelix.Scripting.Namespace.Module.Names do
       end
 
     if should_send do
-      send_to_controlling_clients(entity, formatted)
+      send_to_controlling_clients(entity, formatted, prompt)
     end
   end
 
-  defp send_to_controlling_clients(entity, text) do
+  defp send_to_controlling_clients(entity, text, prompt) do
     id_or_key = Entity.get_id_or_key(entity)
 
     for client <- Clients.controlling(id_or_key) do
       client_id = Record.get_attribute(client, "client_id")
       pid = Record.get_attribute(client, "pid")
-      hub().mark_client_with_message(client_id, text, pid)
+      hub().mark_client_with_message(client_id, text, pid, prompt: prompt)
     end
   end
 

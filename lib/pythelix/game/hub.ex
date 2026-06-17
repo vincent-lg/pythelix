@@ -42,8 +42,10 @@ defmodule Pythelix.Game.Hub do
   @doc """
   Mark a client as having unsent messages and forward the message immediately.
   """
-  def mark_client_with_message(client_id, message, pid, server \\ __MODULE__) do
-    :gen_statem.cast(server, {:message, client_id, message, pid})
+  def mark_client_with_message(client_id, message, pid, opts \\ []) do
+    server = Keyword.get(opts, :server, __MODULE__)
+    prompt = Keyword.get(opts, :prompt, true)
+    :gen_statem.cast(server, {:message, client_id, message, pid, prompt})
   end
 
   # Init
@@ -54,7 +56,8 @@ defmodule Pythelix.Game.Hub do
        mon_ref: nil,
        ticket: nil,
        max_ms: Keyword.get(opts, :max_ms, 2_000),
-       clients_with_messages: MapSet.new()
+       clients_with_messages: MapSet.new(),
+       clients_no_prompt: MapSet.new()
      }}
   end
 
@@ -92,8 +95,8 @@ defmodule Pythelix.Game.Hub do
     {:next_state, :busy, %{data | job_pid: pid, mon_ref: mon, ticket: ticket}, actions}
   end
 
-  def idle(:cast, {:message, client_id, message, pid}, data) do
-    {:keep_state, handle_message(client_id, message, pid, data)}
+  def idle(:cast, {:message, client_id, message, pid, prompt}, data) do
+    {:keep_state, handle_message(client_id, message, pid, prompt, data)}
   end
 
   def idle(_type, _event, data), do: {:keep_state, data}
@@ -118,8 +121,8 @@ defmodule Pythelix.Game.Hub do
     {:keep_state_and_data, []}
   end
 
-  def busy(:cast, {:message, client_id, message, pid}, data) do
-    {:keep_state, handle_message(client_id, message, pid, data)}
+  def busy(:cast, {:message, client_id, message, pid, prompt}, data) do
+    {:keep_state, handle_message(client_id, message, pid, prompt, data)}
   end
 
   def busy(_type, _event, data), do: {:keep_state, data}
@@ -136,9 +139,9 @@ defmodule Pythelix.Game.Hub do
     try do
       send_prompts_to_clients_with_messages(data)
     rescue
-      _ -> %{data | clients_with_messages: MapSet.new()}
+      _ -> %{data | clients_with_messages: MapSet.new(), clients_no_prompt: MapSet.new()}
     catch
-      _, _ -> %{data | clients_with_messages: MapSet.new()}
+      _, _ -> %{data | clients_with_messages: MapSet.new(), clients_no_prompt: MapSet.new()}
     end
   end
 
@@ -156,11 +159,20 @@ defmodule Pythelix.Game.Hub do
     raise "invalid task: #{inspect(arg)}"
   end
 
-  defp handle_message(client_id, message, pid, data) do
+  defp handle_message(client_id, message, pid, prompt, data) do
     # Forward message immediately and mark client as having messages
     send(pid, {:message, message})
     clients_with_messages = MapSet.put(data.clients_with_messages, client_id)
-    %{data | clients_with_messages: clients_with_messages}
+
+    # If prompt=false for any message in the group, suppress the prompt
+    clients_no_prompt =
+      if prompt do
+        data.clients_no_prompt
+      else
+        MapSet.put(data.clients_no_prompt, client_id)
+      end
+
+    %{data | clients_with_messages: clients_with_messages, clients_no_prompt: clients_no_prompt}
   end
 
   defp send_prompts_to_clients_with_messages(data) do
@@ -179,14 +191,15 @@ defmodule Pythelix.Game.Hub do
         %{data | clients_with_messages: clients_with_messages}
 
       client ->
-        menu = Record.get_location_entity(client)
-
-        # Suppress the game prompt while a script is waiting for input from
-        # this client — the ask/choice prompt (if any) was already sent inline.
+        # Suppress the prompt if any message in this group requested it,
+        # or if a script is waiting for input from this client.
         prompt =
-          if InputWaiter.waiting?(client_id) do
+          if MapSet.member?(data.clients_no_prompt, client_id) or
+               InputWaiter.waiting?(client_id) do
             ""
           else
+            menu = Record.get_location_entity(client)
+
             case menu do
               nil ->
                 ""
@@ -204,14 +217,21 @@ defmodule Pythelix.Game.Hub do
         pid = Record.get_attribute(client, "pid")
         send(pid, {:full, prompt})
 
-        # Remove client from set after sending prompt
+        # Remove client from sets after sending prompt
         clients_with_messages = MapSet.delete(data.clients_with_messages, client_id)
-        %{data | clients_with_messages: clients_with_messages}
+        clients_no_prompt = MapSet.delete(data.clients_no_prompt, client_id)
+
+        %{
+          data
+          | clients_with_messages: clients_with_messages,
+            clients_no_prompt: clients_no_prompt
+        }
     end
   end
 
   defp init_world() do
     Record.Diff.init()
+    Record.warmup()
     Record.cache_relationships()
     init_start_time = System.monotonic_time(:microsecond)
 

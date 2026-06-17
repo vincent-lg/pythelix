@@ -13,8 +13,8 @@ defmodule Pythelix.Test.HubStub do
 
   alias Pythelix.Record
 
-  @doc "Synchronous drop-in for `Pythelix.Game.Hub.mark_client_with_message/3`."
-  def mark_client_with_message(client_id, message, pid) do
+  @doc "Synchronous drop-in for `Pythelix.Game.Hub.mark_client_with_message/4`."
+  def mark_client_with_message(client_id, message, pid, _opts \\ []) do
     if is_pid(pid) and Process.alive?(pid) do
       send(pid, {:message, message})
     end
