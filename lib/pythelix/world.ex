@@ -637,7 +637,7 @@ defmodule Pythelix.World do
 
       Enum.map(entities, &Record.get_entity(&1.key))
     rescue
-      e -> {:error, Exception.message(e)}
+      e -> {:error, Exception.format(:error, e, __STACKTRACE__)}
     end
   end
 
