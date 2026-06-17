@@ -56,6 +56,7 @@ defmodule Pythelix.Scripting.REPL do
   defp tabulate_result({[{:tic, _}], :maybe_3_tic}), do: :complete
   defp tabulate_result({[{:quote, _}], :maybe_3_quote}), do: :complete
   defp tabulate_result({[], :normal}), do: :complete
+  defp tabulate_result({[], :comment}), do: :complete
 
   defp tabulate_result({_, :maybe_close_2_tic}),
     do: {:need_more, "still inside a multi-line string"}
@@ -265,6 +266,19 @@ defmodule Pythelix.Scripting.REPL do
 
   defp parse_token({"done", line}, _, :normal) do
     {:error, "'done' keyword at line #{line} doesn't close anything"}
+  end
+
+  # Comments: skip everything from # to end of line.
+  defp parse_token({"#", _}, stack, :normal) do
+    {:ok, stack, :comment}
+  end
+
+  defp parse_token({"\n", _}, stack, :comment) do
+    {:ok, stack, :normal}
+  end
+
+  defp parse_token(_, stack, :comment) do
+    {:ok, stack, :comment}
   end
 
   # Anything else is fair game.
