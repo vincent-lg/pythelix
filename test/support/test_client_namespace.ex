@@ -32,7 +32,7 @@ defmodule Pythelix.Test.TestClientNamespace do
 
   def owner(_script, self) do
     entity = Store.get_value(self)
-    Record.get_attribute(entity, "__owner", :none)
+    Record.get_attribute(entity, "owner", :none)
   end
 
   def owner(script, self, owner) do
@@ -45,7 +45,7 @@ defmodule Pythelix.Test.TestClientNamespace do
         {script, :none}
 
       %Pythelix.Entity{} ->
-        Record.set_attribute(Pythelix.Entity.get_id_or_key(entity), "__owner", owner)
+        Record.set_attribute(Pythelix.Entity.get_id_or_key(entity), "owner", owner)
         {script, :none}
 
       _ ->

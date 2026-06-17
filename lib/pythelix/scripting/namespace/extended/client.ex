@@ -57,8 +57,11 @@ defmodule Pythelix.Scripting.Namespace.Extended.Client do
         else
           supported = Encoding.supported_encodings() |> Enum.join(", ")
 
-          {Script.raise(script, ValueError, "unsupported encoding '#{value}', expected one of: #{supported}"),
-           :none}
+          {Script.raise(
+             script,
+             ValueError,
+             "unsupported encoding '#{value}', expected one of: #{supported}"
+           ), :none}
         end
 
       _ ->
@@ -69,7 +72,7 @@ defmodule Pythelix.Scripting.Namespace.Extended.Client do
   def owner(_script, self) do
     entity = Store.get_value(self)
 
-    Record.get_attribute(entity, "__owner", :none)
+    Record.get_attribute(entity, "owner", :none)
   end
 
   def owner(script, self, owner) do
@@ -82,7 +85,7 @@ defmodule Pythelix.Scripting.Namespace.Extended.Client do
         {script, :none}
 
       %Entity{} ->
-        Record.set_attribute(Entity.get_id_or_key(entity), "__owner", owner)
+        Record.set_attribute(Entity.get_id_or_key(entity), "owner", owner)
         {script, :none}
 
       _ ->
