@@ -276,7 +276,12 @@ defmodule Pythelix.Command.Handler do
           :nomethod ->
             client_id = Record.get_attribute(client, "client_id")
             pid = Record.get_attribute(client, "pid")
-            Pythelix.Game.Hub.mark_client_with_message(client_id, "Command execution failed.", pid)
+
+            Pythelix.Game.Hub.mark_client_with_message(
+              client_id,
+              "Command execution failed.",
+              pid
+            )
 
           error_method ->
             # Execute run_error method asynchronously

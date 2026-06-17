@@ -211,6 +211,7 @@ defmodule Pythelix.Scripting.Namespace.Entity do
   def delattr(script, self, name) do
     entity = Store.get_value(self)
     id_or_key = Entity.get_id_or_key(entity)
+
     display =
       if entity.key != nil do
         "!#{entity.key}!"

@@ -146,8 +146,7 @@ defmodule Pythelix.Scripting.Namespace.String do
   ] do
     Store.get_value(namespace.iterable, recursive: false)
     |> Enum.with_index()
-    |> Enum.reduce_while({script, [], false}, fn {element, index},
-                                                 {script, items, has_fstring} ->
+    |> Enum.reduce_while({script, [], false}, fn {element, index}, {script, items, has_fstring} ->
       cond do
         is_binary(element) ->
           {:cont, {script, [element | items], has_fstring}}

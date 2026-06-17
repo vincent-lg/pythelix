@@ -113,7 +113,10 @@ defmodule Pythelix.Command.Syntax.Parser do
   defp do_classify(string, [{:arg, [{:int, _}]} = token | rest], pos) do
     pos = skip_spaces(string, pos)
     {first_hash, 1} = :binary.match(string, "#", [{:scope, {pos, byte_size(string) - pos}}])
-    {second_hash, 1} = :binary.match(string, "#", [{:scope, {first_hash + 1, byte_size(string) - first_hash - 1}}])
+
+    {second_hash, 1} =
+      :binary.match(string, "#", [{:scope, {first_hash + 1, byte_size(string) - first_hash - 1}}])
+
     {rest_classified, final_pos} = do_classify(string, rest, second_hash + 1)
     {[token | rest_classified], final_pos}
   end

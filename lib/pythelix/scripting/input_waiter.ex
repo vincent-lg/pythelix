@@ -179,8 +179,9 @@ defmodule Pythelix.Scripting.InputWaiter do
           if input_state.entity_id_or_key do
             register(input_state.client_id, task.id, input_state.entity_id_or_key)
           end
-          # Login-time asks (entity_id_or_key nil) are not reconnectable;
-          # skip them — the player will go through login again.
+
+        # Login-time asks (entity_id_or_key nil) are not reconnectable;
+        # skip them — the player will go through login again.
 
         _ ->
           :ok
@@ -216,6 +217,7 @@ defmodule Pythelix.Scripting.InputWaiter do
     unregister(client_id)
 
     Task.restore(task)
+
     resumed_script =
       %Script{task.script | pause: nil, input: nil, last_raw: input}
       |> Script.put_stack(input)

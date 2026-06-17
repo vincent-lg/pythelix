@@ -159,6 +159,7 @@ defmodule Pythelix.Scripting.Runner do
             %Script{pause: :input, input: %InputState{client_id: client_id}} ->
               # Input timeout - unregister waiter and resume with None
               InputWaiter.unregister(client_id)
+
               %Script{task.script | pause: nil, input: nil}
               |> Script.put_stack(:none)
 
@@ -246,7 +247,9 @@ defmodule Pythelix.Scripting.Runner do
   defp schedule_input(script, code, name, input_state) do
     expire_at =
       case input_state.timeout do
-        nil -> nil
+        nil ->
+          nil
+
         timeout ->
           now = DateTime.utc_now()
           DateTime.add(now, trunc(timeout * 1000), :millisecond)

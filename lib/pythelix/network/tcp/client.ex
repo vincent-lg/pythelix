@@ -16,6 +16,7 @@ defmodule Pythelix.Network.TCP.Client do
 
   def init(socket) do
     encoding = Application.get_env(:pythelix, :default_encoding, "utf-8")
+
     {:ok, %{socket: socket, client_id: nil, messages: [], encoding: encoding},
      {:continue, :assign_id}}
   end
@@ -50,7 +51,10 @@ defmodule Pythelix.Network.TCP.Client do
     {:noreply, %{state | messages: [message | messages]}}
   end
 
-  def handle_info({:full, prompt}, %{socket: socket, messages: messages, encoding: encoding} = state) do
+  def handle_info(
+        {:full, prompt},
+        %{socket: socket, messages: messages, encoding: encoding} = state
+      ) do
     text =
       messages
       |> Enum.reverse()

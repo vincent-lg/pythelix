@@ -218,8 +218,12 @@ defmodule Pythelix.Scripting.Namespace.Builtin do
 
       str when is_binary(str) ->
         case Float.parse(str) do
-          {float, ""} -> {script, float}
-          _ -> {Script.raise(script, ValueError, "could not convert string to float: '#{str}'"), :none}
+          {float, ""} ->
+            {script, float}
+
+          _ ->
+            {Script.raise(script, ValueError, "could not convert string to float: '#{str}'"),
+             :none}
         end
 
       _ ->
