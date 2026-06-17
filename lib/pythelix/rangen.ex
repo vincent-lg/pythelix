@@ -44,6 +44,8 @@ defmodule Pythelix.Rangen do
   Concurrent calls race harmlessly: the second start is silently ignored.
   """
   def ensure_trie(key, parsed_patterns) do
+    key = normalize_key(key)
+
     unless TrieServer.alive?(key) do
       raw =
         case Cachex.get(:px_cache, {:rangen_raw, key}) do
@@ -68,11 +70,12 @@ defmodule Pythelix.Rangen do
 
   @doc "Return a snapshot of the trie for the given key (for backtracking)."
   def get_trie(key) do
-    TrieServer.get(key)
+    TrieServer.get(normalize_key(key))
   end
 
   @doc "Insert a new entry into both the DB and the trie."
   def add_entry(key, value, parts) do
+    key = normalize_key(key)
     changeset = RangenEntry.changeset(%RangenEntry{}, %{generator_key: key, value: value})
     Repo.insert!(changeset)
     TrieServer.insert(key, parts)
@@ -81,6 +84,8 @@ defmodule Pythelix.Rangen do
 
   @doc "Remove an entry from both the DB and the trie."
   def remove_entry(key, value, parts) do
+    key = normalize_key(key)
+
     query =
       from e in RangenEntry,
         where: e.generator_key == ^key and e.value == ^value
@@ -92,6 +97,7 @@ defmodule Pythelix.Rangen do
 
   @doc "Clear all entries for a key from the DB and reset the trie."
   def clear_entries(key) do
+    key = normalize_key(key)
     query = from e in RangenEntry, where: e.generator_key == ^key
     Repo.delete_all(query)
     Cachex.del(:px_cache, {:rangen_raw, key})
@@ -105,8 +111,11 @@ defmodule Pythelix.Rangen do
 
   @doc "Return the count of entries for the given key."
   def count(key) do
-    TrieServer.count(key)
+    TrieServer.count(normalize_key(key))
   end
+
+  defp normalize_key(key) when is_binary(key), do: key
+  defp normalize_key(key), do: to_string(key)
 
   @doc """
   Parse a patterns attribute (list of strings) into a list of option lists.
