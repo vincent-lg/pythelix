@@ -124,4 +124,35 @@ defmodule Pythelix.Scripting.Namespace.BuiltinTest do
       assert expr_fail("list(42)") != nil
     end
   end
+
+  describe "apply()" do
+    @describetag :tmp_dir
+
+    test "a worldlet that doesn't parse comes back as a message, not a traceback",
+         %{tmp_dir: dir} do
+      path = Path.join(dir, "broken.txt")
+
+      File.write!(path, """
+      !object/gadget!
+      parent = "generic/object"
+
+      def describe(self):
+          names = [c.name for c in self.contents]
+      """)
+
+      # This is what `character.msg(apply())` puts in front of an administrator.
+      result = expr_ok(~s[apply("#{String.replace(path, "\\", "/")}")])
+
+      assert is_binary(result)
+      assert result =~ "Applying cancelled"
+      assert result =~ "list comprehensions are not supported"
+      assert result =~ "method describe of !object/gadget!"
+    end
+
+    test "a missing worldlet says so", %{tmp_dir: dir} do
+      path = Path.join(dir, "absent.txt") |> String.replace("\\", "/")
+
+      assert expr_ok(~s[apply("#{path}")]) =~ "doesn't exist"
+    end
+  end
 end

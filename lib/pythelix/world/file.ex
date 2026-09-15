@@ -65,8 +65,8 @@ defmodule Pythelix.World.File do
 
         parse_lines(rest, %{state | current: current})
 
-      {:error, _} ->
-        put_error(state, {line, index}, "Syntax error while reading a multiline attribute")
+      {:error, reason} ->
+        put_error(state, {line, index}, "Syntax error in a multiline attribute: #{reason}")
     end
   end
 
@@ -120,8 +120,8 @@ defmodule Pythelix.World.File do
 
         %{state | current: current, need_more: true}
 
-      {:error, _} ->
-        put_error(state, {line, index}, "Syntax error while reading a method")
+      {:error, reason} ->
+        put_error(state, {line, index}, "Syntax error in a method: #{reason}")
     end
   end
 
@@ -134,6 +134,7 @@ defmodule Pythelix.World.File do
         case Pythelix.Command.Signature.constraints(method_name) do
           {name, constraints} when is_binary(name) ->
             put_in(current.methods[name], {constraints, []})
+            |> put_in([:method_lines, name], index + 1)
             |> then(&%{state | method_name: name, current: &1, need_more: true})
 
           error ->
@@ -142,6 +143,7 @@ defmodule Pythelix.World.File do
 
       true ->
         put_in(current.methods[method_name], {:free, []})
+        |> put_in([:method_lines, method_name], index + 1)
         |> then(&%{state | method_name: method_name, current: &1, need_more: true})
     end
   end
@@ -150,6 +152,8 @@ defmodule Pythelix.World.File do
     [key, val] = String.split(line, "=", parts: 2)
     key = String.trim(key)
     val = String.trim(val)
+
+    current = put_in(current, [:attribute_lines, key], index + 1)
 
     case REPL.parse(val) do
       :complete ->
@@ -162,8 +166,8 @@ defmodule Pythelix.World.File do
 
         %{state | multiline_key: key, current: current, need_more: true}
 
-      {:error, _} ->
-        put_error(state, {line, index}, "Syntax error, invalid attribute value: {inspect(val)}")
+      {:error, reason} ->
+        put_error(state, {line, index}, "Invalid attribute value #{inspect(val)}: #{reason}")
     end
   end
 
@@ -183,7 +187,11 @@ defmodule Pythelix.World.File do
       key: nil,
       line: index + 1,
       attributes: %{},
-      methods: %{}
+      methods: %{},
+      # Where each attribute and method starts, so that a problem found inside
+      # one can be reported against its line in the worldlet.
+      attribute_lines: %{},
+      method_lines: %{}
     }
   end
 

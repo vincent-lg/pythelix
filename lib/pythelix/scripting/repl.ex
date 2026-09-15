@@ -6,6 +6,22 @@ defmodule Pythelix.Scripting.REPL do
   with a REPL like the mix script task.
   """
 
+  @typedoc """
+  What went wrong, and where.
+
+  `:line` is where the problem was noticed, `:opened_line` where the block or
+  symbol it refers to was opened (the two differ when a block is left open) and
+  `:hint` states the Pythello rule for readers who expected Python.
+  """
+  @type detail :: %{
+          :kind => :unclosed | :mismatched | :unexpected,
+          :message => binary(),
+          :line => pos_integer(),
+          optional(:symbol) => atom(),
+          optional(:opened_line) => pos_integer(),
+          optional(:hint) => binary() | nil
+        }
+
   @doc """
   Parses the specified input and returns its status:
 
@@ -21,12 +37,34 @@ defmodule Pythelix.Scripting.REPL do
   """
   @spec parse(binary()) :: :complete | {:need_more, binary()} | {:error, binary()}
   def parse(input, opts \\ []) do
+    case diagnose(input, opts) do
+      :complete -> :complete
+      {status, detail} -> {status, detail.message}
+    end
+  end
+
+  @doc """
+  Parse the input like `parse/2`, but describe the outcome in a structured way.
+
+  Instead of a bare message, the `:need_more` and `:error` tuples carry a map
+  with the message, the line the problem was noticed on, the line the offending
+  block was opened on (when there is one) and, where we can give one, a hint
+  explaining the Pythello rule at stake.
+
+  Pass `:line` to say which line of the file `input` starts on, so that a
+  snippet taken out of a worldlet reports the line numbers of that worldlet.
+
+  This is what `mix pythello.check` reports; `parse/2` is the same thing with
+  only the message kept.
+  """
+  @spec diagnose(binary(), keyword()) :: :complete | {:need_more, detail()} | {:error, detail()}
+  def diagnose(input, opts \\ []) do
     input
-    |> tokenize()
+    |> tokenize(Keyword.get(opts, :line, 1))
     |> Enum.reduce_while({[], :normal}, fn token, {stack, mode} ->
       case parse_token(token, stack, mode) do
         {:ok, stack, mode} -> {:cont, {stack, mode}}
-        {:error, reason} -> {:halt, {:error, reason}}
+        {:error, detail} -> {:halt, {:error, detail}}
       end
     end)
     |> tap(fn result ->
@@ -39,12 +77,12 @@ defmodule Pythelix.Scripting.REPL do
     |> tabulate_result()
   end
 
-  defp tokenize(input) do
+  defp tokenize(input, start_line) do
     regex = ~r/[\p{L}\p{N}_]+|[^\p{L}\p{N}_\s]|[\n]/u
     tokens = Regex.scan(regex, input) |> List.flatten()
 
     {annotated, _line} =
-      Enum.map_reduce(tokens, 1, fn token, line ->
+      Enum.map_reduce(tokens, start_line, fn token, line ->
         new_line = if token == "\n", do: line + 1, else: line
         {{token, line}, new_line}
       end)
@@ -53,20 +91,98 @@ defmodule Pythelix.Scripting.REPL do
   end
 
   defp tabulate_result({:error, _} = error), do: error
-  defp tabulate_result({[{:tic, _}], :maybe_3_tic}), do: :complete
-  defp tabulate_result({[{:quote, _}], :maybe_3_quote}), do: :complete
+
+  # In these two modes the string has just been closed; we were only looking
+  # ahead for a third quote. Drop it and judge what remains, so that a block
+  # still open underneath is reported instead of the string that isn't.
+  defp tabulate_result({[{:tic, _} | rest], :maybe_3_tic}), do: tabulate_result({rest, :normal})
+
+  defp tabulate_result({[{:quote, _} | rest], :maybe_3_quote}),
+    do: tabulate_result({rest, :normal})
+
   defp tabulate_result({[], :normal}), do: :complete
   defp tabulate_result({[], :comment}), do: :complete
 
-  defp tabulate_result({_, :maybe_close_2_tic}),
-    do: {:need_more, "still inside a multi-line string"}
+  defp tabulate_result({stack, mode}) when mode in [:maybe_close_2_tic, :multistring] do
+    open_string(stack, "multi-line string")
+  end
 
-  defp tabulate_result({_, :multistring}), do: {:need_more, "still inside a multi-line string"}
-  defp tabulate_result({_, :string}), do: {:need_more, "still inside a string"}
+  defp tabulate_result({stack, :string}), do: open_string(stack, "string")
 
   defp tabulate_result({[{symbol, line} | _], _}) do
-    {:need_more, "no close of symbol #{inspect(symbol)} started on line #{line}"}
+    {opener, closer} = describe(symbol)
+
+    {:need_more,
+     %{
+       kind: :unclosed,
+       symbol: symbol,
+       line: line,
+       opened_line: line,
+       message: "`#{opener}` opened on line #{line} is never closed (expected `#{closer}`)",
+       hint: hint_for(symbol)
+     }}
   end
+
+  defp open_string(stack, kind) do
+    line =
+      case stack do
+        [{_symbol, line} | _] -> line
+        [] -> 1
+      end
+
+    {:need_more,
+     %{
+       kind: :unclosed,
+       symbol: :string,
+       line: line,
+       opened_line: line,
+       message: "still inside a #{kind} opened on line #{line}",
+       hint: nil
+     }}
+  end
+
+  # A closing token showed up while something else was still open. Naming both
+  # the token found and the block still waiting is usually enough to spot which
+  # of the two is really at fault.
+  defp mismatch(found, line, other, other_line) do
+    {opener, closer} = describe(other)
+
+    {:error,
+     %{
+       kind: :mismatched,
+       symbol: other,
+       line: line,
+       opened_line: other_line,
+       message:
+         "found `#{found}` on line #{line}, but `#{opener}` opened on line " <>
+           "#{other_line} is still open (expected `#{closer}` first)",
+       hint: hint_for(other)
+     }}
+  end
+
+  defp unexpected(line, message, hint) do
+    {:error, %{kind: :unexpected, symbol: nil, line: line, message: message, hint: hint}}
+  end
+
+  # Human names for the symbols we stack, as {opener, what closes it}.
+  defp describe(:lp), do: {"(", ")"}
+  defp describe(:lc), do: {"{", "}"}
+  defp describe(:lb), do: {"[", "]"}
+  defp describe(:if), do: {"if", "endif"}
+  defp describe(:for), do: {"for", "done"}
+  defp describe(:while), do: {"while", "done"}
+  defp describe(:quote), do: {~s("), ~s(")}
+  defp describe(:tic), do: {"'", "'"}
+
+  # Blocks are where Pythello parts ways with Python, so say so explicitly.
+  defp hint_for(symbol) when symbol in [:if, :for, :while] do
+    {opener, closer} = describe(symbol)
+
+    "Pythello closes blocks with a keyword, not by indentation: " <>
+      "add `#{closer}` to close the `#{opener}` block."
+  end
+
+  defp hint_for(_symbol), do: nil
 
   # Multiline strings.
   defp parse_token(_token, stack, :escape_multistring) do
@@ -79,7 +195,11 @@ defmodule Pythelix.Scripting.REPL do
   end
 
   defp parse_token({"\n", line}, _, :string) do
-    {:error, "syntax error on line #{line}: the string should be closed before the end of line"}
+    unexpected(
+      line,
+      "the string opened on line #{line} is not closed before the end of the line",
+      "Close it on the same line, or use a triple-quoted string (\"\"\") to span several lines."
+    )
   end
 
   defp parse_token({"\\", _line}, stack, :string) do
@@ -185,11 +305,11 @@ defmodule Pythelix.Scripting.REPL do
   end
 
   defp parse_token({")", line}, [{other, other_line} | _], :normal) do
-    {:error, "found ) on line #{line}, but unclosed #{other} at #{other_line}"}
+    mismatch(")", line, other, other_line)
   end
 
   defp parse_token({")", line}, _, :normal) do
-    {:error, "right parent ) at line #{line} doesn't close anything"}
+    unexpected(line, "`)` on line #{line} doesn't close anything", nil)
   end
 
   # Braces
@@ -202,11 +322,11 @@ defmodule Pythelix.Scripting.REPL do
   end
 
   defp parse_token({"}", line}, [{other, other_line} | _], :normal) do
-    {:error, "found } on line #{line}, but unclosed #{other} at #{other_line}"}
+    mismatch("}", line, other, other_line)
   end
 
   defp parse_token({"}", line}, _, :normal) do
-    {:error, "right brace } at line #{line} doesn't close anything"}
+    unexpected(line, "`}` on line #{line} doesn't close anything", nil)
   end
 
   # Brackets
@@ -219,11 +339,11 @@ defmodule Pythelix.Scripting.REPL do
   end
 
   defp parse_token({"]", line}, [{other, other_line} | _], :normal) do
-    {:error, "found ] on line #{line}, but unclosed #{other} at #{other_line}"}
+    mismatch("]", line, other, other_line)
   end
 
   defp parse_token({"]", line}, _, :normal) do
-    {:error, "right bracket ] at line #{line} doesn't close anything"}
+    unexpected(line, "`]` on line #{line} doesn't close anything", nil)
   end
 
   # If...endif keywords
@@ -236,11 +356,11 @@ defmodule Pythelix.Scripting.REPL do
   end
 
   defp parse_token({"endif", line}, [{other, other_line} | _], :normal) do
-    {:error, "found 'endif' on line #{line}, but unclosed #{other} at #{other_line}"}
+    mismatch("endif", line, other, other_line)
   end
 
   defp parse_token({"endif", line}, _, :normal) do
-    {:error, "'endif' at line #{line} doesn't close an 'if' condition"}
+    unexpected(line, "`endif` on line #{line} doesn't close an `if` block", nil)
   end
 
   # While-for...done
@@ -261,11 +381,11 @@ defmodule Pythelix.Scripting.REPL do
   end
 
   defp parse_token({"done", line}, [{other, other_line} | _], :normal) do
-    {:error, "found 'done' on line #{line}, but unclosed #{other} at #{other_line}"}
+    mismatch("done", line, other, other_line)
   end
 
   defp parse_token({"done", line}, _, :normal) do
-    {:error, "'done' keyword at line #{line} doesn't close anything"}
+    unexpected(line, "`done` on line #{line} doesn't close a `for` or `while` loop", nil)
   end
 
   # Comments: skip everything from # to end of line.

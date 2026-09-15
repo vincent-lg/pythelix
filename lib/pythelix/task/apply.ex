@@ -51,7 +51,9 @@ defmodule Pythelix.Task.Apply do
           IO.puts("The specified file #{inspect(file)} doesn't exist.")
 
         {:error, reason} ->
-          IO.puts("An error occurred: #{reason}")
+          IO.puts("Applying cancelled.
+
+#{reason}")
 
         :error ->
           IO.puts("An error occurred, applying cancelled.")

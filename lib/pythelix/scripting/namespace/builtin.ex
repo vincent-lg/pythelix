@@ -41,8 +41,12 @@ defmodule Pythelix.Scripting.Namespace.Builtin do
       :nofile ->
         {script, "The specified file #{inspect(namespace.file)} doesn't exist."}
 
+      # A worldlet that doesn't parse is a file the administrator is in the
+      # middle of editing, not a broken script: hand back what's wrong with it
+      # so `character.msg(apply())` shows it, rather than raising and burying
+      # the explanation under a traceback.
       {:error, reason} ->
-        {Script.raise(script, RuntimeError, reason), :none}
+        {script, "Applying cancelled.\n\n#{reason}"}
 
       :error ->
         {script, "An error occurred, applying cancelled."}

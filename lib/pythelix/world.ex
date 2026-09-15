@@ -18,6 +18,7 @@ defmodule Pythelix.World do
   alias Pythelix.Record
   alias Pythelix.Scripting
   alias Pythelix.Scripting.Namespace.Extended
+  alias Pythelix.World.Check
   alias Extended.Menu, as: ExtendedMenu
 
   def init() do
@@ -52,7 +53,7 @@ defmodule Pythelix.World do
     if worldlet == :static or File.exists?(worldlet) do
       case process_worldlets(worldlet) do
         {:error, reason} ->
-          {:error, reason}
+          {:error, explain(worldlet, reason)}
 
         entities ->
           worldlet =
@@ -71,6 +72,26 @@ defmodule Pythelix.World do
       :nofile
     end
   end
+
+  # Whatever went wrong, say it in terms of the worldlet rather than of the
+  # engine: a missing `endif` should read as a missing `endif`, not as a match
+  # error with a stacktrace. When the checker has nothing to say about it, the
+  # original message stands.
+  defp explain(:static, reason), do: readable(reason)
+
+  defp explain(path, reason) do
+    Check.explain(path) || readable(reason)
+  end
+
+  # Some failures are reported as an atom, which reaches the administrator as
+  # bare "cyclic_dependency". Say what it means and where to look.
+  defp readable(:cyclic_dependency) do
+    "Entities depend on each other in a circle, so they cannot be ordered. " <>
+      "Check their `parent` and `location` attributes."
+  end
+
+  defp readable(reason) when is_binary(reason), do: reason
+  defp readable(reason), do: inspect(reason)
 
   defp process_worldlets(path) do
     files =

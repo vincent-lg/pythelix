@@ -245,7 +245,8 @@ defmodule Pythelix.Game.Hub do
       end
 
       case result do
-        {:error, reason} -> Logger.error("World init failed: #{reason}")
+        {:error, reason} -> Logger.error("World init failed:
+#{reason}")
         _ -> TickManager.rebuild_all()
       end
     end
