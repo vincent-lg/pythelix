@@ -1,0 +1,110 @@
+!farm/generic_npc!
+parent = "generic/character"
+permissions = set()
+description = None
+
+def __namefor__(viewer: Entity, quantity: int = 1):
+    return self.name
+
+!farm/npc/owner!
+parent = "farm/generic_npc"
+name = "a sunburnt woman in a flour-dusted apron"
+location = "farm/room/road"
+tick = 60
+description = Description("""
+A stocky woman in her middle years, her face and forearms
+deeply tanned from long days outdoors. Her hands are rough
+and calloused, dusted white with flour up to the wrists.
+A faded cotton apron, once blue, is knotted tightly over
+a patched linen dress. Her dark hair is pulled back under
+a kerchief, though a few loose strands cling to her damp
+forehead. Her eyes are red-rimmed, and she keeps glancing
+south toward the farm gate as if expecting someone small
+to come running back through it.
+""")
+
+def on_tick(self):
+    messages = [
+        f"{self} wrings her flour-dusted hands, pacing in a tight circle.",
+        f"{self} shades her eyes and stares down the road, lips pressed thin.",
+        f"{self} draws a sharp breath and steadies herself against the gatepost.",
+        f"{self} mutters something under her breath and clutches her apron.",
+    ]
+
+    self.location.announce(random.choice(messages), prompt=False)
+
+def enter(self, character: Entity):
+    """Called when a character enters the NPC's room."""
+    message = f"""
+        {self} catches sight of you and hurries over, breathless:
+
+        "Please -- have you come from the south road? My boy, Tom,
+        he went out to the fields this morning and hasn't come back.
+        He's only seven. I've been calling and calling but the gate's
+        rusted shut and I can't get through. The whole farm's gone
+        wrong today -- the lock on the house is jammed, the stairs
+        are half rotten, and Bramble's still chained up in the barn.
+
+        If you could get through the gate and find him, I'd be
+        grateful beyond words. He'll be out past the barn somewhere,
+        I'm sure of it. Please hurry."
+    """
+
+    character.msg(message)
+
+!farm/npc/clem!
+parent = "farm/generic_npc"
+name = "a small boy sitting in the wheat"
+description = Description("""
+A wiry boy of about seven, with a mess of sun-bleached
+hair and a face full of freckles. His knees are grass-stained
+and his bare feet are caked with dry mud. He wears an
+oversized linen shirt that hangs past his elbows, the sleeves
+rolled up in thick, uneven folds. A piece of straw is tucked
+behind one ear, and he's turning a smooth pebble over and
+over in his fingers, watching it catch the light.
+""")
+location = "farm/room/fields"
+
+def enter(self, character: Entity):
+    """When the character enters the room."""
+    message = f"""
+        {self} looks up with a start and squints at you, shielding
+        his eyes from the sun.
+
+        "Oh. You're not Mum." He turns the pebble in his hand
+        and frowns. "She's going to be cross, isn't she? I only
+        came out to watch the skylark. Then the gate got stuck
+        and I couldn't get back. Is Bramble alright?"
+    """
+
+    character.msg(message)
+
+!farm/npc/bramble!
+parent = "farm/generic_npc"
+name = "a mud-brown sheepdog"
+description = Description("""
+A stocky sheepdog with a thick, matted coat the colour of
+dried mud, lighter at the chest where burrs and bits of
+straw cling stubbornly to the fur. $chain_state.
+One ear stands up while the other flops forward, giving
+the dog a permanently lopsided, inquisitive look. A pink
+tongue lolls out between worn teeth, and the tail wags
+in slow, hopeful sweeps whenever anyone draws near.
+""")
+location = "farm/room/barn"
+freed = False
+
+def describe_chain_state(viewer: Entity):
+    if self.freed:
+        return """
+            The heavy chain that held the dog lies in a loose coil on
+            the ground, the collar unbuckled and cast aside
+        """
+    else:
+        return """
+            A heavy iron chain runs from a fence post to a worn leather
+            collar around the dog's neck, pulled taut as the dog strains
+            toward you
+        """
+    endif

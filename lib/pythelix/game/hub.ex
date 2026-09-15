@@ -6,6 +6,7 @@ defmodule Pythelix.Game.Hub do
   require Logger
 
   alias Pythelix.{Method, Record, World}
+  alias Pythelix.Game.TickManager
   alias Pythelix.Scripting.InputWaiter
   alias Pythelix.Task.Persistent
 
@@ -245,7 +246,7 @@ defmodule Pythelix.Game.Hub do
 
       case result do
         {:error, reason} -> Logger.error("World init failed: #{reason}")
-        _ -> :ok
+        _ -> TickManager.rebuild_all()
       end
     end
     |> tap(fn _ ->

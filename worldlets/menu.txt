@@ -176,7 +176,7 @@ def unknown_input(client, input):
         player.permissions.add("admin")
     endif
 
-    player.former_location = !room/bakery!
+    player.former_location = !farm/room/road!
     client.player = player
     client.location = !menu/near_game!
 
@@ -186,18 +186,24 @@ parent = "generic/menu"
 def enter(client):
     player = client.player
     player.location = player.former_location
+
     client.owner = player
     client.controls.add(player)
+
     client.location = !menu/game!
 
 !menu/game!
 parent = "generic/menu"
 
+def enter(self, character):
+    # Calls enter.
+    character.location.enter(character)
+
 def input(character, input):
     # Check exits.
     exit = character.location.find_exit(input)
     if exit is not None:
-        character.move_through(exit)
+        character.try_exit(exit)
         return True
     endif
 

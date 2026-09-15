@@ -23,15 +23,23 @@ def match(self, string: str, exclude_self: bool = True, candidates = None, limit
 
     return results
 
-def msg(self, text):
-    names.notify(self, text)
+def msg(self, text, prompt: bool = True):
+    names.notify(self, text, prompt=prompt)
 
-def move_through(exit):
-    """Move the character through an exit."""
+def try_exit(exit):
+    """Move the character through an exit, or try to."""
+    if not self.location.can_leave(self, exit):
+        return False
+    endif
+
+    self.location.leave(self, exit)
     self.location.announce(f"{self} leaves {exit.name}.")
     self.location = exit.destination
     self.msg(self.location.look(self))
     self.location.announce(f"{self} arrives.")
+    self.location.enter(self)
+
+    return True
 
 !generic/player!
 parent = "generic/character"

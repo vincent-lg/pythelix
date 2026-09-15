@@ -1,0 +1,392 @@
+!farm/room/road!
+parent = "farm/generic_room"
+title = "A Dirt Road"
+description = Description("""
+A narrow dirt road winds between rolling green hills, the packed
+earth warm and dry underfoot. Tall grass sways on either side,
+whispering against itself in the breeze. The air is thick with
+the scent of clover and sun-baked soil, and somewhere in the hedge
+a wren is singing its quick, tumbling song.
+
+To the south, an old wooden gate marks the entrance to a small
+farm. A hand-painted sign reads "Maplewood Farm" in letters that
+have long since faded to a soft, mossy green. Beyond the gate,
+you can make out a wide yard and the pitched roof of a farmhouse.
+""")
+hint = "Nothing to fix here. Head south toward the farm gate to begin."
+exits = [
+    Exit("south", !farm/room/gate!),
+]
+
+def enter(self, character: Entity):
+    """When a character enters."""
+    character.msg("""
+        TIP:
+            This zone helps you understand building on Pythelix and will present
+            you challenges to fix in most rooms.
+            If you get stuck, try the HINT command. And to fix things, you'll
+            need to edit the files in the worldlets/farm directory, then type
+            APPLY in the game. Need help? Head to https://pythelix.org/start.html
+    """)
+
+!farm/room/gate!
+parent = "farm/generic_room"
+title = "The Farm Gate"
+locked = True
+description = Description("""
+Two weathered fence posts stand on either side of the path, joined
+by a sturdy gate of oak planks gone silver with age. A low stone
+wall stretches away into the hedgerows on both sides, its mossy
+stones warm to the touch. The smell of crushed nettles rises from
+the verge where boots have trodden the weeds flat.
+
+$gate_state.
+""")
+hint = """
+    The gate is locked. Open worldlets/farm/room.txt, find farm/room/gate,
+    and change 'locked = True' to 'locked = False'. Then type APPLY.
+"""
+exits = [
+    Exit("north", !farm/room/road!),
+    Exit("south", !farm/room/yard!),
+]
+
+def can_leave(self, character, exit):
+    if exit.name == "south" and self.locked:
+        character.msg("The gate is locked. Try the HINT command.")
+        return False
+    endif
+
+    return True
+
+def describe_gate_state(viewer: Entity):
+    if self.locked:
+        return """
+            The gate won't budge. The old iron latch is rusted shut, and the wood
+            groans when you push against it
+        """
+    else:
+        return """
+            The gate stands open, its iron latch lifted. A worn path leads
+            south into the farmyard
+        """
+    endif
+
+!farm/room/yard!
+parent = "farm/generic_room"
+title = "The Farmyard"
+combination = "sunflwer"
+description = Description("""
+A wide farmyard opens before you, the earth packed hard and smooth
+by years of boots, hooves and cart wheels. The smell of hay and
+damp straw hangs in the air, mingled with the faint, sharp tang
+of iron from an old plough rusting beside the fence. A few brown
+hens scratch and mutter near an overturned bucket, pecking at
+nothing in particular.
+
+To the west stands a stone farmhouse with blue-painted shutters,
+one hanging slightly crooked on its hinge. To the east, the
+broad red flank of a barn rises against the sky. Above, $sky.
+
+The farmhouse door carries an old combination lock. A note tacked
+to the gatepost reads: "Combination is sunflower." $lock_state.
+""")
+hint = "The combination should be 'sunflower' but the combination attribute has a typo ('sunflwer'). Fix the spelling in worldlets/farm/room.txt and APPLY."
+exits = [
+    Exit("north", !farm/room/gate!),
+    Exit("inside", !farm/room/kitchen!),
+    Exit("east", !farm/room/barn!),
+]
+
+def can_leave(self, character, exit):
+    if exit.name == "inside" and self.combination != "sunflower":
+        characer.msg("You rattle the kitchen door... but it won't open an inch.")
+        return False
+    endif
+
+    return True
+
+def describe_lock_state(viewer: Entity):
+    if self.combination == "sunflower":
+        return """
+            You turn the dials to spell S-U-N-F-L-O-W-E-R and the latch
+            turns freely, the farmhouse door swinging open on quiet hinges
+        """
+    else:
+        return """
+            You try spelling out S-U-N-F-L-O-W-E-R on the dials, but
+            the latch clicks and holds firm. Something about the stored
+            combination must be wrong
+        """
+    endif
+
+!farm/room/kitchen!
+parent = "farm/generic_room"
+title = "The Farmhouse Kitchen"
+pot_order = [
+    "heavy",
+    "light",
+    "medium",
+]
+description = Description("""
+The kitchen is small and low-ceilinged, the whitewashed walls
+yellowed by years of hearth smoke. A cast-iron stove squats
+against one wall, black with old soot. Bunches of dried
+rosemary, thyme and lavender dangle from the ceiling beams,
+filling the room with a dusty, herbal sweetness. A fine layer
+of flour coats the heavy oak table, and the flagstones
+underfoot are cool and slightly uneven.
+
+A cracked enamel jug sits by the window, holding a handful of
+wildflowers that have long since dried. The air carries a ghost
+of cinnamon and baked apples, as if the oven remembers what it
+used to hold.
+
+Above the hearth, three cast-iron pots hang from a chain-rack
+on numbered hooks. Each has a worn leather tag labelling its
+weight. A note chalked on the chimney breast reads: "Hang by
+weight, light first -- or the chain-check jams the latch."
+
+$pot_rack.
+""")
+hint = "The three pots are hung in the wrong order. Edit the pot_order list in worldlets/farm/room.txt so the values read, from first to last: 'light', 'medium', 'heavy'. Then APPLY."
+exits = [
+    Exit("outside", !farm/room/yard!),
+    Exit("north", !farm/room/hallway!),
+]
+
+def can_leave(self, character, exit):
+    if exit.name == "north" and self.pot_order != ["light", "medium", "heavy"]:
+        character.msg("You try the door, but something prevents it from opening.")
+        return False
+    endif
+
+    return True
+
+def describe_pot_rack(viewer: Entity):
+    if self.pot_order == ["light", "medium", "heavy"]:
+        return """
+            The pots hang in the proper order -- lightest to heaviest. The
+            chain-check releases with a soft click and the door to the north
+            swings free
+        """
+    else:
+        return """
+            The pots are not in the right order. The chain-check is jammed
+            and the door to the north holds firm
+        """
+    endif
+
+!farm/room/hallway!
+parent = "farm/generic_room"
+title = "The Hallway"
+repaired_steps = 3
+bedroom_private = True
+description = Description("""
+A narrow hallway runs through the heart of the farmhouse. The
+whitewashed walls are bare but for a row of iron coat hooks,
+one still holding a waxed canvas jacket stiff with age. The
+floorboards creak and give slightly underfoot, and the air
+smells faintly of beeswax and damp wool. A draught slips in
+from somewhere, stirring the dust in thin ribbons of light that
+fall through a high window.
+
+To the west, a plain wooden door leads to the farmer's bedroom.
+$bedroom_door_state.
+
+At the far end, a wooden staircase climbs toward the loft.
+$staircase_state.
+""")
+hint = "The staircase needs at least 5 repaired steps. Change 'repaired_steps = 3' to 'repaired_steps = 5' (or higher) in worldlets/farm/room.txt and APPLY. The bedroom door to the west is blocked out of propriety -- you can remove that restriction by changing 'bedroom_private = True' to 'bedroom_private = False' if you're curious."
+exits = [
+    Exit("south", !farm/room/kitchen!),
+    Exit("up", !farm/room/loft!),
+    Exit("west", !farm/room/bedroom!),
+]
+
+def can_leave(self, character, exit):
+    if exit.name == "up" and self.repaired_steps < 5:
+        character.msg("Even jumping wouldn't be enough, too many broken steps.")
+        return False
+    endif
+
+    if exit.name == "west" and self.bedroom_private:
+        return False
+    endif
+
+    return True
+
+def describe_staircase_state(viewer: Entity):
+    if self.repaired_steps >= 5:
+        return f"The staircase looks solid -- {self.repaired_steps} steps repaired and steady underfoot"
+    else:
+        return f"Only {self.repaired_steps} steps have been repaired so far. The rest are splintered or missing -- not enough to climb safely"
+    endif
+
+def describe_bedroom_door_state(viewer: Entity):
+    if self.bedroom_private:
+        return "It wouldn't be proper to go in uninvited"
+    else:
+        return "It stands slightly ajar, the room beyond quiet and dim"
+    endif
+
+!farm/room/bedroom!
+parent = "farm/generic_room"
+title = "The Farmer's Bedroom"
+description = Description("""
+A small, quiet room with sloping walls that follow the shape
+of the roof. A heavy wooden bed frame stands against the far
+wall, covered in a patchwork quilt of faded blues and greens,
+its seams hand-stitched and slightly uneven. The pillow still
+holds the faint impression of a head.
+
+A washstand with a chipped porcelain basin sits beneath the
+single window. The curtain, thin cotton printed with tiny
+cornflowers, lets in a soft, diffuse light. On the bedside
+table: a tallow candle burnt to a stub, a folded pair of
+reading spectacles, and a well-thumbed almanac open to a page
+on crop rotation.
+
+The room smells of clean linen and old wood, with a trace of
+pipe tobacco that clings stubbornly to the curtains.
+""")
+hint = "No puzzle here. This is a private space you've chosen to explore."
+exits = [
+    Exit("east", !farm/room/hallway!),
+]
+
+!farm/room/loft!
+parent = "farm/generic_room"
+title = "The Loft"
+lever_pulled = True
+gears_oiled = True
+description = Description("""
+The loft is dim and close, the slanted ceiling low enough to
+brush your hair. Old hay bales are stacked against the far wall,
+their sweet, dusty smell filling the warm air. Cobwebs hang in
+pale curtains from the rafters, swaying in a draught you can
+feel but not find. Thin blades of light cut through cracks in
+the roof tiles, catching the slow drift of dust motes.
+
+In one corner, a child's narrow cot is tucked against the wall,
+its thin mattress covered with a patchwork blanket. A cloth doll
+with button eyes sits propped on the pillow, and at the foot of
+the bed a small wooden horse lies on its side, one leg chipped.
+A few flat stones are stacked on a stool nearby -- a half-built
+tower, abandoned mid-game.
+
+Near a heavy wooden trapdoor in the floor, a brass lever juts
+upright, connected to the door by a system of gears and pulleys.
+A small brass plaque reads: "Pull lever and oil gears to open."
+
+$mechanism_state.
+""")
+hint = """
+    Both conditions are met (lever pulled, gears oiled), but the trapdoor won't open.
+    Read the can_leave method in worldlets/farm/room.txt carefully
+    -- there's a small word that inverts the logic.
+"""
+exits = [
+    Exit("down", !farm/room/hallway!),
+    Exit("east", !farm/room/barn!),
+]
+
+def can_leave(self, exit):
+    if exit.name == "east":
+        character.msg("Hum, it seems the lever won't budge for some reason.")
+        return self.lever_pulled and not self.gears_oiled
+    endif
+
+    return True
+
+def describe_mechanism_state(viewer: Entity):
+    if self.lever_pulled and self.gears_oiled:
+        return """
+            The lever has been pulled and the gears are oiled -- every condition
+            met. Yet the trapdoor holds firm. Something in the mechanism's
+            logic must be wrong
+        """
+    elif self.lever_pulled:
+        return "The lever has been pulled, but the gears are still dry. The trapdoor remains sealed"
+    elif self.gears_oiled:
+        return "The gears are oiled, but the lever has not been pulled. The trapdoor remains sealed"
+    else:
+        return "The lever has not been pulled and the gears are dry. The trapdoor remains sealed"
+    endif
+
+!farm/room/barn!
+parent = "farm/generic_room"
+title = "The Barn"
+description = Description("""
+The old barn is tall and hollow, thick oak beams rising to a
+roof that creaks in the wind. Stalls line one side, their gates
+hanging open, the straw inside scattered thin and dry. The air
+is heavy with the smell of old hay, leather tack and the faint
+sourness of long-absent livestock. Bales and grain sacks fill
+the far side in crooked towers, some split and spilling.
+
+A few swallows dart between the high rafters, their calls sharp
+and quick in the echoing space. Near the south doors, a heavy
+iron chain is looped around a fence post.
+
+The large barn doors stand wide open to the south, letting in
+$light.
+
+A wide path beyond leads out toward open fields.
+""")
+hint = """
+    The description uses $light for dynamic text, which calls the describe_light method.
+    Right now it always returns 'darkness'. Fix it to check the time
+    with gametime.now(!calendar/farm!) and its time_of_day property -- return
+    something like 'warm morning light' during the day, and 'darkness'
+    only at night.
+    If you're stuck, head over to https://pytelix.org/farm.html
+
+    Bramble the dog is chained here too: in worldlets/farm/npc.txt,
+    change 'freed = False' to 'freed = True' on farm/npc/bramble.
+    Then APPLY.
+"""
+exits = [
+    Exit("west", !farm/room/loft!),
+    Exit("south", !farm/room/fields!),
+]
+
+def describe_light(viewer: Entity):
+    return "darkness"
+
+def can_leave(self, character, exit):
+    if exit.name == "south":
+        light = self.describe_light(None)
+
+        if light == "darkness":
+            character.msg("You hit an invisible wall. Well, not fun!")
+            return False
+        endif
+    endif
+
+    return True
+
+!farm/room/fields!
+parent = "farm/generic_room"
+title = "The Open Fields"
+description = Description("""
+Golden wheat stretches in every direction, rippling gently in
+the breeze like a slow, rolling sea. The stalks hiss and whisper
+as they brush against each other, and the air is warm with the
+sweet, biscuity smell of grain ready for harvest. Underfoot the
+earth is dry and cracked between the furrows.
+
+Above, $sky. A skylark hangs somewhere
+unseen, pouring out its thin, bright song. In the distance the
+farmhouse and barn look small and quiet against the green hills.
+""")
+hint = """
+    You've done it -- you've fixed up the Maplewood Farm and found
+    young Clem. Along the way, you've edited strings, booleans,
+    numbers, lists, and fixed a method. The farm is yours to keep
+    tinkering with, or you can remove the worldlets/farm directory
+    to start fresh with your own world.
+"""
+exits = [
+    Exit("north", !farm/room/barn!),
+]

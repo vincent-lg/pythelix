@@ -48,8 +48,8 @@ def build_dynamic(paragraph: str, location: Entity, viewer: Entity):
 description = None
 exits = []
 
-def announce(self, text):
-    names.broadcast(self, text)
+def announce(self, text, prompt: bool = True):
+    names.broadcast(self, text, prompt=prompt)
 
 def look(self, viewer: Entity):
     lines = [self.title]
@@ -59,7 +59,7 @@ def look(self, viewer: Entity):
     # Exits.
     lines.append(self.look_exits(viewer))
 
-    # Soirt content.
+    # Sort content.
     objects = []
     characters = []
     for content in self.contents:
@@ -120,6 +120,85 @@ def find_exit(self, name: str, allow_partial: bool = False):
     done
 
     return None
+
+def can_leave(self, character: Entity, exit):
+    """Check whether the character can leave the current room.
+
+    If not, the error message should be provided by different can_leave
+    methods.
+
+    Calls `can_leave` on all the room's content (excepting the character
+    themselve). A guard that blocks an exit can just define the `can_leave`
+    method and send a message:
+
+        !npc/guard!
+        ...
+
+        def can_leave(self, character, exit):
+            character.msg(f"{self} blocks your path with a sneer on his face.")
+            return False
+
+    """
+    for content in self.contents:
+        if content is not character:
+            method = getattr(content, "can_leave", None)
+            if method is not None:
+                if not method(character, exit):
+                    return False
+                endif
+            endif
+        endif
+    done
+
+    return True
+
+def leave(self, character: Entity, exit):
+    """Allow room content to act when a character leaves.
+
+    At this point, it is not possible to prevent the character from moving
+    (see `can_leave`). It's just here to provide a message, like someone
+    opening the door respectfully before the character.
+
+    Calls `leave` on every entity in the room, excepting the character
+    moving.
+
+        !npc/guard!
+        ...
+
+        def leave(self, character, exit):
+            character.msg(f"{self} nods and moves away from the doors.")
+
+    """
+    for content in self.contents:
+        if content is not character:
+            method = getattr(content, "leave", None)
+            if method is not None:
+                method(character, exit)
+            endif
+        endif
+    done
+
+def enter(self, character: Entity):
+    """Allow room content to act when a character enters.
+
+    Calls `enter` on every entity in the room, excepting the character
+    moving.
+
+        !npc/guard!
+        ...
+
+        def enter(self, character):
+            character.msg(f"{self} looks at you with some distrust.")
+
+    """
+    for content in self.contents:
+        if content is not character:
+            method = getattr(content, "enter", None)
+            if method is not None:
+                method(character)
+            endif
+        endif
+    done
 
 !generic/object!
 singular = "a thing"

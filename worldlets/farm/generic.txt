@@ -1,0 +1,21 @@
+!farm/generic_room!
+parent = "generic/room"
+hint = None
+
+def describe_sky(viewer: Entity):
+    """Return a short sky/atmosphere phrase based on the farm calendar."""
+    now = gametime.now(!calendar/farm!)
+    tod = now.time_of_day
+    if tod == "dawn":
+        return "a pale pink light is creeping over the hills"
+    elif tod == "morning":
+        return "the morning sun casts long shadows across the ground"
+    elif tod == "midday":
+        return "the sun sits high and bright overhead"
+    elif tod == "afternoon":
+        return "the afternoon light is warm and golden"
+    elif tod == "evening":
+        return "the sky is streaked with amber and violet"
+    else:
+        return "stars glitter in the dark sky above"
+    endif

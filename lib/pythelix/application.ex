@@ -64,6 +64,7 @@ defmodule Pythelix.Application do
         {DynamicSupervisor, strategy: :one_for_one, name: Pythelix.Network.TCP.ClientSupervisor},
         {Task.Supervisor, name: Pythelix.Game.TaskSupervisor},
         Pythelix.Game.Hub,
+        Pythelix.Game.TickManager,
         Pythelix.Game.Ext,
         Pythelix.Network.TCP.Server,
         PythelixWeb.Telemetry,

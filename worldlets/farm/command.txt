@@ -1,0 +1,21 @@
+!farm/command/hint!
+parent = "generic/char_command"
+name = "hint"
+category = "Tutorial"
+help = """
+Get a hint for the current room.
+
+Syntax:
+    hint
+
+If the current room has a puzzle to solve, this command gives
+a hint about what to fix in the worldlet file.
+"""
+
+def run(character):
+    hint = getattr(character.location, "hint", None)
+    if hint is not None:
+        character.msg(hint)
+    else:
+        character.msg("No hint available for this room.")
+    endif

@@ -14,7 +14,7 @@ defmodule Pythelix.World do
   @worldlet_pattern "*.txt"
 
   alias Pythelix.Command
-  alias Pythelix.Game.{Epoch, Modes}
+  alias Pythelix.Game.{Epoch, Modes, TickManager}
   alias Pythelix.Record
   alias Pythelix.Scripting
   alias Pythelix.Scripting.Namespace.Extended
@@ -633,6 +633,7 @@ defmodule Pythelix.World do
 
       Record.Diff.apply()
       link_commands()
+      TickManager.rebuild(Enum.map(entities, & &1.key))
       Epoch.init()
 
       Enum.map(entities, &Record.get_entity(&1.key))

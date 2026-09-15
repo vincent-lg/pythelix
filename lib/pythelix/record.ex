@@ -71,6 +71,14 @@ defmodule Pythelix.Record do
     end
   end
 
+  @doc """
+  Return the IDs of every stored entity.
+  """
+  @spec all_entity_ids() :: [integer()]
+  def all_entity_ids do
+    Repo.all(from e in Record.Entity, select: e.gen_id)
+  end
+
   defp maybe_load_stored_entity(nil), do: nil
 
   defp maybe_load_stored_entity(entity) do

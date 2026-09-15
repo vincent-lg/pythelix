@@ -1,0 +1,38 @@
+!calendar/farm!
+parent = "generic/calendar"
+type = "custom"
+offset = 0
+units = {
+    "second": GameTimeBaseUnit(),
+    "minute": GameTimeUnit("second", 60),
+    "hour": GameTimeUnit("minute", 60),
+    "day": GameTimeUnit("hour", 24, start=1),
+    "weekday": GameTimeCyclicUnit("day", 7, start=1),
+    "month": GameTimeUnit("day", 30, start=1),
+    "year": GameTimeUnit("month", 12, start=1),
+}
+properties = {
+    "time_of_day": [
+        GameTimeBoundary("hour", 5, 8, "dawn"),
+        GameTimeBoundary("hour", 8, 12, "morning"),
+        GameTimeBoundary("hour", 12, 14, "midday"),
+        GameTimeBoundary("hour", 14, 18, "afternoon"),
+        GameTimeBoundary("hour", 18, 21, "evening"),
+        GameTimeDefault("night")
+    ],
+    "season": [
+        GameTimeBoundary("month", 3, 6, "spring"),
+        GameTimeBoundary("month", 6, 9, "summer"),
+        GameTimeBoundary("month", 9, 12, "autumn"),
+        GameTimeDefault("winter")
+    ],
+    "day_name": [
+        GameTimeProperty("weekday", 1, "Ploughday"),
+        GameTimeProperty("weekday", 2, "Sowday"),
+        GameTimeProperty("weekday", 3, "Waterday"),
+        GameTimeProperty("weekday", 4, "Weedday"),
+        GameTimeProperty("weekday", 5, "Harvestday"),
+        GameTimeProperty("weekday", 6, "Marketday"),
+        GameTimeProperty("weekday", 7, "Restday")
+    ]
+}
