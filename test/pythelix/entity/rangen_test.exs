@@ -5,8 +5,14 @@ defmodule Pythelix.Entity.RangenTest do
 
   use Pythelix.ScriptingCase
 
+  import Ecto.Query, only: [from: 2]
+
+  alias Pythelix.Rangen
   alias Pythelix.Rangen.Trie
+  alias Pythelix.Rangen.TrieServer
   alias Pythelix.Record
+  alias Pythelix.Record.RangenEntry
+  alias Pythelix.Repo
   alias Pythelix.Scripting
 
   setup do
@@ -63,6 +69,88 @@ defmodule Pythelix.Entity.RangenTest do
       assert Trie.count(trie) == 1
       assert Trie.used?(trie, ["a", "b"]) == true
     end
+
+    test "an empty trie holds nothing" do
+      trie = Trie.new()
+
+      assert Trie.count(trie) == 0
+      assert Trie.used?(trie, []) == false
+      assert Trie.used?(trie, ["a"]) == false
+    end
+
+    test "inserting the same parts twice only counts once" do
+      trie =
+        Trie.new()
+        |> Trie.insert(["a", "b"])
+        |> Trie.insert(["a", "b"])
+
+      assert Trie.count(trie) == 1
+
+      # ... and a single remove is enough to free it again.
+      trie = Trie.remove(trie, ["a", "b"])
+      assert Trie.used?(trie, ["a", "b"]) == false
+    end
+
+    test "an entry that is a prefix of another coexists with it" do
+      trie =
+        Trie.new()
+        |> Trie.insert(["a"])
+        |> Trie.insert(["a", "b"])
+
+      assert Trie.count(trie) == 2
+      assert Trie.used?(trie, ["a"]) == true
+      assert Trie.used?(trie, ["a", "b"]) == true
+
+      trie = Trie.remove(trie, ["a"])
+      assert Trie.used?(trie, ["a"]) == false
+      assert Trie.used?(trie, ["a", "b"]) == true
+    end
+
+    test "removing the last entry prunes the branch" do
+      trie =
+        Trie.new()
+        |> Trie.insert(["a", "b", "c"])
+        |> Trie.remove(["a", "b", "c"])
+
+      assert trie == Trie.new()
+      assert Trie.count(trie) == 0
+    end
+  end
+
+  describe "patterns" do
+    test "parse_patterns splits each pattern into its characters" do
+      assert Rangen.parse_patterns(["ab", "012"]) == [["a", "b"], ["0", "1", "2"]]
+      assert Rangen.parse_patterns([]) == []
+    end
+
+    test "parse_patterns handles multi-byte characters" do
+      assert Rangen.parse_patterns(["éè"]) == [["é", "è"]]
+    end
+
+    test "decompose_string takes one character per pattern" do
+      parsed = Rangen.parse_patterns(["ab", "ab", "ab"])
+
+      assert Rangen.decompose_string("aab", parsed) == ["a", "a", "b"]
+    end
+
+    test "decompose_string ignores characters beyond the last pattern" do
+      parsed = Rangen.parse_patterns(["ab", "ab", "ab"])
+
+      assert Rangen.decompose_string("aabb", parsed) == ["a", "a", "b"]
+    end
+
+    test "decompose_string stops when the string is shorter than the patterns" do
+      parsed = Rangen.parse_patterns(["ab", "ab", "ab"])
+
+      assert Rangen.decompose_string("a", parsed) == ["a"]
+      assert Rangen.decompose_string("", parsed) == []
+    end
+
+    test "decompose_string works on multi-byte characters" do
+      parsed = Rangen.parse_patterns(["éè", "ab"])
+
+      assert Rangen.decompose_string("éa", parsed) == ["é", "a"]
+    end
   end
 
   defp create_rangen(key, patterns, check_method \\ nil) do
@@ -82,6 +170,33 @@ defmodule Pythelix.Entity.RangenTest do
     end
 
     entity
+  end
+
+  # The registry unregisters a dead server asynchronously, so give it a moment.
+  defp wait_until(condition, attempts \\ 50) do
+    cond do
+      condition.() -> :ok
+      attempts == 0 -> flunk("condition never became true")
+      true -> Process.sleep(10) && wait_until(condition, attempts - 1)
+    end
+  end
+
+  defp values_in_db(key) do
+    Repo.all(from e in RangenEntry, where: e.generator_key == ^key, select: e.value)
+  end
+
+  # Write a temporary worldlet file and apply it, as `apply` would in game.
+  defp worldlet(content) do
+    directory = Path.join(System.tmp_dir!(), "rangen_#{System.unique_integer([:positive])}")
+    File.mkdir_p!(directory)
+    on_exit(fn -> File.rm_rf!(directory) end)
+
+    path = Path.join(directory, "rangen.txt")
+    File.write!(path, content)
+
+    assert {:ok, _path, _number} = Pythelix.World.apply(path)
+
+    :ok
   end
 
   defp generate_all(key, count) do
@@ -166,6 +281,86 @@ defmodule Pythelix.Entity.RangenTest do
       assert script.error == nil
       assert script.variables["result"] == "exhausted"
     end
+
+    test "each position draws from its own pattern" do
+      create_rangen("rangen/test_mixed", ["ab", "012"])
+
+      results = generate_all("rangen/test_mixed", 6)
+
+      assert length(Enum.uniq(results)) == 6
+
+      for result <- results do
+        assert String.match?(result, ~r/^[ab][012]$/)
+      end
+    end
+
+    test "a character repeated in a pattern yields a single combination" do
+      create_rangen("rangen/test_dup", ["aa"])
+
+      script =
+        Scripting.run("""
+        one = !rangen/test_dup!.generate()
+        try:
+          two = !rangen/test_dup!.generate()
+        except ValueError:
+          two = "exhausted"
+        endtry
+        """)
+
+      assert script.error == nil
+      assert script.variables["one"] == "a"
+      assert script.variables["two"] == "exhausted"
+    end
+
+    test "check is called on every prefix, pruning whole branches" do
+      create_rangen("rangen/test_prefix", ["ab", "ab"], "return not text.startswith('a')")
+
+      results = generate_all("rangen/test_prefix", 2)
+
+      assert Enum.sort(results) == ["ba", "bb"]
+
+      script =
+        Scripting.run("""
+        try:
+          result = !rangen/test_prefix!.generate()
+        except ValueError:
+          result = "exhausted"
+        endtry
+        """)
+
+      assert script.error == nil
+      assert script.variables["result"] == "exhausted"
+    end
+
+    test "a check that rejects every prefix exhausts immediately" do
+      # `len(text) == 2` is never true for the one-character prefixes `check`
+      # receives first, so no branch is ever explored.
+      create_rangen("rangen/test_never", ["ab", "ab"], "return len(text) == 2")
+
+      script =
+        Scripting.run("""
+        try:
+          result = !rangen/test_never!.generate()
+        except ValueError:
+          result = "exhausted"
+        endtry
+        """)
+
+      assert script.error == nil
+      assert script.variables["result"] == "exhausted"
+    end
+
+    test "two generators keep separate sets of used strings" do
+      create_rangen("rangen/test_first", ["ab", "ab", "ab"])
+      create_rangen("rangen/test_second", ["ab", "ab", "ab"])
+
+      first = generate_all("rangen/test_first", 8)
+      assert length(Enum.uniq(first)) == 8
+
+      # The first one is exhausted, the second one is untouched.
+      second = generate_all("rangen/test_second", 8)
+      assert length(Enum.uniq(second)) == 8
+    end
   end
 
   describe "add and remove" do
@@ -210,6 +405,158 @@ defmodule Pythelix.Entity.RangenTest do
       # Should be able to generate exactly 1 more (the removed one)
       results = generate_all("rangen/test_remove", 1)
       assert results == ["aab"]
+    end
+
+    test "removing a string that was never used is a no-op" do
+      create_rangen("rangen/test_remove_unknown", ["ab", "ab", "ab"])
+
+      script =
+        run_ok("""
+        ent = !rangen/test_remove_unknown!
+        ent.add("aab")
+        ent.remove("bba")
+        after = ent.count
+        """)
+
+      assert Script.get_variable_value(script, "after") == 1
+      assert values_in_db("rangen/test_remove_unknown") == ["aab"]
+    end
+  end
+
+  describe "database" do
+    test "generated and added strings are stored" do
+      create_rangen("rangen/test_db", ["ab", "ab", "ab"])
+
+      run_ok("""
+      !rangen/test_db!.add("aab")
+      """)
+
+      generated = generate_all("rangen/test_db", 2)
+
+      assert Enum.sort(values_in_db("rangen/test_db")) == Enum.sort(["aab" | generated])
+    end
+
+    test "remove deletes the row" do
+      create_rangen("rangen/test_db_remove", ["ab", "ab", "ab"])
+
+      run_ok("""
+      ent = !rangen/test_db_remove!
+      ent.add("aab")
+      ent.add("bba")
+      ent.remove("aab")
+      """)
+
+      assert values_in_db("rangen/test_db_remove") == ["bba"]
+    end
+
+    test "clear deletes every row for that generator only" do
+      create_rangen("rangen/test_db_clear", ["ab", "ab", "ab"])
+      create_rangen("rangen/test_db_kept", ["ab", "ab", "ab"])
+
+      run_ok("""
+      !rangen/test_db_clear!.add("aab")
+      !rangen/test_db_kept!.add("aab")
+      !rangen/test_db_clear!.clear()
+      """)
+
+      assert values_in_db("rangen/test_db_clear") == []
+      assert values_in_db("rangen/test_db_kept") == ["aab"]
+    end
+
+    test "entries survive the loss of the trie server" do
+      create_rangen("rangen/test_restart", ["ab", "ab", "ab"])
+
+      generated = generate_all("rangen/test_restart", 3)
+      assert Rangen.count("rangen/test_restart") == 3
+
+      # Simulate a restart: the in-memory trie is gone, only the rows remain.
+      [{pid, _}] = Registry.lookup(Pythelix.Rangen.Registry, "rangen/test_restart")
+      :ok = DynamicSupervisor.terminate_child(Pythelix.Rangen.Supervisor, pid)
+      wait_until(fn -> not TrieServer.alive?("rangen/test_restart") end)
+
+      Rangen.warmup()
+      Rangen.ensure_trie("rangen/test_restart", Rangen.parse_patterns(["ab", "ab", "ab"]))
+
+      assert Rangen.count("rangen/test_restart") == 3
+
+      # The five remaining combinations are still generated, then it exhausts.
+      remaining = generate_all("rangen/test_restart", 5)
+      assert length(Enum.uniq(generated ++ remaining)) == 8
+    end
+  end
+
+  describe "worldlets" do
+    test "a rangen defined in a worldlet generates values matching its patterns" do
+      worldlet("""
+      !rangen/phone!
+      parent = "generic/rangen"
+      patterns = ["0", "1234", "0123456789", "0123456789"]
+
+      def check(self, text):
+          return not text.startswith("013")
+      """)
+
+      script =
+        run_ok("""
+        number = !rangen/phone!.generate()
+        total = !rangen/phone!.count
+        """)
+
+      number = Script.get_variable_value(script, "number")
+
+      assert String.match?(number, ~r/^0[1-4]\d\d$/)
+      refute String.starts_with?(number, "013")
+      assert Script.get_variable_value(script, "total") == 1
+      assert values_in_db("rangen/phone") == [number]
+    end
+
+    test "a check can consult an attribute of the generator" do
+      # The documented way to keep a list of forbidden values: guard on the
+      # length first, since `check` also receives the shorter prefixes.
+      worldlet("""
+      !rangen/guarded!
+      parent = "generic/rangen"
+      patterns = ["ab", "ab"]
+      forbidden = ["aa", "ab"]
+
+      def check(self, text):
+          if len(text) < 2:
+              return True
+          endif
+
+          return text not in self.forbidden
+      """)
+
+      results = generate_all("rangen/guarded", 2)
+
+      assert Enum.sort(results) == ["ba", "bb"]
+    end
+
+    test "a value taken from a generator can be given back" do
+      worldlet("""
+      !rangen/pool!
+      parent = "generic/rangen"
+      patterns = ["ab", "ab"]
+
+      !obj/subscriber!
+      name = "subscriber"
+      """)
+
+      script =
+        run_ok("""
+        subscriber = !obj/subscriber!
+        before = hasattr(subscriber, "phone_number")
+        subscriber.phone_number = !rangen/pool!.generate()
+        after = hasattr(subscriber, "phone_number")
+        taken = !rangen/pool!.count
+        !rangen/pool!.remove(subscriber.phone_number)
+        given_back = !rangen/pool!.count
+        """)
+
+      assert Script.get_variable_value(script, "before") == false
+      assert Script.get_variable_value(script, "after") == true
+      assert Script.get_variable_value(script, "taken") == 1
+      assert Script.get_variable_value(script, "given_back") == 0
     end
   end
 
