@@ -1,0 +1,4 @@
+!test/goblin_weak!
+parent = "generic/object"
+singular = "a wounded goblin"
+hp = 3

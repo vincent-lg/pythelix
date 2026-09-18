@@ -76,7 +76,11 @@ config :codepagex, :encodings, [
 config :pythelix,
   worldlets: true,
   show_stats: true,
+  # The game's root: paths given by a builder are resolved against this, so
+  # they mean the same thing wherever a command happens to be run from.
+  base_path: File.cwd!(),
   worldlets_path: Path.join(File.cwd!(), "worldlets"),
+  scenarios_path: Path.join(File.cwd!(), "scenarios"),
   tasks_path: Path.join(File.cwd!(), "tasks"),
   # Default encoding for new TCP client connections.
   # Supported values: "utf-8", "iso-8859-1", "iso-8859-15", "cp1252"

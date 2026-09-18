@@ -120,6 +120,57 @@ defmodule Pythelix.Scripting.DiagnosticTest do
     end
   end
 
+  describe "calls that parse but don't exist" do
+    test "print is named, with what to use instead" do
+      diagnostic = one(~s|print("debug")\n|)
+
+      assert diagnostic.message =~ "`print()` does not exist"
+      assert diagnostic.hint =~ "character.msg"
+    end
+
+    test "range is named" do
+      diagnostic = one("for i in range(10):\n    x = i\ndone\n")
+
+      assert diagnostic.message =~ "`range()` does not exist"
+    end
+
+    test "pass is named" do
+      diagnostic = one("if x:\n    pass\nendif\n")
+
+      assert diagnostic.message =~ "`pass` does not exist"
+    end
+
+    test "a missing builtin is named individually" do
+      assert one("best = max(scores)\n").message =~ "`max()` does not exist"
+      assert one("items = sorted(things)\n").message =~ "`sorted()` does not exist"
+    end
+
+    test "builtins that do exist are not flagged" do
+      assert [] == check(~s|total = len(items)\nname = str(total)\n|)
+    end
+  end
+
+  describe "the colon in a dict literal" do
+    test "a missing space after the colon is explained" do
+      diagnostic = one(~s|d = {"a":1}\n|)
+
+      assert diagnostic.message =~ "needs a space after the colon"
+      assert diagnostic.hint =~ "15:00"
+    end
+
+    test "a later key is caught too" do
+      assert one(~s|d = {"a": 1, "b":2}\n|).message =~ "space after the colon"
+    end
+
+    test "a properly spaced dict is left alone" do
+      assert [] == check(~s|d = {"a": 1, "b": 2}\n|)
+    end
+
+    test "a set of times is left alone" do
+      assert [] == check("times = {15:00, 16:00}\n")
+    end
+  end
+
   describe "prose is not code" do
     test "English words in a description are not reported" do
       code =
@@ -130,6 +181,10 @@ defmodule Pythelix.Scripting.DiagnosticTest do
 
     test "a comment mentioning lambda is not reported" do
       assert [] == check("# no lambda here\nx = 1\n")
+    end
+
+    test "a message quoting print() is not reported" do
+      assert [] == check(~s|character.msg("print(x) is not real here")\n|)
     end
 
     test "a string containing a bracket does not confuse the scanner" do

@@ -1,0 +1,7 @@
+# Entities a scenario needs in place. Not played; applied by a scenario.
+
+!test/apple!
+parent = "generic/object"
+singular = "a red apple"
+plural = "red apples"
+location = "room/bakery"

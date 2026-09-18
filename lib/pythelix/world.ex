@@ -49,7 +49,11 @@ defmodule Pythelix.World do
     end
   end
 
-  def apply(worldlet) do
+  def apply(:static = worldlet), do: do_apply(worldlet)
+
+  def apply(worldlet), do: worldlet |> Pythelix.Paths.resolve() |> do_apply()
+
+  defp do_apply(worldlet) do
     if worldlet == :static or File.exists?(worldlet) do
       case process_worldlets(worldlet) do
         {:error, reason} ->
@@ -93,17 +97,24 @@ defmodule Pythelix.World do
   defp readable(reason) when is_binary(reason), do: reason
   defp readable(reason), do: inspect(reason)
 
+  # Windows gives us backslashes, and `Path.wildcard/1` treats a backslash as an
+  # escape character, so a real directory silently matches nothing. Normalise
+  # before globbing (see `Pythelix.Paths`).
+  defp glob(directory, pattern) do
+    Path.wildcard("#{Pythelix.Paths.normalize(directory)}/#{pattern}")
+  end
+
   defp process_worldlets(path) do
     files =
       cond do
         path == nil ->
-          Path.wildcard("#{@worldlet_dir}/**/#{@worldlet_pattern}")
+          glob(@worldlet_dir, "**/#{@worldlet_pattern}")
 
         path == :static ->
           []
 
         File.dir?(path) ->
-          Path.wildcard("#{path}/**/#{@worldlet_pattern}")
+          glob(path, "**/#{@worldlet_pattern}")
 
         true ->
           [path]

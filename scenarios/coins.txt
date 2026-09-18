@@ -1,0 +1,14 @@
+# Gold coins stack: 30 on the floor, take 20, and the rest stays behind.
+
+given Alice in !room/bakery!
+given 30 !object/gold_coin! in !room/bakery!
+
+Alice> look
+Alice sees "30 gold coins"
+
+Alice> get 20 gold coin
+Alice sees "20 gold coins"
+
+Alice> look
+Alice sees "10 gold coins"
+Alice does not see "30 gold coins"

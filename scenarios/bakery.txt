@@ -1,0 +1,15 @@
+# Two people in the bakery. What one does, the other sees.
+
+given Alice in !room/bakery!
+given Bob in !room/bakery!
+
+Alice> look
+Alice sees "bakery"
+
+Alice> say is anyone here
+Alice sees "is anyone here"
+Bob sees "is anyone here"
+
+Bob> xyzzy
+Bob sees "Command not found"
+Alice does not see "Command not found"

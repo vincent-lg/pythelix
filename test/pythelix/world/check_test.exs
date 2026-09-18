@@ -40,6 +40,30 @@ defmodule Pythelix.World.CheckTest do
       assert result.entities == 1
     end
 
+    test "comments outside a method are allowed", %{tmp_dir: dir} do
+      # The first thing anyone writes in a new file is a line saying what it's
+      # for — including above the first entity, where there is no method to
+      # take it.
+      path =
+        write(dir, "commented.txt", """
+        # Objects a scenario needs in place.
+
+        !test/apple!
+        # A comment between attributes, with an = sign in it.
+        parent = "generic/object"
+        singular = "a red apple"
+
+        def taste(self, character):
+            # A comment inside a method still belongs to the script.
+            character.msg("Sweet.")
+        """)
+
+      result = run(path)
+
+      assert result.diagnostics == []
+      assert result.entities == 1
+    end
+
     test "prose in a description is not mistaken for code", %{tmp_dir: dir} do
       path =
         write(dir, "room.txt", """

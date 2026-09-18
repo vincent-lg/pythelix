@@ -1,0 +1,11 @@
+# The front door: a fresh connection meets the login menus.
+
+connect Newcomer
+Newcomer sees "Welcome to the Pythelix Engine"
+Newcomer sees "Enter your username"
+
+Newcomer> nosuchaccount
+Newcomer sees "doesn't exist"
+
+Newcomer> new
+Newcomer sees "Enter your new username"

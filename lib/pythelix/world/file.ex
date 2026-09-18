@@ -91,6 +91,12 @@ defmodule Pythelix.World.File do
         state = parse_method_content(state, {line, index})
         parse_lines(rest, state)
 
+      # A comment outside a method. Inside one it belongs to the script and has
+      # been consumed above; this has to come before attributes, since a
+      # comment may well contain an equals sign.
+      !need_more && String.starts_with?(String.trim(line), "#") ->
+        parse_lines(rest, state)
+
       !need_more && String.contains?(line, "=") ->
         state = parse_attribute(state, {line, index})
         parse_lines(rest, state)

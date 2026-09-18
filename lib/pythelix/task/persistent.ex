@@ -40,7 +40,7 @@ defmodule Pythelix.Task.Persistent do
   """
   @spec load() :: integer()
   def load() do
-    Path.wildcard("#{get_path()}/*.task")
+    Path.wildcard("#{Pythelix.Paths.normalize(get_path())}/*.task")
     |> Enum.map(&load_task/1)
     |> Enum.reject(&(&1 == nil))
     |> Enum.reduce({get_status(), get_ids()}, fn task, {status, ids} ->

@@ -19,7 +19,6 @@ defmodule Pythelix.MixProject do
       test_coverage: [
         ignore_modules: [
           ~r/^Mix\./,
-          ~r/^Pumpkin\./,
           ~r/^Pythelix\.Adapters\./,
           ~r/^Pythelix\.Scripting\.Parser/,
           ~r/^PythelixWeb/
@@ -44,14 +43,6 @@ defmodule Pythelix.MixProject do
   # Specifies which paths to compile per environment.
   defp elixirc_paths(:test), do: ["lib", "test/support"]
   defp elixirc_paths(_), do: ["lib"]
-
-  def cli do
-    [
-      preferred_envs: [
-        pumpkin: :test
-      ]
-    ]
-  end
 
   # Specifies your project dependencies.
   #
@@ -89,7 +80,6 @@ defmodule Pythelix.MixProject do
       {:jason, "~> 1.2"},
       {:dns_cluster, "~> 0.1.1"},
       {:bandit, "~> 1.5"},
-      {:gherkin, "~> 2.0"},
       {:meck, "~> 0.9", only: :test}
     ]
     |> then(fn deps ->
@@ -131,6 +121,12 @@ defmodule Pythelix.MixProject do
   defp copy_extra_files(release) do
     File.cp_r!("docs", Path.join(release.path, "docs"))
     File.cp_r!("worldlets", Path.join(release.path, "worldlets"))
+
+    # Scenarios ship too, so that `bin/scenario` with no argument works in a
+    # release exactly as `bin/apply` does.
+    if File.dir?("scenarios") do
+      File.cp_r!("scenarios", Path.join(release.path, "scenarios"))
+    end
 
     release
   end

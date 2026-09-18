@@ -1,0 +1,6 @@
+apply apples.txt
+
+given Alice in !room/bakery!
+
+Alice> look
+Alice sees "a red apple"

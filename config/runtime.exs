@@ -92,6 +92,7 @@ if config_env() == :prod do
 
   database_path = resolve_path.("DATABASE_PATH", "pythelix.db")
   worldlets_path = resolve_path.("WORLDLETS_PATH", "worldlets")
+  scenarios_path = resolve_path.("SCENARIOS_PATH", "scenarios")
   tasks_path = resolve_path.("TASKS_PATH", "tasks")
   default_encoding = System.get_env("PYTHELIX_DEFAULT_ENCODING", "utf-8")
 
@@ -100,7 +101,9 @@ if config_env() == :prod do
   end
 
   config :pythelix,
+    base_path: base_dir,
     worldlets_path: worldlets_path,
+    scenarios_path: scenarios_path,
     tasks_path: tasks_path,
     default_encoding: default_encoding
 

@@ -75,10 +75,19 @@ defmodule Pythelix.World.Check do
     _error -> nil
   end
 
+  # Windows gives us backslashes, and `Path.wildcard/1` treats a backslash as an
+  # escape character, so a real directory silently matches nothing. Normalise
+  # before globbing (see `Pythelix.Paths`).
+  defp glob(directory, pattern) do
+    Path.wildcard("#{Pythelix.Paths.normalize(directory)}/#{pattern}")
+  end
+
   defp files(path) do
+    path = Pythelix.Paths.resolve(path)
+
     cond do
       not Elixir.File.exists?(path) -> []
-      Elixir.File.dir?(path) -> Path.wildcard("#{path}/**/#{@worldlet_pattern}")
+      Elixir.File.dir?(path) -> glob(path, "**/#{@worldlet_pattern}")
       true -> [path]
     end
   end
@@ -129,8 +138,8 @@ defmodule Pythelix.World.Check do
 
   defp read_lines(path) do
     path
-    |> Elixir.File.read!()
-    |> String.split(~r/\r?\n/)
+    |> Pythelix.Encoding.read_file!()
+    |> String.split("\n")
     |> Enum.with_index(1)
   end
 

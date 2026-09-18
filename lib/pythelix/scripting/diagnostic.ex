@@ -57,7 +57,25 @@ defmodule Pythelix.Scripting.Diagnostic do
     {~r/^\s*@\w/m, "decorators are not supported", nil, "methods.md"},
     {~r/^\s*with\s+.+\bas\b.*:/m, "`with` blocks are not supported", nil, "scripting.md"},
     {~r/:=/, "the walrus operator `:=` is not supported",
-     "Assign on its own line first, then test the variable.", "scripting.md"}
+     "Assign on its own line first, then test the variable.", "scripting.md"},
+    # These parse perfectly well and only fail when a player runs the line, so
+    # catching them here is the difference between a build error and a
+    # traceback in someone's face.
+    {~r/\bprint\s*\(/, "`print()` does not exist in Pythello",
+     "Send the text to someone with `character.msg(...)`, or write to the server log with `log(...)`.",
+     "pythello-for-llms.md"},
+    {~r/\brange\s*\(/, "`range()` does not exist in Pythello",
+     "Loop over a list, or count upwards with a `while` loop.", "pythello-for-llms.md"},
+    {~r/^[ \t]*pass[ \t]*$/m, "`pass` does not exist in Pythello",
+     "Leave the block empty, or `return`.", "pythello-for-llms.md"},
+    {~r/\b(?:sorted|min|max|sum|abs|round|any|all|enumerate|zip|reversed|map|filter|input|open)\s*\(/,
+     :missing_builtin, "Pythello has a small set of builtins; see the list of what exists.",
+     "pythello-for-llms.md"},
+    # `15:00` is a time, so a colon with nothing after it is read as one. This
+    # makes `{"a":1}` a syntax error and, worse, `{1:2}` a silent set of times.
+    {~r/[{,]\s*:\S/, "a dict literal needs a space after the colon",
+     ~s|Because `15:00` is a time, `{"a":1}` is read as one: write `{"a": 1}`.|,
+     "pythello-for-llms.md"}
   ]
 
   @doc """
@@ -136,15 +154,26 @@ defmodule Pythelix.Scripting.Diagnostic do
 
     Enum.find_value(@pythonisms, fn {regex, message, hint, doc} ->
       case Regex.run(regex, masked, return: :index) do
-        [{offset, _length} | _] ->
+        [{offset, length} | _] ->
           {line, column} = position_at(code, offset, base)
-          %{line: line, column: column, message: message, hint: hint, doc: doc}
+          found = binary_part(code, offset, length)
+
+          %{line: line, column: column, message: message(message, found), hint: hint, doc: doc}
 
         nil ->
           nil
       end
     end)
   end
+
+  # A rule covering several names says which one it found.
+  defp message(:missing_builtin, found) do
+    name = found |> String.trim_trailing("(") |> String.trim()
+
+    "`#{name}()` does not exist in Pythello"
+  end
+
+  defp message(message, _found), do: message
 
   defp scan_blocks(code, base) do
     case REPL.diagnose(code, line: base) do
