@@ -215,7 +215,7 @@ def run(character):
     if console == None:
         console = code.Console({"self": character, "location": character.location})
         character._py_console = console
-    character.game_modes.add("menu/pythello", character)
+    character.game_modes.add(!menu/pythello!, character)
     character.msg("Pythello console. Type 'quit' to exit.")
 
 !menu/pythello!
@@ -241,9 +241,11 @@ location = "menu/pythello"
 name = "quit"
 
 def run(character):
-    character.game_modes.remove(0)
+    character.game_modes.close()
     character.msg("Good bye.")
 ```
+
+The stack of menus this uses is described in the [game modes documentation](../../game_modes.md).
 
 A session inside the menu:
 

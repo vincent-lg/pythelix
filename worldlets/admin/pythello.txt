@@ -44,7 +44,7 @@ def run(character, text):
         character.msg(result["error"])
     endif
 
-    #character.game_modes.add("menu/pythello", character.id)
+    #character.game_modes.add(!menu/pythello!, character)
     #character.msg("Pythello console")
 
 !menu/pythello!
@@ -66,5 +66,5 @@ location = "menu/pythello"
 name = "quit"
 
 def run(character):
-    character.game_modes.remove(0)
+    character.game_modes.close()
     character.msg("Good bye.")

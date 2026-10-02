@@ -24,6 +24,7 @@ If you're new to Pythelix and want to learn by doing, [head over to the getting 
   - [Stackables](./staclabkes.md): handling entities that appear in great numbers (like gold coin, bills, crafting resources...).
   - [Password management](./password.md): how to handle passwords without storing them in your database.
   - [Prompts](./prompt.md): how to handle a prompt (editing it, disabling it).
+  - [Game modes](./game_modes.md): how to keep several menus open at once (a console, an editor, a shop) and let the player address any of them.
   - [Random-string generators](./rangen.md): how to randomly create unique string identifiers (phone numbers, licence plates and so on).
   - [Encoding](./encoding.md): how to handle accented characters in your games.
 

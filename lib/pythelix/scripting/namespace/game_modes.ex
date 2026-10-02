@@ -16,22 +16,30 @@ defmodule Pythelix.Scripting.Namespace.GameModes do
   end
 
   defmet __len__(script, namespace), [] do
-    game_modes = Store.get_value(namespace.self)
+    game_modes = modes(namespace)
     {script, length(game_modes.game_modes)}
+  end
+
+  # Game modes are read back from storage as they were written, so a world
+  # older than a field would not have it. Normalize at the door.
+  defp modes(namespace) do
+    namespace.self
+    |> Store.get_value()
+    |> Modes.normalize()
   end
 
   defmet add(script, namespace), [
     {:menu, index: 0, keyword: "menu", type: {:entity, Pythelix.Generic.menu()}},
     {:owner, index: 1, keyword: "owner", type: :entity, default: nil},
-    {:default, keyword: "default", type: :bool, default: true}
+    {:active, keyword: "active", type: :bool, default: true}
   ] do
-    game_modes = Store.get_value(namespace.self)
+    game_modes = modes(namespace)
     menu = Store.get_value(namespace.menu)
     owner = Store.get_value(namespace.owner)
 
     opts =
-      if namespace.default do
-        [default: true]
+      if namespace.active do
+        [active: true]
       else
         []
       end
@@ -42,11 +50,26 @@ defmodule Pythelix.Scripting.Namespace.GameModes do
     {script, :none}
   end
 
+  defmet close(script, namespace), [] do
+    game_modes = modes(namespace)
+
+    case Modes.close(game_modes) do
+      :error ->
+        message = "cannot close the last game mode"
+
+        {Script.raise(script, ValueError, message), :none}
+
+      {:ok, game_modes} ->
+        Store.update_reference(namespace.self, game_modes)
+        {script, :none}
+    end
+  end
+
   defmet remove(script, namespace), [
     {:menu, index: 0, keyword: "menu", type: {:entity, Pythelix.Generic.menu()}},
     {:owner, index: 1, keyword: "owner", type: :entity, default: nil}
   ] do
-    game_modes = Store.get_value(namespace.self)
+    game_modes = modes(namespace)
     menu = Store.get_value(namespace.menu)
     owner = Store.get_value(namespace.owner)
 

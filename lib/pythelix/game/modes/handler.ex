@@ -41,51 +41,57 @@ defmodule Pythelix.Game.Modes.Handler do
 
   @doc """
   Process input within game mode context, handling pipe operators.
+
+  Pipes on their own (`>`, `<<`) move the character to that mode for good.
+  Pipes followed by something to do (`>look`) send just that one input there
+  and leave the character where it stands.
   """
   def process_game_mode_input(game_modes, client, input, start_time, owner) do
     case parse_pipe_input(input) do
-      {:pipe, net_movement, remaining_input} when net_movement != 0 ->
-        direction = if net_movement > 0, do: :next, else: :previous
-        count = abs(net_movement)
+      {:pipe, net_movement, ""} when net_movement != 0 ->
+        game_modes
+        |> Modes.move(net_movement)
+        |> dispatch(client, "", start_time, owner)
 
-        handle_mode_switch(
-          game_modes,
-          client,
-          direction,
-          count,
-          remaining_input,
-          start_time,
-          owner
-        )
+      {:pipe, net_movement, remaining_input} when net_movement != 0 ->
+        game_modes
+        |> Modes.aim(net_movement)
+        |> dispatch(client, remaining_input, start_time, owner)
 
       {:no_pipe, clean_input} ->
-        # No pipe operators, process with current active mode
-        handle_with_active_mode(game_modes, client, clean_input, start_time, owner)
+        # No pipe operators, process with the mode the character stands on.
+        game_modes
+        |> Modes.aim()
+        |> dispatch(client, clean_input, start_time, owner)
     end
   end
 
   @doc """
-  Handle mode switching with pipe operators.
-  """
-  def handle_mode_switch(game_modes, client, direction, count, remaining_input, start_time, owner) do
-    new_active_index = calculate_new_active_index(game_modes, direction, count)
-
-    # Update the active mode
-    updated_game_modes = %{game_modes | active: new_active_index}
-    id_or_key = Entity.get_id_or_key(owner)
-    Record.set_attribute(id_or_key, "game_modes", updated_game_modes)
-
-    # Process remaining input with new active mode
-    handle_with_active_mode(updated_game_modes, client, remaining_input, start_time, owner)
-  end
-
-  @doc """
-  Handle input with the currently active game mode.
+  Handle input with the game mode currently receiving it.
   """
   def handle_with_active_mode(game_modes, client, input, start_time, owner) do
     {menu, owner} = get_active_mode(game_modes, owner)
 
     MenuHandler.handle(menu, client, input, start_time, owner)
+  end
+
+  # Remember where this input is going before running it, so that a script
+  # calling `game_modes.close()` closes the mode it was typed into rather
+  # than whichever one happens to be on top.
+  defp dispatch(game_modes, client, input, start_time, owner) do
+    game_modes = persist(game_modes, owner)
+
+    handle_with_active_mode(game_modes, client, input, start_time, owner)
+  end
+
+  defp persist(game_modes, owner) do
+    stored = Record.get_attribute(owner, "game_modes")
+
+    if stored != game_modes do
+      Record.set_attribute(Entity.get_id_or_key(owner), "game_modes", game_modes)
+    end
+
+    game_modes
   end
 
   defp get_owned_by_client(client) do
@@ -96,23 +102,14 @@ defmodule Pythelix.Game.Modes.Handler do
   end
 
   defp get_game_modes(entity) do
-    Record.get_attribute(entity, "game_modes")
+    case Record.get_attribute(entity, "game_modes") do
+      nil -> nil
+      modes -> Modes.normalize(modes)
+    end
   end
 
   defp get_active_mode(%Modes{} = modes, %Entity{} = owner) do
     Modes.get_active(modes, owner)
-  end
-
-  defp calculate_new_active_index(%Modes{active: current, game_modes: modes}, direction, count) do
-    mode_count = length(modes)
-
-    case direction do
-      :next ->
-        rem(current + count, mode_count)
-
-      :previous ->
-        rem(current - count + mode_count, mode_count)
-    end
   end
 
   defp parse_pipe_input(input) do

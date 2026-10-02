@@ -47,4 +47,42 @@ defmodule Pythelix.Scripting.Namespace.GameModesTest do
       assert owned == character
     end
   end
+
+  describe "close" do
+    test "closing the mode just added brings the game menu back" do
+      modes =
+        expr_ok("""
+        char = !generic/character!
+        char.game_modes.add(!menu/motd!)
+        char.game_modes.close()
+        char.game_modes
+        """)
+
+      assert modes.game_modes == [{"menu/game", nil}]
+      assert modes.active == 0
+    end
+
+    test "closing one of two screens of the same menu leaves the other open" do
+      modes =
+        expr_ok("""
+        char = !generic/character!
+        char.game_modes.add(!menu/motd!)
+        char.game_modes.add(!menu/motd!)
+        char.game_modes.close()
+        char.game_modes
+        """)
+
+      assert modes.game_modes == [{"menu/motd", nil}, {"menu/game", nil}]
+    end
+
+    test "the last mode cannot be closed" do
+      traceback =
+        expr_fail("""
+        char = !generic/character!
+        char.game_modes.close()
+        """)
+
+      assert traceback.exception == ValueError
+    end
+  end
 end

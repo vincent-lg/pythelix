@@ -140,13 +140,57 @@ defmodule Pythelix.Game.Modes.HandlerTest do
       assert game_modes.active == 1
     end
 
-    test "handles pipe operators with commands", %{client: client, menu: menu} do
-      # Test pipe with command: ">look" should switch to next mode and execute look
+    test "a pipe with a command sends it away without moving the character" do
+      # ">look" runs `look` one mode down, but the character stays where it
+      # stands, so the next plain input goes back to where it was typed.
+      client = Record.get_entity("test_client")
+      menu = Record.get_entity("menu/game")
       Handler.handle(menu, client, ">look", 0)
 
       character = Record.get_attribute(client, "owner")
       game_modes = Record.get_attribute(character, "game_modes")
+      assert game_modes.active == 0
+      assert game_modes.target == 1
+    end
+
+    test "a plain input clears the mode a previous pipe aimed at", %{
+      client: client,
+      menu: menu
+    } do
+      Handler.handle(menu, client, ">look", 0)
+      Handler.handle(menu, client, "look", 0)
+
+      character = Record.get_attribute(client, "owner")
+      game_modes = Record.get_attribute(character, "game_modes")
+      assert game_modes.active == 0
+      assert game_modes.target == nil
+    end
+
+    test "a bare pipe moves the character and aims at nothing", %{
+      client: client,
+      menu: menu
+    } do
+      Handler.handle(menu, client, ">", 0)
+
+      character = Record.get_attribute(client, "owner")
+      game_modes = Record.get_attribute(character, "game_modes")
       assert game_modes.active == 1
+      assert game_modes.target == nil
+    end
+
+    test "a pipe is counted from where the character stands, not from the last one", %{
+      client: client,
+      menu: menu
+    } do
+      # Two `>look` in a row both aim one mode down from mode 0, rather than
+      # walking further away each time.
+      Handler.handle(menu, client, ">look", 0)
+      Handler.handle(menu, client, ">look", 0)
+
+      character = Record.get_attribute(client, "owner")
+      game_modes = Record.get_attribute(character, "game_modes")
+      assert game_modes.active == 0
+      assert game_modes.target == 1
     end
 
     test "handles input without game modes", %{menu: menu} do
