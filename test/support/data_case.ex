@@ -29,6 +29,7 @@ defmodule Pythelix.DataCase do
 
   setup tags do
     Pythelix.DataCase.setup_sandbox(tags)
+    Pythelix.DataCase.drain_hub_on_exit()
     Pythelix.Scripting.Store.init()
     Pythelix.Record.Cache.clear()
     :ok
@@ -40,6 +41,35 @@ defmodule Pythelix.DataCase do
   def setup_sandbox(tags) do
     pid = Ecto.Adapters.SQL.Sandbox.start_owner!(Pythelix.Repo, shared: not tags[:async])
     on_exit(fn -> Ecto.Adapters.SQL.Sandbox.stop_owner(pid) end)
+  end
+
+  @doc """
+  Wait, when the test exits, for the global game hub to finish the jobs queued
+  so far, before the sandbox owner goes away.
+
+  Scripts that pause (`wait`, `ask`...) resume through the global hub, which
+  applies their diffs from its own process. Without this, a test can end while
+  the hub is still committing on the test's sandbox connection, which logs a
+  "owner exited" disconnection. Registered after the sandbox `on_exit`, so it
+  runs before it.
+  """
+  def drain_hub_on_exit(timeout \\ 1_000) do
+    on_exit(fn -> drain_hub(timeout) end)
+  end
+
+  @doc """
+  Wait for the global game hub to be idle, i.e. to have finished every job
+  queued so far and applied its diff. Returns on timeout or if the hub is
+  not running.
+  """
+  def drain_hub(timeout \\ 1_000) do
+    if Process.whereis(Pythelix.Game.Hub) do
+      Pythelix.Game.Hub.await_idle(Pythelix.Game.Hub, timeout)
+    end
+
+    :ok
+  catch
+    :exit, _ -> :ok
   end
 
   @doc """

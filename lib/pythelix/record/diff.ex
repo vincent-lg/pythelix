@@ -107,26 +107,39 @@ defmodule Pythelix.Record.Diff do
   """
   @spec apply() :: :ok
   def apply() do
+    entries = collect_entries()
+
+    if entries == [] and get_update_entity_query() == nil and
+         get_update_attribute_query() == nil do
+      # Nothing changed: skip the transaction (and the connection checkout).
+      :ok
+    else
+      apply_entries(entries)
+    end
+  end
+
+  defp collect_entries() do
     {:ok, keys} = Cachex.keys(:px_diff)
 
-    entries =
-      keys
-      |> Enum.filter(fn
-        {:add, _} -> true
-        {:update, _} -> true
-        {:delete, _} -> true
-        {:addattr, _} -> true
-        {:setattr, _} -> true
-        {:delattr, _} -> true
-        _other -> false
-      end)
-      |> Enum.map(fn key ->
-        case Cachex.get(:px_diff, key) do
-          {:ok, nil} -> {nil, nil}
-          {:ok, value} -> {key, value}
-        end
-      end)
+    keys
+    |> Enum.filter(fn
+      {:add, _} -> true
+      {:update, _} -> true
+      {:delete, _} -> true
+      {:addattr, _} -> true
+      {:setattr, _} -> true
+      {:delattr, _} -> true
+      _other -> false
+    end)
+    |> Enum.map(fn key ->
+      case Cachex.get(:px_diff, key) do
+        {:ok, nil} -> {nil, nil}
+        {:ok, value} -> {key, value}
+      end
+    end)
+  end
 
+  defp apply_entries(entries) do
     # Entities (add, update, delete)
     Multi.new()
     |> Multi.run(:add_entities, fn _repo, _changes ->

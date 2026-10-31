@@ -21,6 +21,10 @@ defmodule Pythelix.Game.TickManager do
   ticks unconditionally and simple ticks only when observed — then reschedules
   the next batch (±10% jitter).
 
+  Intervals are multiplied by a `time_scale` (option `:time_scale`, or the
+  `:tick_time_scale` application setting, default 1). Tests use a small scale
+  to run the real timer path without waiting whole seconds.
+
   Entities enter the registry through:
 
     * `rebuild/2` — after a worldlet apply, scanning the applied entities and
@@ -43,7 +47,7 @@ defmodule Pythelix.Game.TickManager do
   # Entities due within this window (ms) of a fire are ticked together.
   @window 1_000
 
-  defstruct registry: %{}, schedule: [], timer: nil, hub: Hub
+  defstruct registry: %{}, schedule: [], timer: nil, hub: Hub, time_scale: 1
 
   # Public API
 
@@ -113,12 +117,18 @@ defmodule Pythelix.Game.TickManager do
 
   @impl true
   def init(opts) do
-    {:ok, %__MODULE__{hub: Keyword.get(opts, :hub, Hub)}}
+    time_scale =
+      Keyword.get(opts, :time_scale, Application.get_env(:pythelix, :tick_time_scale, 1))
+
+    {:ok, %__MODULE__{hub: Keyword.get(opts, :hub, Hub), time_scale: time_scale}}
   end
 
   @impl true
   def handle_cast({:register, id_or_key}, state) do
-    {:noreply, state |> apply_registry(reconcile_one(state.registry, id_or_key)) |> refresh()}
+    {:noreply,
+     state
+     |> apply_registry(reconcile_one(state.registry, id_or_key, state.time_scale))
+     |> refresh()}
   end
 
   def handle_cast({:unregister, id_or_key}, state) do
@@ -137,13 +147,13 @@ defmodule Pythelix.Game.TickManager do
       |> Enum.flat_map(&with_descendants/1)
       |> Enum.uniq()
 
-    registry = Enum.reduce(scanned, state.registry, &reconcile_one(&2, &1))
+    registry = Enum.reduce(scanned, state.registry, &reconcile_one(&2, &1, state.time_scale))
 
     {:noreply, state |> apply_registry(registry) |> refresh()}
   end
 
   def handle_cast(:rebuild_all, state) do
-    registry = Enum.reduce(Record.all_entity_ids(), %{}, &reconcile_one(&2, &1))
+    registry = Enum.reduce(Record.all_entity_ids(), %{}, &reconcile_one(&2, &1, state.time_scale))
 
     {:noreply, state |> apply_registry(registry) |> refresh()}
   end
@@ -153,7 +163,7 @@ defmodule Pythelix.Game.TickManager do
     now = now_ms()
 
     {due, rest} =
-      Enum.split_with(state.schedule, fn {_key, at, _iv, _kind} -> at <= now + @window end)
+      Enum.split_with(state.schedule, fn {_key, at, _iv, _kind} -> at <= now + window(state) end)
 
     # Drop entities that have been destroyed rather than rescheduling them forever.
     {alive, dead} =
@@ -180,7 +190,7 @@ defmodule Pythelix.Game.TickManager do
 
   # Classify one entity and add/update/remove it in the given registry, keyed by
   # the entity's canonical id-or-key so register/unregister/rebuild always agree.
-  defp reconcile_one(registry, id_or_key) do
+  defp reconcile_one(registry, id_or_key, time_scale) do
     case Record.get_entity(normalize(id_or_key)) do
       nil ->
         Map.delete(registry, normalize(id_or_key))
@@ -188,7 +198,7 @@ defmodule Pythelix.Game.TickManager do
       %Entity{} = entity ->
         key = Entity.get_id_or_key(entity)
 
-        case classify(entity) do
+        case classify(entity, time_scale) do
           :skip -> Map.delete(registry, key)
           {:ok, entry} -> Map.put(registry, key, entry)
         end
@@ -196,11 +206,11 @@ defmodule Pythelix.Game.TickManager do
   end
 
   # Decide whether and how an entity ticks.
-  defp classify(%Entity{} = entity) do
+  defp classify(%Entity{} = entity, time_scale) do
     tick = Record.get_attribute(entity, "tick")
 
     if is_number(tick) and tick > 0 do
-      interval_ms = round(tick * 1000)
+      interval_ms = max(round(tick * 1000 * time_scale), 1)
       major? = has_method?(entity, "on_major_tick")
       simple? = has_method?(entity, "on_tick")
 
@@ -382,6 +392,9 @@ defmodule Pythelix.Game.TickManager do
   defp normalize(id_or_key), do: id_or_key
 
   defp now_ms, do: System.monotonic_time(:millisecond)
+
+  # The batching window, scaled like the intervals.
+  defp window(%{time_scale: time_scale}), do: round(@window * time_scale)
 
   # ±10% jitter on the interval.
   defp jitter(interval_ms) do

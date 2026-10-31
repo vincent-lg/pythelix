@@ -3,6 +3,11 @@ defmodule Pythelix.Game.TickManagerTest do
 
   @moduletag capture_log: true
 
+  # The manager runs its real timer path, with every interval (and the
+  # batching window) multiplied by this scale. Sleeps below are written in
+  # "real" milliseconds and scaled the same way.
+  @time_scale 0.05
+
   alias Pythelix.Entity
   alias Pythelix.Game.Hub
   alias Pythelix.Game.TickManager
@@ -17,7 +22,7 @@ defmodule Pythelix.Game.TickManagerTest do
     {:ok, _hub_pid} = start_supervised({Hub, name: hub, max_ms: 2_000})
 
     srv = :"tick_mgr_#{System.unique_integer([:positive])}"
-    {:ok, pid} = start_supervised({TickManager, name: srv, hub: hub})
+    {:ok, pid} = start_supervised({TickManager, name: srv, hub: hub, time_scale: @time_scale})
 
     [srv: srv, hub: hub, tick_pid: pid]
   end
@@ -29,6 +34,8 @@ defmodule Pythelix.Game.TickManagerTest do
     Hub.run(fn -> send(test_pid, :hub_done) end, hub)
     assert_receive :hub_done, timeout
   end
+
+  defp sleep_scaled(ms), do: Process.sleep(round(ms * @time_scale))
 
   defp uniq(prefix), do: "#{prefix}/#{System.unique_integer([:positive])}"
 
@@ -79,7 +86,7 @@ defmodule Pythelix.Game.TickManagerTest do
 
       TickManager.register(Entity.get_id_or_key(npc), srv)
 
-      Process.sleep(2500)
+      sleep_scaled(2500)
       await_hub(hub)
 
       assert ticked?(Entity.get_id_or_key(npc))
@@ -92,7 +99,7 @@ defmodule Pythelix.Game.TickManagerTest do
 
       TickManager.register(Entity.get_id_or_key(npc), srv)
 
-      Process.sleep(2500)
+      sleep_scaled(2500)
       await_hub(hub)
 
       refute ticked?(Entity.get_id_or_key(npc))
@@ -109,7 +116,7 @@ defmodule Pythelix.Game.TickManagerTest do
 
       TickManager.register(Entity.get_id_or_key(npc), srv)
 
-      Process.sleep(500)
+      sleep_scaled(500)
       await_hub(hub)
 
       refute ticked?(Entity.get_id_or_key(npc))
@@ -130,13 +137,13 @@ defmodule Pythelix.Game.TickManagerTest do
       key = Entity.get_id_or_key(npc)
       TickManager.register(key, srv)
 
-      Process.sleep(2500)
+      sleep_scaled(2500)
       await_hub(hub)
 
       TickManager.unregister(key, srv)
       count_after = Record.get_attribute(Record.get_entity(key), "count") || 0
 
-      Process.sleep(2000)
+      sleep_scaled(2000)
       await_hub(hub)
 
       count_later = Record.get_attribute(Record.get_entity(key), "count") || 0
@@ -173,7 +180,7 @@ defmodule Pythelix.Game.TickManagerTest do
         TickManager.register(Entity.get_id_or_key(e), srv)
       end
 
-      Process.sleep(2500)
+      sleep_scaled(2500)
       await_hub(hub)
 
       # Inside the player's room (and nested) tick; the ancestor vehicle ticks.
@@ -192,7 +199,7 @@ defmodule Pythelix.Game.TickManagerTest do
 
       TickManager.register(Entity.get_id_or_key(npc), srv)
 
-      Process.sleep(2500)
+      sleep_scaled(2500)
       await_hub(hub)
 
       assert ticked?(Entity.get_id_or_key(npc))
@@ -212,7 +219,7 @@ defmodule Pythelix.Game.TickManagerTest do
 
       TickManager.register(key, srv)
 
-      Process.sleep(1500)
+      sleep_scaled(1500)
       await_hub(hub)
 
       refute ticked?(key)
@@ -230,7 +237,7 @@ defmodule Pythelix.Game.TickManagerTest do
 
       TickManager.register(key, srv)
 
-      Process.sleep(1500)
+      sleep_scaled(1500)
       await_hub(hub)
 
       refute ticked?(key)
@@ -245,7 +252,7 @@ defmodule Pythelix.Game.TickManagerTest do
 
       TickManager.rebuild([parent], srv)
 
-      Process.sleep(2500)
+      sleep_scaled(2500)
       await_hub(hub)
 
       assert ticked?(child_key)
@@ -257,7 +264,7 @@ defmodule Pythelix.Game.TickManagerTest do
 
       TickManager.register(key, srv)
 
-      Process.sleep(2500)
+      sleep_scaled(2500)
       await_hub(hub)
 
       assert ticked?(key)
@@ -267,7 +274,7 @@ defmodule Pythelix.Game.TickManagerTest do
       Record.set_attribute(key, "ticked", false)
       TickManager.rebuild([npc], srv)
 
-      Process.sleep(2000)
+      sleep_scaled(2000)
       await_hub(hub)
 
       refute ticked?(key)
@@ -282,7 +289,7 @@ defmodule Pythelix.Game.TickManagerTest do
       TickManager.register(key, srv)
       Record.delete_entity(key)
 
-      Process.sleep(2500)
+      sleep_scaled(2500)
       await_hub(hub)
 
       assert Process.alive?(GenServer.whereis(srv))

@@ -9,9 +9,6 @@ defmodule Pythelix.Game.MessageIntegrationTest do
   alias Pythelix.Network.TCP.Server
   alias Pythelix.Record
 
-  # Use the default port from the server
-  @test_port 4000
-
   setup_all do
     # Start the Game Hub
     case GenServer.start_link(Hub, [], name: Hub) do
@@ -28,7 +25,7 @@ defmodule Pythelix.Game.MessageIntegrationTest do
       {:error, {:already_started, _pid}} -> :ok
     end
 
-    # Start the TCP server (it uses hard-coded port 4000)
+    # Start the TCP server (on the port configured for the test environment)
     case Server.start_link(nil) do
       {:ok, _pid} -> :ok
       {:error, {:already_started, _pid}} -> :ok
@@ -192,7 +189,7 @@ defmodule Pythelix.Game.MessageIntegrationTest do
     test "client connects and receives welcome message with prompt (validates Game Hub message system)" do
       # Connect TCP client with active mode for non-blocking message reception
       {:ok, socket} =
-        :gen_tcp.connect(~c"localhost", @test_port, [:binary, packet: :line, active: true])
+        :gen_tcp.connect(~c"localhost", Server.port(), [:binary, packet: :line, active: true])
 
       # Should receive welcome message and then prompt (Game Hub message queuing system)
       assert_receive {:tcp, ^socket, welcome_response}, 1000
@@ -218,7 +215,7 @@ defmodule Pythelix.Game.MessageIntegrationTest do
     test "grouped commands send multiple messages together" do
       # Connect with active mode for non-blocking reception
       {:ok, socket} =
-        :gen_tcp.connect(~c"localhost", @test_port, [:binary, packet: :line, active: true])
+        :gen_tcp.connect(~c"localhost", Server.port(), [:binary, packet: :line, active: true])
 
       # Clear welcome message
       welcome = receive_all(socket, 100)
@@ -243,7 +240,7 @@ defmodule Pythelix.Game.MessageIntegrationTest do
 
     test "Game Hub message queuing system works with job completion" do
       {:ok, socket} =
-        :gen_tcp.connect(~c"localhost", @test_port, [:binary, packet: :line, active: true])
+        :gen_tcp.connect(~c"localhost", Server.port(), [:binary, packet: :line, active: true])
 
       # Clear welcome message
       receive_all(socket, 200)
@@ -261,10 +258,10 @@ defmodule Pythelix.Game.MessageIntegrationTest do
     test "multiple client connections each get their own message queuing" do
       # Connect two clients
       {:ok, socket1} =
-        :gen_tcp.connect(~c"localhost", @test_port, [:binary, packet: :line, active: true])
+        :gen_tcp.connect(~c"localhost", Server.port(), [:binary, packet: :line, active: true])
 
       {:ok, socket2} =
-        :gen_tcp.connect(~c"localhost", @test_port, [:binary, packet: :line, active: true])
+        :gen_tcp.connect(~c"localhost", Server.port(), [:binary, packet: :line, active: true])
 
       # Both should get welcome messages independently
       assert_receive {:tcp, ^socket1, welcome1}, 1000
@@ -285,7 +282,7 @@ defmodule Pythelix.Game.MessageIntegrationTest do
       Record.set_method("menu/motd", "get_prompt", args, "undefined_variable")
 
       {:ok, socket} =
-        :gen_tcp.connect(~c"localhost", @test_port, [:binary, packet: :line, active: true])
+        :gen_tcp.connect(~c"localhost", Server.port(), [:binary, packet: :line, active: true])
 
       # Should still receive welcome message even with broken prompt
       assert_receive {:tcp, ^socket, welcome}, 1000

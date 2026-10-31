@@ -6,7 +6,9 @@ import Config
 # to provide built-in test partitioning in CI environment.
 # Run `mix help test` for more information.
 config :pythelix, Pythelix.Repo,
-  database: Path.expand("../pythelix_test.db", __DIR__),
+  # Each `mix test --partitions N` process gets its own database file (see
+  # `mix test.par`), so partitions can run in parallel OS processes.
+  database: Path.expand("../pythelix_test#{System.get_env("MIX_TEST_PARTITION")}.db", __DIR__),
   # database: ":memory:",
   # database: "file::memory:?cache=shared",
   pool_size: 5,
@@ -18,6 +20,9 @@ config :pythelix,
   worldlets: false,
   show_stats: false,
   sync_script_execution: true,
+  # Each `mix test --partitions N` process listens on its own telnet port so
+  # partitions can run in parallel OS processes (see `mix test.par`).
+  telnet_port: 4000 + String.to_integer(System.get_env("MIX_TEST_PARTITION") || "0"),
   game_hub: Pythelix.Test.HubStub
 
 # We don't run a server during test. If one is required,

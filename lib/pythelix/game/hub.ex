@@ -26,7 +26,8 @@ defmodule Pythelix.Game.Hub do
       start: {__MODULE__, :start_link, [opts]},
       type: :worker,
       restart: :permanent,
-      shutdown: 500
+      # Leave time for the job in flight to finish (see `terminate/3`).
+      shutdown: 5_000
     }
   end
 
@@ -41,6 +42,16 @@ defmodule Pythelix.Game.Hub do
   def run(job, server \\ __MODULE__), do: :gen_statem.cast(server, {:run, job})
 
   @doc """
+  Block until the hub has run every job queued so far and is idle again.
+
+  The call is postponed while a job runs (and while the hub initializes), so
+  it returns only once the last job has completed and its diff was applied.
+  """
+  def await_idle(server \\ __MODULE__, timeout \\ 5_000) do
+    :gen_statem.call(server, :await_idle, timeout)
+  end
+
+  @doc """
   Mark a client as having unsent messages and forward the message immediately.
   """
   def mark_client_with_message(client_id, message, pid, opts \\ []) do
@@ -51,6 +62,9 @@ defmodule Pythelix.Game.Hub do
 
   # Init
   def init(opts) do
+    # Trap exits so `terminate/3` runs on shutdown and can finish the job in flight.
+    Process.flag(:trap_exit, true)
+
     {:ok, :init,
      %{
        job_pid: nil,
@@ -72,6 +86,8 @@ defmodule Pythelix.Game.Hub do
   def init(:state_timeout, :go_idle, data) do
     {:next_state, :idle, data}
   end
+
+  def init({:call, _from}, :await_idle, _data), do: {:keep_state_and_data, [:postpone]}
 
   # IDLE state
   def idle(:cast, {:run, job}, data) do
@@ -100,10 +116,13 @@ defmodule Pythelix.Game.Hub do
     {:keep_state, handle_message(client_id, message, pid, prompt, data)}
   end
 
+  def idle({:call, from}, :await_idle, data), do: {:keep_state, data, [{:reply, from, :ok}]}
+
   def idle(_type, _event, data), do: {:keep_state, data}
 
   # BUSY state
   def busy(:cast, {:run, _job}, _data), do: {:keep_state_and_data, [:postpone]}
+  def busy({:call, _from}, :await_idle, _data), do: {:keep_state_and_data, [:postpone]}
 
   def busy(:info, {:job_ok, ticket, _result}, %{ticket: ticket, mon_ref: mon} = data) do
     Process.demonitor(mon, [:flush])
@@ -127,6 +146,19 @@ defmodule Pythelix.Game.Hub do
   end
 
   def busy(_type, _event, data), do: {:keep_state, data}
+
+  # On shutdown, wait for the running job (if any) and apply its diff rather
+  # than leaving a transaction open on a connection that is about to vanish.
+  def terminate(_reason, :busy, %{job_pid: pid, mon_ref: mon} = data) when is_pid(pid) do
+    receive do
+      {:job_ok, _ticket, _result} -> finalize_job(data)
+      {:DOWN, ^mon, :process, _pid, _reason} -> finalize_job(data)
+    after
+      4_000 -> :ok
+    end
+  end
+
+  def terminate(_reason, _state, _data), do: :ok
 
   defp finalize_job(data) do
     try do
