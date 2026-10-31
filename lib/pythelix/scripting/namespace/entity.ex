@@ -219,9 +219,7 @@ defmodule Pythelix.Scripting.Namespace.Entity do
         "Entity(#{entity.id})"
       end
 
-    attributes = Record.get_attributes(entity)
-
-    case Map.get(attributes, name) do
+    case Record.get_attribute(entity, name) do
       nil ->
         {Script.raise(script, AttributeError, "'#{display}' has no attribute '#{name}'"), :none}
 
@@ -236,9 +234,7 @@ defmodule Pythelix.Scripting.Namespace.Entity do
 
     case Store.get_bound_entity_attribute(entity, name) do
       nil ->
-        attributes = Record.get_attributes(entity)
-
-        case Map.get(attributes, name) do
+        case Record.get_attribute(entity, name) do
           nil ->
             {:error, :attribute_not_found}
 
@@ -274,10 +270,8 @@ defmodule Pythelix.Scripting.Namespace.Entity do
         entity.id
       end
 
-    methods = Record.get_methods(entity)
-
-    case Map.get(methods, name) do
-      nil ->
+    case Record.get_method(entity, name) do
+      :nomethod ->
         Script.raise(script, AttributeError, "#{display_key} has no attribute '#{name}'")
 
       method ->

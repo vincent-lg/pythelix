@@ -171,21 +171,21 @@ defmodule Pythelix.Scripting.Interpreter.Script do
 
   def put_stack(%{stack: stack} = script, value, :no_reference) do
     %{script | stack: [value | stack]}
-    |> debug("in stack: #{inspect(value)}")
+    |> debug(fn -> "in stack: #{inspect(value)}" end)
   end
 
   def put_stack(%{stack: stack} = script, {:formatted, string}) do
     formatted = Format.String.new(script, string)
 
     %{script | stack: [formatted | stack]}
-    |> debug("in stack: #{inspect(formatted)}")
+    |> debug(fn -> "in stack: #{inspect(formatted)}" end)
   end
 
   def put_stack(%{stack: stack} = script, value) do
     {script, value} = (references?(value) && reference(script, value)) || {script, value}
 
     %{script | stack: [value | stack]}
-    |> debug("in stack: #{inspect(value)}")
+    |> debug(fn -> "in stack: #{inspect(value)}" end)
   end
 
   def get_stack(script, retrieve \\ :value)
@@ -203,7 +203,7 @@ defmodule Pythelix.Scripting.Interpreter.Script do
 
     script =
       script
-      |> debug("from stack: #{inspect(first)}")
+      |> debug(fn -> "from stack: #{inspect(first)}" end)
 
     {%{script | stack: next}, first}
   end
@@ -216,7 +216,7 @@ defmodule Pythelix.Scripting.Interpreter.Script do
     variables = Map.put(variables, variable, value)
 
     %{script | variables: variables}
-    |> debug("store #{variable} = #{inspect(value)}")
+    |> debug(fn -> "store #{variable} = #{inspect(value)}" end)
   end
 
   def jump(script, line) do
@@ -232,7 +232,7 @@ defmodule Pythelix.Scripting.Interpreter.Script do
 
     script =
       script
-      |> debug("create ref #{inspect(reference)} = #{inspect(value)}")
+      |> debug(fn -> "create ref #{inspect(reference)} = #{inspect(value)}" end)
 
     {script, reference}
   end
@@ -253,7 +253,14 @@ defmodule Pythelix.Scripting.Interpreter.Script do
   def references?(%Tuple{}), do: false
   def references?(_value), do: true
 
+  @doc """
+  Record a debug message if a debugger is attached to the script.
+
+  The message can be a string or a zero-arity function returning one, so
+  that expensive formatting (like `inspect`) only runs when debugging.
+  """
   def debug(%{debugger: %Debugger{} = debugger} = script, text) do
+    text = if is_function(text, 0), do: text.(), else: text
     debugger = Debugger.add(debugger, script.cursor - 1, text)
 
     %{script | debugger: debugger}

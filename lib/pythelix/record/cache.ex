@@ -415,7 +415,7 @@ defmodule Pythelix.Record.Cache do
 
     Cachex.get_and_update(:px_cache, {:attributes, id_or_key}, fn
       nil -> {:commit, [name]}
-      names -> {:commit, [name | names]}
+      names -> if name in names, do: {:ignore, names}, else: {:commit, [name | names]}
     end)
   end
 
@@ -483,7 +483,7 @@ defmodule Pythelix.Record.Cache do
 
     Cachex.get_and_update(:px_cache, {:methods, id_or_key}, fn
       nil -> {:commit, [name]}
-      names -> {:commit, [name | names]}
+      names -> if name in names, do: {:ignore, names}, else: {:commit, [name | names]}
     end)
   end
 

@@ -26,6 +26,9 @@ defmodule Pythelix.Scripting.Display do
   * object: the object on which to call __bool__.
   """
   @spec to_bool(Script.t(), term()) :: boolean()
+  def to_bool(_script, bool) when is_boolean(bool), do: bool
+  def to_bool(_script, :none), do: false
+
   def to_bool(script, object) do
     case Callable.call!(script, object, "__bool__", []) do
       {:traceback, _} ->
