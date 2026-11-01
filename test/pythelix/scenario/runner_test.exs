@@ -118,6 +118,31 @@ defmodule Pythelix.Scenario.RunnerTest do
                """)
     end
 
+    test "a stack answers to its plural name" do
+      assert {:ok, _} =
+               play("""
+               given Alice in !room/bakery!
+               given 30 !object/gold_coin! in !room/bakery!
+
+               Alice> get 20 gold coins
+               Alice sees "You pick up 20 gold coins"
+
+               Alice> drop gold coins
+               Alice sees "a gold coin"
+               """)
+    end
+
+    test "the plural finds a single one" do
+      assert {:ok, _} =
+               play("""
+               given Alice in !room/bakery!
+               given !object/gold_coin! in !room/bakery!
+
+               Alice> get gold coins
+               Alice sees "You pick up a gold coin"
+               """)
+    end
+
     test "a thing can be put straight into a player's hands" do
       assert {:ok, _} =
                play("""

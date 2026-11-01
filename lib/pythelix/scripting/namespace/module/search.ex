@@ -87,8 +87,9 @@ defmodule Pythelix.Scripting.Namespace.Module.Search do
       contents
       |> Enum.filter(fn item -> item_visible?(item, viewer) end)
       |> Enum.filter(fn item ->
-        attr_value = get_item_name(item, filter, viewer)
-        attr_value != nil && matches_normalized?(normalizer.(attr_value), normalized_text)
+        item
+        |> item_names(filter, viewer)
+        |> Enum.any?(fn name -> matches_normalized?(normalizer.(name), normalized_text) end)
       end)
       |> maybe_select_index(match_index)
       |> apply_limit(limit, limit_container)
@@ -138,20 +139,36 @@ defmodule Pythelix.Scripting.Namespace.Module.Search do
     end
   end
 
-  # Without a viewer, fall back to the raw attribute value.
-  defp get_item_name(item, filter, nil) do
-    get_item_attribute(item, filter)
+  # Every name an item answers to, as the viewer would see it. Without a
+  # viewer, that is the raw attribute value.
+  defp item_names(item, filter, nil) do
+    List.wrap(get_item_attribute(item, filter))
   end
 
   # With a viewer, call __namefor__(viewer) on the item entity if the method
   # exists. Falls back to the raw attribute value on :nomethod, :noresult, or
   # :traceback.
-  defp get_item_name(item, filter, viewer) do
-    entity = get_item_entity(item)
+  #
+  # A stack is named by its quantity ("30 gold coins"), so a player asked to
+  # `get 20 gold coins` by the room description that just said so. The stack
+  # therefore also answers to its plural name: the one for its own quantity,
+  # and the one for a stack of two, so that `get gold coins` still finds a
+  # lone coin lying on the floor.
+  defp item_names(%Stackable{entity: entity, quantity: quantity} = item, filter, viewer) do
+    [1, 2, quantity]
+    |> Enum.uniq()
+    |> Enum.map(fn number -> call_namefor(entity, viewer, number) end)
+    |> Enum.reject(&is_nil/1)
+    |> case do
+      [] -> List.wrap(get_item_attribute(item, filter))
+      names -> Enum.uniq(names)
+    end
+  end
 
+  defp item_names(%Entity{} = entity, filter, viewer) do
     case call_namefor(entity, viewer) do
-      nil -> get_item_attribute(item, filter)
-      result -> result
+      nil -> List.wrap(get_item_attribute(entity, filter))
+      result -> [result]
     end
   end
 

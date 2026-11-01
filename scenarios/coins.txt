@@ -12,3 +12,18 @@ Alice sees "20 gold coins"
 Alice> look
 Alice sees "10 gold coins"
 Alice does not see "30 gold coins"
+
+# The room says "gold coins", so that is what a player types back.
+Alice> get 5 gold coins
+Alice sees "5 gold coins"
+
+Alice> drop 25 gold coins
+Alice sees "25 gold coins"
+
+Alice> look
+Alice sees "30 gold coins"
+
+# The plural finds a single coin too.
+Alice> get 1 gold coin
+Alice> drop gold coins
+Alice sees "a gold coin"
