@@ -119,7 +119,7 @@ defmodule Pythelix.World.ApplyErrorsTest do
 
       Pythelix.World.apply(:static)
 
-      assert {:ok, _path, number} = Pythelix.World.apply(path)
+      assert {:ok, _path, number, _notices} = Pythelix.World.apply(path)
       assert number > 0
     end
   end

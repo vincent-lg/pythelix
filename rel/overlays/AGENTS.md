@@ -16,6 +16,7 @@ only the lines that matter.
 | `worldlets/` | The world: rooms, objects, NPCs, commands, menus. **Edit these.** |
 | `scenarios/` | Transcripts proving the game behaves as intended. **Edit these.** |
 | `docs/` | The documentation. **Read these.** |
+| `settings.txt` | Ports, paths, encodings, generic entities. Generated on first start; see `docs/settings.md`. |
 | `bin/` | The commands to run — see `bin/AGENTS.md` |
 | `lib/`, `releases/`, `erts-*/` | The engine itself. **Never edit.** |
 

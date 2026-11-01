@@ -61,13 +61,16 @@ defmodule Pythelix.Task.Check do
     %{
       files: length(result.files),
       entities: result.entities,
-      diagnostics: Enum.map(result.diagnostics, &Diagnostic.to_map/1)
+      diagnostics: Enum.map(result.diagnostics, &Diagnostic.to_map/1),
+      notices: result.notices
     }
     |> Jason.encode!(pretty: true)
     |> IO.puts()
   end
 
   defp report(%{diagnostics: []} = result) do
+    Enum.each(result.notices, &IO.puts/1)
+
     IO.puts(
       "Checked #{count(length(result.files), "worldlet")}, " <>
         "#{count(result.entities, "entity", "entities")}: no problem found."
@@ -75,6 +78,7 @@ defmodule Pythelix.Task.Check do
   end
 
   defp report(result) do
+    Enum.each(result.notices, &IO.puts/1)
     Enum.each(result.diagnostics, &IO.puts("\n" <> Diagnostic.format(&1)))
 
     IO.puts(

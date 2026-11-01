@@ -35,8 +35,13 @@ defmodule Pythelix.World do
   Args:
 
   - `worldlet` (or `:all`): the path leading to the directory or worldlet file.
+
+  Returns `{:ok, path, number_of_entities, notices}`, the notices being
+  sentences worth showing the builder even though the worldlet applied (a
+  file that wasn't UTF-8, say).
   """
-  @spec apply(String.t() | :all) :: {:ok, String.t(), integer()} | {:error, String.t()} | :nofile
+  @spec apply(String.t() | :all) ::
+          {:ok, String.t(), integer(), [String.t()]} | {:error, String.t()} | :nofile
   def apply(:all) do
     result =
       Application.get_env(:pythelix, :worldlets_path, Path.join(File.cwd!(), "worldlets"))
@@ -59,7 +64,7 @@ defmodule Pythelix.World do
         {:error, reason} ->
           {:error, explain(worldlet, reason)}
 
-        entities ->
+        {entities, notices} ->
           worldlet =
             if worldlet == :static do
               "static"
@@ -67,7 +72,7 @@ defmodule Pythelix.World do
               Pythelix.Paths.display(worldlet)
             end
 
-          {:ok, worldlet, length(entities)}
+          {:ok, worldlet, length(entities), notices}
       end
     else
       :nofile
@@ -119,24 +124,29 @@ defmodule Pythelix.World do
 
     files
     |> Enum.map(&Pythelix.World.File.parse_file/1)
-    |> Enum.reduce_while([], fn
-      {:ok, entities}, acc ->
-        {:cont, acc ++ entities}
+    |> Enum.reduce_while({[], []}, fn
+      {:ok, entities, notices}, {acc, acc_notices} ->
+        {:cont, {acc ++ entities, acc_notices ++ notices}}
 
       {:error, reason}, _acc ->
         {:halt, {:error, reason}}
     end)
     |> case do
-      {:error, reason} -> {:error, reason}
-      entities -> {:ok, entities}
+      {:error, reason} ->
+        {:error, reason}
+
+      {entities, notices} ->
+        {:ok, entities}
+        |> maybe_add_base_entities()
+        |> maybe_deduce_parents()
+        |> maybe_sort_entities()
+        |> maybe_create_entities()
+        |> with_notices(notices)
     end
-    |> maybe_add_base_entities()
-    |> maybe_deduce_parents()
-    |> maybe_sort_entities()
-    |> maybe_create_entities()
   end
 
-  defp maybe_add_base_entities({:error, _} = error), do: error
+  defp with_notices({:error, _} = error, _notices), do: error
+  defp with_notices(entities, notices), do: {entities, notices}
 
   defp maybe_add_base_entities({:ok, entities}) do
     {:ok,
@@ -488,8 +498,6 @@ defmodule Pythelix.World do
       | entities
     ]
   end
-
-  defp maybe_deduce_parents({:error, error}), do: {:error, error}
 
   defp maybe_deduce_parents({:ok, entities}) do
     Enum.reduce_while(entities, {:ok, []}, fn entity, {:ok, acc} ->

@@ -136,6 +136,8 @@ defmodule Pythelix.Task.Scenario do
         {:error, name}
 
       {:ok, scenario} ->
+        Enum.each(scenario.notices, &IO.puts("  note  #{&1}"))
+
         in_clean_world(fn ->
           case Runner.run(scenario) do
             {:ok, steps} ->

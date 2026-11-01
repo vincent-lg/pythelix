@@ -44,7 +44,8 @@ defmodule Pythelix.Task.Apply do
       GenServer.cast(pid, {:run, {__MODULE__, :execute, [self(), file]}})
 
       receive do
-        {:ok, path, number} ->
+        {:ok, path, number, notices} ->
+          Enum.each(notices, &IO.puts/1)
           IO.puts("Worldlet applied from #{path}: #{number} entities were added or updated.")
 
         :nofile ->

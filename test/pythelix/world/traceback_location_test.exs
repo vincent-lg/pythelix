@@ -62,7 +62,7 @@ defmodule Pythelix.World.TracebackLocationTest do
             self.greet()
         """)
 
-      assert {:ok, _, _} = Pythelix.World.apply(path)
+      assert {:ok, _, _, _} = Pythelix.World.apply(path)
 
       traceback = traceback_of("!dog!.bark()")
       text = Traceback.format(traceback)
@@ -85,7 +85,7 @@ defmodule Pythelix.World.TracebackLocationTest do
 
     test "a worldlet under the game directory is shown relative to it", %{tmp_dir: dir} do
       path = write(dir, "a.txt", "!thing!\ndef run(self):\n    return nothing\n")
-      assert {:ok, _, _} = Pythelix.World.apply(path)
+      assert {:ok, _, _, _} = Pythelix.World.apply(path)
 
       text = traceback_of("!thing!.run()") |> Traceback.format()
 

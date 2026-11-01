@@ -194,7 +194,7 @@ defmodule Pythelix.Entity.RangenTest do
     path = Path.join(directory, "rangen.txt")
     File.write!(path, content)
 
-    assert {:ok, _path, _number} = Pythelix.World.apply(path)
+    assert {:ok, _path, _number, _notices} = Pythelix.World.apply(path)
 
     :ok
   end

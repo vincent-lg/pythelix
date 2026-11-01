@@ -51,7 +51,7 @@ defmodule Pythelix.Scenario.Runner do
 
   defp play(%Step{kind: :apply, text: path} = step, state) do
     case Pythelix.World.apply(fixture_path(path)) do
-      {:ok, _path, _number} ->
+      {:ok, _path, _number, _notices} ->
         count(state)
 
       :nofile ->

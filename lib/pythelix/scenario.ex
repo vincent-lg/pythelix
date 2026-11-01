@@ -41,12 +41,13 @@ defmodule Pythelix.Scenario do
 
   alias Pythelix.Scenario.Step
 
-  defstruct [:name, :file, steps: []]
+  defstruct [:name, :file, steps: [], notices: []]
 
   @type t :: %__MODULE__{
           name: binary(),
           file: binary() | nil,
-          steps: [Step.t()]
+          steps: [Step.t()],
+          notices: [binary()]
         }
 
   @doc """
@@ -55,12 +56,24 @@ defmodule Pythelix.Scenario do
   Returns `{:ok, scenario}`, or `{:error, diagnostics}` listing every line
   that isn't one of the five constructs — all of them, since a typo on one
   line says nothing about the next.
+
+  A file that wasn't UTF-8 and was read with the fallback encoding still
+  parses; the scenario's `:notices` say so, for the runner to report.
   """
   @spec parse_file(binary()) :: {:ok, t()} | {:error, [Step.error()]}
   def parse_file(path) do
-    path
-    |> Pythelix.Encoding.read_file!()
-    |> parse(name: Path.basename(path, Path.extname(path)), file: path)
+    {text, encoding} = Pythelix.Encoding.read_file(path)
+
+    notices =
+      case encoding do
+        "utf-8" -> []
+        other -> [Pythelix.Encoding.notice(path, other)]
+      end
+
+    case parse(text, name: Path.basename(path, Path.extname(path)), file: path) do
+      {:ok, scenario} -> {:ok, %{scenario | notices: notices}}
+      {:error, _} = error -> error
+    end
   end
 
   @doc """

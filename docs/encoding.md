@@ -19,14 +19,15 @@ Characters that cannot be represented in the target encoding are replaced with `
 
 The default encoding applies to every new client the moment it connects, before any scripting runs.
 
-There are two ways to change the default encoding:
+To change it, open the [settings file](./settings.md) (`settings.txt`, at the root of your game) and set `DEFAULT_ENCODING`:
 
-1. Through an environmebnt variable, `PYTHELIX_DEFAULTENCODING`.
-2. Through the configuratoin.
+```
+DEFAULT_ENCODING=cp1252
+```
 
-To alter the default encoding, you can set the `DEFAULT_ENCODING` environment variable to another encoding (see the list above).
+Restart the server for the change to take effect. An environment variable named `DEFAULT_ENCODING` overrides the file, which deployment scripts may find handy.
 
-Otherwise, you can open `config/config.exs` and set the `default_encoding` key:
+If you run Pythelix from source with `mix`, the settings file isn't used: open `config/config.exs` and set the `default_encoding` key instead:
 
 ```elixir
 config :pythelix,
@@ -34,7 +35,11 @@ config :pythelix,
   default_encoding: "cp1252"
 ```
 
-Restart the server for the change to take effect. If the key is absent, `"utf-8"` is used.
+If the key is absent, `"utf-8"` is used.
+
+## The encoding of your worldlet files
+
+This page is about players' clients. Worldlet and scenario files have their own setting, `WORLDLETS_ENCODING`, used only for a file that isn't valid UTF-8; it is described in [the settings file](./settings.md#how-worldlet-files-are-read).
 
 ## Changing the encoding per client at runtime
 

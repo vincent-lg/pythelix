@@ -35,8 +35,10 @@ defmodule Pythelix.Scripting.Namespace.Builtin do
     {:file, index: 0, type: :str, default: :all}
   ] do
     case World.apply(namespace.file) do
-      {:ok, path, number} ->
-        {script, "Worldlet applied from #{path}: #{number} entities were added or updated."}
+      {:ok, path, number, notices} ->
+        message = "Worldlet applied from #{path}: #{number} entities were added or updated."
+
+        {script, Enum.join([message | notices], "\n")}
 
       :nofile ->
         {script, "The specified file #{inspect(namespace.file)} doesn't exist."}

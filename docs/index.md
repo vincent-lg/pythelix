@@ -27,6 +27,7 @@ If you're new to Pythelix and want to learn by doing, [head over to the getting 
   - [Game modes](./game_modes.md): how to keep several menus open at once (a console, an editor, a shop) and let the player address any of them.
   - [Random-string generators](./rangen.md): how to randomly create unique string identifiers (phone numbers, licence plates and so on).
   - [Encoding](./encoding.md): how to handle accented characters in your games.
+  - [The settings file](./settings.md): ports, paths, encodings and generic entities, in one `settings.txt` file.
 
 - The engine itself is extremely fast and can maintain high availability.
 - Errors don't crash the server. At worst, they will forward a message to the user (and administrators) that can be easily fixed.

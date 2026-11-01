@@ -40,7 +40,7 @@ bin/scenario scenarios/quests
 Scenario files are read the same way worldlets are, so your editor's defaults don't matter:
 
 - **Line endings** — CRLF, LF or a lone CR all work. A file saved by Notepad behaves exactly like one saved on Linux.
-- **Encoding** — UTF-8 is read as UTF-8. If a file isn't valid UTF-8, it is decoded using the encoding your game is configured for (`PYTHELIX_DEFAULT_ENCODING`, one of `utf-8`, `iso-8859-1`, `iso-8859-15` or `cp1252`), so an accented character typed in a Latin-1 editor still matches the accented character in your game. A UTF-8 byte-order mark is ignored rather than becoming part of the first line.
+- **Encoding** — UTF-8 is read as UTF-8. If a file isn't valid UTF-8, it is decoded using `WORLDLETS_ENCODING` from your [settings file](./settings.md) (one of `utf-8`, `iso-8859-1`, `iso-8859-15` or `cp1252`; when empty, the players' `DEFAULT_ENCODING`), so an accented character typed in a Latin-1 editor still matches the accented character in your game. The scenario runner tells you when a file needed that fallback. A UTF-8 byte-order mark is ignored rather than becoming part of the first line.
 
 ## Why bother
 

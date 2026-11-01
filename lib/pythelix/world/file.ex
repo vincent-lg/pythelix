@@ -5,9 +5,27 @@ defmodule Pythelix.World.File do
   @pattern_entity ~r/^!(.*?)!$/
   @pattern_method ~r/^def\s+(.+):$/
 
+  @doc """
+  Parse a worldlet file.
+
+  Returns the entities it defines and a list of notices for the builder: a
+  file that wasn't UTF-8 and had to be read with the fallback encoding is
+  worth telling them about, even though it parsed.
+  """
+  @spec parse_file(binary()) :: {:ok, [map()], [binary()]} | {:error, binary()}
   def parse_file(path) do
-    File.stream!(path)
-    |> parse(path)
+    {text, encoding} = Pythelix.Encoding.read_file(path)
+
+    notices =
+      case encoding do
+        "utf-8" -> []
+        other -> [Pythelix.Encoding.notice(path, other)]
+      end
+
+    case text |> String.split("\n") |> parse(path) do
+      {:ok, entities} -> {:ok, entities, notices}
+      {:error, _} = error -> error
+    end
   end
 
   def parse_string(text) do

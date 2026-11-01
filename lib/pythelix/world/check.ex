@@ -17,12 +17,13 @@ defmodule Pythelix.World.Check do
 
   @worldlet_pattern "*.txt"
 
-  defstruct files: [], entities: 0, diagnostics: []
+  defstruct files: [], entities: 0, diagnostics: [], notices: []
 
   @type t :: %__MODULE__{
           files: [binary()],
           entities: non_neg_integer(),
-          diagnostics: [Diagnostic.t()]
+          diagnostics: [Diagnostic.t()],
+          notices: [binary()]
         }
 
   @doc """
@@ -30,7 +31,8 @@ defmodule Pythelix.World.Check do
 
   Returns a result holding the files that were read, how many entities they
   define and every diagnostic found. An empty `:diagnostics` means the worldlets
-  parse.
+  parse. `:notices` are worth showing even then: a file that wasn't UTF-8 and
+  was read with the fallback encoding, for instance.
   """
   @spec run(binary() | :all) :: {:ok, t()} | :nofile
   def run(:all) do
@@ -96,13 +98,14 @@ defmodule Pythelix.World.Check do
     result = %{result | files: result.files ++ [path]}
 
     case WorldletFile.parse_file(path) do
-      {:ok, entities} ->
+      {:ok, entities, notices} ->
         diagnostics = Enum.flat_map(entities, &check_entity(&1, path))
 
         %{
           result
           | entities: result.entities + length(entities),
-            diagnostics: result.diagnostics ++ diagnostics
+            diagnostics: result.diagnostics ++ diagnostics,
+            notices: result.notices ++ notices
         }
 
       {:error, reason} ->

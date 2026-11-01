@@ -21,6 +21,8 @@ After downloading a binary archive, decompress it using unzip or tar. Inside the
 - **lib**: the libraries; you should generally avoid modifying anything here.
 - **worldlets**: your [worldlet files](./worldlets.md). You may spend a lot of time here building your game.
 
+The first time Pythelix starts, it also writes a `settings.txt` file here. That is where you change ports, paths, encodings and the like; see [the settings file](./settings.md). You don't need to touch it to get started.
+
 To get started, open the "bin" directory. There are several scripts here (`.bat` files for Windows users, files without extensions otherwise):
 
 - **apply** (or `apply.bat`): a script to apply worldlets (not needed immediately).
