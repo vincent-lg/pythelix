@@ -295,4 +295,72 @@ defmodule Pythelix.Game.TickManagerTest do
       assert Process.alive?(GenServer.whereis(srv))
     end
   end
+
+  describe "under a virtual clock" do
+    alias Pythelix.Game.Clock.Virtual
+
+    setup %{hub: hub} do
+      start_supervised!(Virtual)
+      srv = :"tick_mgr_virtual_#{System.unique_integer([:positive])}"
+      spec = Supervisor.child_spec({TickManager, name: srv, hub: hub, clock: Virtual}, id: srv)
+      {:ok, _pid} = start_supervised(spec)
+
+      [srv: srv]
+    end
+
+    test "nothing fires until time is advanced", %{srv: srv, hub: hub} do
+      npc = tickable(uniq("npc"), 60, "on_major_tick")
+      TickManager.register(Entity.get_id_or_key(npc), srv)
+
+      Process.sleep(50)
+      await_hub(hub)
+
+      refute ticked?(Entity.get_id_or_key(npc))
+    end
+
+    test "advancing fires every tick due, in order, with no jitter", %{srv: srv, hub: hub} do
+      npc = tickable(uniq("npc"), 60, "on_major_tick", "self.count = self.count + 1
+")
+      key = Entity.get_id_or_key(npc)
+      Record.set_attribute(key, "count", 0)
+      TickManager.register(key, srv)
+      :sys.get_state(srv)
+
+      Virtual.advance(59_000)
+      await_hub(hub)
+      refute ticked_count(key) > 0
+
+      Virtual.advance(1_000)
+      await_hub(hub)
+      assert ticked_count(key) == 1
+
+      # Three hours of a minute-long tick: 180 more, without waiting any.
+      Virtual.advance(3 * 60 * 60 * 1_000)
+      await_hub(hub)
+      assert ticked_count(key) == 181
+    end
+
+    test "simple ticks still need a player around", %{srv: srv, hub: hub} do
+      room = create(uniq("room"))
+      npc = tickable(uniq("npc"), 60)
+      place(npc, room)
+      key = Entity.get_id_or_key(npc)
+      TickManager.register(key, srv)
+      :sys.get_state(srv)
+
+      Virtual.advance(120_000)
+      await_hub(hub)
+      refute ticked?(key)
+
+      character = create(uniq("char"))
+      place(character, room)
+      add_player(character)
+
+      Virtual.advance(60_000)
+      await_hub(hub)
+      assert ticked?(key)
+    end
+
+    defp ticked_count(key), do: Record.get_attribute(Record.get_entity(key), "count") || 0
+  end
 end

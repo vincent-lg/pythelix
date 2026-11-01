@@ -10,7 +10,7 @@ defmodule Pythelix.Scenario.Step do
 
   defstruct [:kind, :actor, :text, :count, :target, :line]
 
-  @type kind :: :apply | :given | :place | :connect | :input | :sees | :not_sees
+  @type kind :: :apply | :given | :place | :connect | :wait | :input | :sees | :not_sees
 
   @type t :: %__MODULE__{
           kind: kind(),
@@ -18,9 +18,11 @@ defmodule Pythelix.Scenario.Step do
           # and `:place`.
           actor: binary() | nil,
           # The payload: a room key for `:given`, a prototype key for
-          # `:place`, the input or expected text for the rest.
+          # `:place`, the duration as written for `:wait`, the input or
+          # expected text for the rest.
           text: binary(),
-          # `:place` only: how many, and where they go.
+          # `:place`: how many, and where they go. `:wait`: the duration in
+          # milliseconds.
           count: pos_integer() | nil,
           target: binary() | nil,
           line: pos_integer()
@@ -40,6 +42,7 @@ defmodule Pythelix.Scenario.Step do
      ~r/^given\s+(?:(?<count>\d+)\s+)?(?<text>!.+?!)\s+in\s+(?<target>!.+!|#{@name})\s*$/},
     {:given, ~r/^given\s+(?<actor>#{@name})\s+in\s+(?<text>!.+!)\s*$/},
     {:connect, ~r/^connect\s+(?<actor>#{@name})\s*$/},
+    {:wait, ~r/^wait\s+(?<text>\S.*?)\s*$/},
     {:not_sees, ~r/^(?<actor>#{@name})\s+does\s+not\s+see\s+"(?<text>.*)"\s*$/},
     {:sees, ~r/^(?<actor>#{@name})\s+sees\s+"(?<text>.*)"\s*$/},
     {:input, ~r/^(?<actor>#{@name})>\s?(?<text>.*?)\s*$/}
@@ -55,6 +58,7 @@ defmodule Pythelix.Scenario.Step do
   def render(%__MODULE__{kind: :apply, text: text}), do: "apply #{text}"
   def render(%__MODULE__{kind: :given, actor: a, text: t}), do: "given #{a} in #{t}"
   def render(%__MODULE__{kind: :connect, actor: a}), do: "connect #{a}"
+  def render(%__MODULE__{kind: :wait, text: t}), do: "wait #{t}"
 
   def render(%__MODULE__{kind: :place, count: nil, text: t, target: to}),
     do: "given #{t} in #{to}"
@@ -90,17 +94,63 @@ defmodule Pythelix.Scenario.Step do
           nil
 
         captures ->
-          {:ok,
-           %__MODULE__{
-             kind: kind,
-             actor: blank_to_nil(captures["actor"]),
-             text: captures["text"],
-             count: count(captures["count"]),
-             target: blank_to_nil(captures["target"]),
-             line: number
-           }}
+          build(kind, captures, line, number)
       end
     end) || {:error, unknown(trimmed, line, number)}
+  end
+
+  # A wait is only a step once its duration reads: `wait 3h` is one, `wait
+  # for the bread` is a line the author meant as something else.
+  defp build(:wait, %{"text" => text}, line, number) do
+    case duration(text) do
+      {:ok, ms} ->
+        {:ok, %__MODULE__{kind: :wait, text: text, count: ms, line: number}}
+
+      :error ->
+        message =
+          "expected a duration, as in `wait 30s`, `wait 2m`, `wait 3h`, " <>
+            "`wait 1d` or `wait 1h30m`"
+
+        {:error, %{line: number, source: line, message: message}}
+    end
+  end
+
+  defp build(kind, captures, _line, number) do
+    {:ok,
+     %__MODULE__{
+       kind: kind,
+       actor: blank_to_nil(captures["actor"]),
+       text: captures["text"],
+       count: count(captures["count"]),
+       target: blank_to_nil(captures["target"]),
+       line: number
+     }}
+  end
+
+  @units %{"s" => 1_000, "m" => 60_000, "h" => 3_600_000, "d" => 86_400_000}
+
+  @doc """
+  Read a duration such as `30s`, `2m`, `3h`, `1d` or `1h30m` into milliseconds.
+
+  A bare number is seconds. Parts may be joined with or without spaces.
+  """
+  @spec duration(binary()) :: {:ok, non_neg_integer()} | :error
+  def duration(text) do
+    parts = Regex.scan(~r/(\d+)\s*([smhd]?)/, String.downcase(text))
+
+    cond do
+      parts == [] ->
+        :error
+
+      Regex.replace(~r/(\d+)\s*([smhd]?)\s*/, String.downcase(text), "") != "" ->
+        :error
+
+      true ->
+        {:ok,
+         Enum.reduce(parts, 0, fn [_, number, unit], total ->
+           total + String.to_integer(number) * Map.get(@units, unit, 1_000)
+         end)}
+    end
   end
 
   # Say what was expected rather than only that the line is wrong: the mistake
@@ -115,6 +165,9 @@ defmodule Pythelix.Scenario.Step do
         String.starts_with?(trimmed, "connect") ->
           "expected: connect Alice"
 
+        String.starts_with?(trimmed, "wait") ->
+          "expected a duration, as in: wait 3h"
+
         String.starts_with?(trimmed, "apply") ->
           "expected: apply worldlets/somewhere"
 
@@ -125,7 +178,8 @@ defmodule Pythelix.Scenario.Step do
           ~s|expected `Name> input`, `Name sees "text"` or `Name does not see "text"`|
 
         true ->
-          "expected `apply`, `given`, `Name>`, `Name sees` or `Name does not see`"
+          "expected `apply`, `given`, `connect`, `wait`, `Name>`, `Name sees` " <>
+            "or `Name does not see`"
       end
 
     %{line: number, source: line, message: message}

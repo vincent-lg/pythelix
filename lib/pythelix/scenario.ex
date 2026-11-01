@@ -19,17 +19,21 @@ defmodule Pythelix.Scenario do
       Alice sees "There is nothing left to harvest."
       Bob does not see "bundle of wheat"
 
-  The vocabulary is deliberately tiny and closed — five constructs, listed
+  The vocabulary is deliberately tiny and closed — the constructs listed
   below. It is not a test framework and has no expressions, variables or
   conditions: the moment it becomes programmable it stops being readable by
   the people it is for, and stops being reliably writable by an assistant.
 
-  ## The five constructs
+  ## The constructs
 
     * `apply <path>` — apply a worldlet file or directory before playing.
       Optional and repeatable; with none, the game's own worldlets are used.
     * `given <Name> in !<entity key>!` — a player of that name, in that room,
       already logged in.
+    * `connect <Name>` — a client that has just connected, in the first menu.
+    * `given <count> !<prototype>! in <somewhere>` — things in the world.
+    * `wait <duration>` — time passes: every tick and scheduled call due
+      within it runs, at once, in order.
     * `<Name>> <input>` — that player types that line.
     * `<Name> sees "<text>"` — that text reached them since they last typed.
     * `<Name> does not see "<text>"` — it didn't.
@@ -54,7 +58,7 @@ defmodule Pythelix.Scenario do
   Read and parse a scenario file.
 
   Returns `{:ok, scenario}`, or `{:error, diagnostics}` listing every line
-  that isn't one of the five constructs — all of them, since a typo on one
+  that isn't one of the constructs — all of them, since a typo on one
   line says nothing about the next.
 
   A file that wasn't UTF-8 and was read with the fallback encoding still

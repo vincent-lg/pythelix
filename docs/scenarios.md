@@ -117,6 +117,24 @@ Alice> say hello, everyone
 
 This goes through the same code the telnet server uses, so exits, channels, command matching and menus all behave normally.
 
+### `wait <duration>`
+
+Let time pass:
+
+```
+Alice> plant wheat
+Alice sees "You plant the wheat."
+
+wait 3h
+
+Alice> look
+Alice sees "The wheat is ready to harvest."
+```
+
+Every [tick](./ticking.md) and every scheduled call due within that time runs, in order, before the next line — and the scenario does not take three hours to play. Durations are written `30s`, `2m`, `3h`, `1d` or `1h30m`; a bare number is seconds.
+
+Scenarios play on a clock that only moves when a `wait` says so, so a tick never fires between two lines on its own, and there is no jitter: the same scenario sees the same ticks every time. This is how quests with timers, crops, wandering NPCs and scheduled world events get checked — the half of a world that is hardest to verify by hand.
+
 ### `<Name> sees "<text>"` and `<Name> does not see "<text>"`
 
 What reached them since they last typed:

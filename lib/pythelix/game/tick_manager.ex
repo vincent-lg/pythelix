@@ -25,6 +25,11 @@ defmodule Pythelix.Game.TickManager do
   `:tick_time_scale` application setting, default 1). Tests use a small scale
   to run the real timer path without waiting whole seconds.
 
+  Time itself is read from `Pythelix.Game.Clock` (option `:clock`, or the
+  `:clock` application setting). Under `Pythelix.Game.Clock.Virtual` nothing
+  fires until the clock is advanced, which is how a scenario's `wait 3h`
+  ticks three hours' worth without taking them.
+
   Entities enter the registry through:
 
     * `rebuild/2` — after a worldlet apply, scanning the applied entities and
@@ -39,7 +44,7 @@ defmodule Pythelix.Game.TickManager do
   require Logger
 
   alias Pythelix.{Entity, Method, Record}
-  alias Pythelix.Game.Hub
+  alias Pythelix.Game.{Clock, Hub}
   alias Pythelix.Generic
 
   @type id_or_key :: integer() | binary()
@@ -47,7 +52,7 @@ defmodule Pythelix.Game.TickManager do
   # Entities due within this window (ms) of a fire are ticked together.
   @window 1_000
 
-  defstruct registry: %{}, schedule: [], timer: nil, hub: Hub, time_scale: 1
+  defstruct registry: %{}, schedule: [], timer: nil, hub: Hub, time_scale: 1, clock: nil
 
   # Public API
 
@@ -120,7 +125,12 @@ defmodule Pythelix.Game.TickManager do
     time_scale =
       Keyword.get(opts, :time_scale, Application.get_env(:pythelix, :tick_time_scale, 1))
 
-    {:ok, %__MODULE__{hub: Keyword.get(opts, :hub, Hub), time_scale: time_scale}}
+    {:ok,
+     %__MODULE__{
+       hub: Keyword.get(opts, :hub, Hub),
+       time_scale: time_scale,
+       clock: Keyword.get(opts, :clock)
+     }}
   end
 
   @impl true
@@ -160,7 +170,7 @@ defmodule Pythelix.Game.TickManager do
 
   @impl true
   def handle_info(:tick, state) do
-    now = now_ms()
+    now = now_ms(state)
 
     {due, rest} =
       Enum.split_with(state.schedule, fn {_key, at, _iv, _kind} -> at <= now + window(state) end)
@@ -176,7 +186,7 @@ defmodule Pythelix.Game.TickManager do
 
     schedule =
       Enum.reduce(alive, rest, fn {key, _at, iv, kind}, acc ->
-        [{key, now + iv + jitter(iv), iv, kind} | acc]
+        [{key, now + iv + jitter(state, iv), iv, kind} | acc]
       end)
 
     {:noreply, schedule_next_tick(%{state | registry: registry, schedule: schedule, timer: nil})}
@@ -261,12 +271,12 @@ defmodule Pythelix.Game.TickManager do
   # Replace the registry and rebuild the schedule, preserving timing phase for
   # entities that were already scheduled.
   defp apply_registry(state, registry) do
-    now = now_ms()
+    now = now_ms(state)
     existing = Map.new(state.schedule, fn {key, at, _iv, _kind} -> {key, at} end)
 
     schedule =
       Enum.map(registry, fn {key, %{interval_ms: iv, kind: kind}} ->
-        at = Map.get(existing, key) || now + iv + jitter(iv)
+        at = Map.get(existing, key) || now + iv + jitter(state, iv)
         {key, at, iv, kind}
       end)
 
@@ -282,7 +292,7 @@ defmodule Pythelix.Game.TickManager do
   defp cancel_timer(%{timer: nil} = state), do: state
 
   defp cancel_timer(%{timer: ref} = state) do
-    Process.cancel_timer(ref)
+    clock(state).cancel_timer(ref)
     %{state | timer: nil}
   end
 
@@ -290,8 +300,8 @@ defmodule Pythelix.Game.TickManager do
 
   defp schedule_next_tick(%{schedule: schedule} = state) do
     {_key, soonest, _iv, _kind} = Enum.min_by(schedule, fn {_key, at, _iv, _kind} -> at end)
-    delay = max(soonest - now_ms(), 0)
-    %{state | timer: Process.send_after(self(), :tick, delay)}
+    delay = max(soonest - now_ms(state), 0)
+    %{state | timer: clock(state).send_after(self(), :tick, delay)}
   end
 
   # Firing
@@ -391,19 +401,14 @@ defmodule Pythelix.Game.TickManager do
   defp normalize(%Entity{} = entity), do: Entity.get_id_or_key(entity)
   defp normalize(id_or_key), do: id_or_key
 
-  defp now_ms, do: System.monotonic_time(:millisecond)
+  # The clock given at start, or whichever one the application is set to now.
+  defp clock(%{clock: nil}), do: Clock.current()
+  defp clock(%{clock: clock}), do: clock
+
+  defp now_ms(state), do: clock(state).now_ms()
+
+  defp jitter(state, interval_ms), do: clock(state).jitter(interval_ms)
 
   # The batching window, scaled like the intervals.
   defp window(%{time_scale: time_scale}), do: round(@window * time_scale)
-
-  # ±10% jitter on the interval.
-  defp jitter(interval_ms) do
-    range = div(interval_ms, 10)
-
-    if range > 0 do
-      :rand.uniform(range * 2 + 1) - range - 1
-    else
-      0
-    end
-  end
 end

@@ -26,6 +26,21 @@ defmodule Pythelix.ScenarioTest do
       assert [%Step{kind: :connect, actor: "Alice"}] = parse("connect Alice\n")
     end
 
+    test "wait reads a duration into milliseconds" do
+      assert [%Step{kind: :wait, text: "3h", count: 10_800_000}] = parse("wait 3h\n")
+      assert [%Step{kind: :wait, count: 30_000}] = parse("wait 30s\n")
+      assert [%Step{kind: :wait, count: 120_000}] = parse("wait 2m\n")
+      assert [%Step{kind: :wait, count: 86_400_000}] = parse("wait 1d\n")
+      assert [%Step{kind: :wait, count: 5_400_000}] = parse("wait 1h30m\n")
+      assert [%Step{kind: :wait, count: 5_400_000}] = parse("wait 1h 30m\n")
+      assert [%Step{kind: :wait, count: 45_000}] = parse("wait 45\n")
+    end
+
+    test "a wait without a duration is an error that says what was expected" do
+      assert {:error, [error]} = Scenario.parse("wait for the bread\n")
+      assert error.message =~ "wait 3h"
+    end
+
     test "given places a thing, with a count" do
       assert [%Step{kind: :place, count: 30, text: "!gold/coin!", target: "!room/bakery!"}] =
                parse("given 30 !gold/coin! in !room/bakery!\n")
@@ -131,6 +146,7 @@ defmodule Pythelix.ScenarioTest do
             "given !object/sword! in !room/a!",
             "given 30 !gold/coin! in Alice",
             "connect Newcomer",
+            "wait 3h",
             "Alice> harvest wheat",
             ~s|Alice sees "some text"|,
             ~s|Alice does not see "some text"|

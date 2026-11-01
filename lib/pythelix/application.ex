@@ -44,39 +44,42 @@ defmodule Pythelix.Application do
     topologies = Application.get_env(:libcluster, :topologies)
 
     children =
-      [
-        %{
-          id: :px_cache,
-          start: {Cachex, :start_link, [:px_cache, []]}
-        },
-        %{
-          id: :px_diff,
-          start: {Cachex, :start_link, [:px_diff, []]}
-        },
-        %{
-          id: :px_tasks,
-          start: {Cachex, :start_link, [:px_tasks, []]}
-        },
-        Pythelix.Repo,
-        {Registry, keys: :unique, name: Registry.LongRunning},
-        {Registry, keys: :unique, name: Pythelix.Rangen.Registry},
-        {DynamicSupervisor, strategy: :one_for_one, name: Pythelix.Rangen.Supervisor},
-        {DynamicSupervisor, strategy: :one_for_one, name: Pythelix.Network.TCP.ClientSupervisor},
-        {Task.Supervisor, name: Pythelix.Game.TaskSupervisor},
-        Pythelix.Game.Hub,
-        Pythelix.Game.TickManager,
-        Pythelix.Game.Ext,
-        Pythelix.Network.TCP.Server,
-        PythelixWeb.Telemetry,
-        {Ecto.Migrator,
-         repos: Application.fetch_env!(:pythelix, :ecto_repos), skip: skip_migrations?()},
-        {DNSCluster, query: Application.get_env(:pythelix, :dns_cluster_query) || :ignore},
-        {Phoenix.PubSub, name: Pythelix.PubSub},
-        # Start the Finch HTTP client for sending emails
-        {Finch, name: Pythelix.Finch},
-        # Start to serve requests, typically the last entry
-        PythelixWeb.Endpoint
-      ]
+      ([
+         %{
+           id: :px_cache,
+           start: {Cachex, :start_link, [:px_cache, []]}
+         },
+         %{
+           id: :px_diff,
+           start: {Cachex, :start_link, [:px_diff, []]}
+         },
+         %{
+           id: :px_tasks,
+           start: {Cachex, :start_link, [:px_tasks, []]}
+         },
+         Pythelix.Repo,
+         {Registry, keys: :unique, name: Registry.LongRunning},
+         {Registry, keys: :unique, name: Pythelix.Rangen.Registry},
+         {DynamicSupervisor, strategy: :one_for_one, name: Pythelix.Rangen.Supervisor},
+         {DynamicSupervisor, strategy: :one_for_one, name: Pythelix.Network.TCP.ClientSupervisor},
+         {Task.Supervisor, name: Pythelix.Game.TaskSupervisor}
+       ] ++
+         clock_children() ++
+         [
+           Pythelix.Game.Hub,
+           Pythelix.Game.TickManager,
+           Pythelix.Game.Ext,
+           Pythelix.Network.TCP.Server,
+           PythelixWeb.Telemetry,
+           {Ecto.Migrator,
+            repos: Application.fetch_env!(:pythelix, :ecto_repos), skip: skip_migrations?()},
+           {DNSCluster, query: Application.get_env(:pythelix, :dns_cluster_query) || :ignore},
+           {Phoenix.PubSub, name: Pythelix.PubSub},
+           # Start the Finch HTTP client for sending emails
+           {Finch, name: Pythelix.Finch},
+           # Start to serve requests, typically the last entry
+           PythelixWeb.Endpoint
+         ])
       |> then(fn children ->
         case topologies do
           nil -> children
@@ -96,6 +99,16 @@ defmodule Pythelix.Application do
   def config_change(changed, _new, removed) do
     PythelixWeb.Endpoint.config_change(changed, removed)
     :ok
+  end
+
+  # A virtual clock is a process (it holds the timers it will fire on
+  # request); the real one is not. It goes before the hub, which arms the
+  # first timers while it starts.
+  defp clock_children do
+    case Pythelix.Game.Clock.current() do
+      Pythelix.Game.Clock.Virtual -> [Pythelix.Game.Clock.Virtual]
+      _ -> []
+    end
   end
 
   defp skip_migrations?() do

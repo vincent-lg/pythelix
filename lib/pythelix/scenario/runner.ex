@@ -17,6 +17,7 @@ defmodule Pythelix.Scenario.Runner do
   """
 
   alias Pythelix.{Entity, Record}
+  alias Pythelix.Game.Clock
   alias Pythelix.Scenario
   alias Pythelix.Scenario.{Collector, Failure, Step}
   alias Pythelix.Scripting
@@ -80,6 +81,24 @@ defmodule Pythelix.Scenario.Runner do
       fail(state, step, "#{name} has already joined")
     else
       state |> open_client(name) |> count()
+    end
+  end
+
+  # Time passes: every tick and scheduled call due within the duration runs,
+  # in order, before the next line. Only a virtual clock can be hurried; the
+  # scenario command line always plays under one.
+  defp play(%Step{kind: :wait, count: ms} = step, state) do
+    case Clock.advance(ms) do
+      :ok ->
+        count(state)
+
+      {:error, :real_clock} ->
+        fail(
+          state,
+          step,
+          "time cannot be hurried under the real clock; play with " <>
+            "mix pythello.scenario, or set the clock to Pythelix.Game.Clock.Virtual"
+        )
     end
   end
 

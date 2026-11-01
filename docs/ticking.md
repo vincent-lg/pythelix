@@ -168,6 +168,24 @@ def on_major_tick(self):
 
 This rebuilds the old "zone" idea entirely in worldlet code, where you control exactly what counts as "occupied" — without the engine imposing a fixed grouping on you.
 
+## Checking it without waiting
+
+A tick that fires once a minute, or a call scheduled for the next dawn, is exactly the behavior you can least afford to check by hand. [Scenarios](./scenarios.md) play on a clock that moves only when told to, so `wait 3h` fires three hours' worth of ticks and scheduled calls in order and returns at once:
+
+```
+given Alice in !farm/room/field!
+
+Alice> plant wheat
+Alice sees "You plant the wheat."
+
+wait 3h
+
+Alice> look
+Alice sees "The wheat is ready to harvest."
+```
+
+Under that clock there is no jitter, and nothing fires between two lines on its own.
+
 ## Summary
 
 | You want… | Use |

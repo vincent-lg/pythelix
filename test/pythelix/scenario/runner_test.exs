@@ -225,4 +225,112 @@ defmodule Pythelix.Scenario.RunnerTest do
       assert failure.message =~ "given Zoe in"
     end
   end
+
+  describe "wait" do
+    @moduletag :tmp_dir
+
+    alias Pythelix.Game.Clock.Virtual
+    alias Pythelix.Game.TickManager
+
+    setup %{tmp_dir: dir} do
+      # The scenario command line plays under the virtual clock; here the
+      # application is already running on the real one, so switch for the
+      # test's duration. The tick manager gets a fresh start afterwards, as
+      # its timers were armed on a clock that no longer exists.
+      start_supervised!(Virtual)
+      Application.put_env(:pythelix, :clock, Virtual)
+
+      on_exit(fn ->
+        Application.delete_env(:pythelix, :clock)
+        Supervisor.terminate_child(Pythelix.Supervisor, TickManager)
+        Supervisor.restart_child(Pythelix.Supervisor, TickManager)
+      end)
+
+      fixture = Path.join(dir, "wheat.txt")
+
+      File.write!(fixture, """
+      !test/wheat!
+      parent = "generic/object"
+      singular = "a wheat seedling"
+      location = "room/bakery"
+      tick = 60
+      grown = 0
+
+      def on_tick(self):
+          self.grown = self.grown + 1
+          if self.grown >= 3:
+              self.singular = "a stalk of ripe wheat"
+          endif
+
+      !test/oven!
+      parent = "generic/object"
+      singular = "a cold oven"
+      location = "room/bakery"
+
+      def light(self):
+          self.singular = "a warm oven"
+
+      !command/bake!
+      parent = "generic/char_command"
+      name = "bake"
+
+      def run(character):
+          realtime.now().add(30).schedule(!test/oven!, "light")
+          character.msg("You light the oven.")
+      """)
+
+      [fixture: fixture]
+    end
+
+    test "ticks happen while a scenario waits", %{fixture: fixture} do
+      assert {:ok, _} =
+               play("""
+               apply #{fixture}
+
+               given Alice in !room/bakery!
+
+               Alice> look
+               Alice sees "a wheat seedling"
+
+               wait 2m
+
+               Alice> look
+               Alice sees "a wheat seedling"
+
+               wait 1m
+
+               Alice> look
+               Alice sees "a stalk of ripe wheat"
+               """)
+    end
+
+    test "a scheduled call happens while a scenario waits", %{fixture: fixture} do
+      assert {:ok, _} =
+               play("""
+               apply #{fixture}
+
+               given Alice in !room/bakery!
+
+               Alice> bake
+               Alice sees "You light the oven."
+
+               Alice> look
+               Alice sees "a cold oven"
+
+               wait 30s
+
+               Alice> look
+               Alice sees "a warm oven"
+               """)
+    end
+  end
+
+  describe "wait under the real clock" do
+    test "is refused with an explanation" do
+      assert {:failed, [failure]} = play("wait 3h\n")
+
+      assert failure.message =~ "real clock"
+      assert failure.message =~ "mix pythello.scenario"
+    end
+  end
 end

@@ -32,6 +32,10 @@ defmodule Pythelix.Task.Scenario do
     Application.put_env(:pythelix, :telnet_port, nil)
     Application.put_env(:pythelix, :sync_script_execution, true)
 
+    # Time moves only when a scenario says `wait`: ticks and scheduled calls
+    # then happen at once, in order, and never on their own between two lines.
+    Application.put_env(:pythelix, :clock, Pythelix.Game.Clock.Virtual)
+
     # Nothing may listen: a release run with PHX_SERVER set would otherwise
     # bind the web port and collide with the game that is already running.
     Application.put_env(

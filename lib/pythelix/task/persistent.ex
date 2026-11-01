@@ -273,7 +273,12 @@ defmodule Pythelix.Task.Persistent do
         |> then(&((&1 > 0 && &1) || 0))
 
       continuation_job = {Pythelix.Scripting.Runner, :resume_task, [task.id]}
-      Process.send_after(Pythelix.Game.Hub, {:"$gen_cast", {:run, continuation_job}}, time)
+
+      Pythelix.Game.Clock.send_after(
+        Pythelix.Game.Hub,
+        {:"$gen_cast", {:run, continuation_job}},
+        time
+      )
     end
 
     {:ok, task}
