@@ -9,6 +9,8 @@ defmodule Pythelix.Scripting.Format.String do
   values on each iteration).
   """
 
+  require Logger
+
   alias Pythelix.Entity
   alias Pythelix.Method
   alias Pythelix.Record
@@ -100,6 +102,14 @@ defmodule Pythelix.Scripting.Format.String do
       |> maybe_format(script)
     end)
     |> Enum.join()
+  end
+
+  # Anything else is a script that failed or returned nothing, handed over by
+  # a caller that only expected text. Formatting it as nothing keeps that
+  # mistake from burying the script's own error under a FunctionClauseError.
+  def format(other) do
+    Logger.warning("expected text to format, got #{inspect(other)}")
+    ""
   end
 
   defp do_split([], acc, buffer, :text),

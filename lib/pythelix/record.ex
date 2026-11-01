@@ -523,8 +523,13 @@ defmodule Pythelix.Record do
 
       unless pending_input do
         try do
+          # A `get_text` that raises has already logged its traceback. The
+          # client still deserves a sign that the menu is broken, rather than
+          # a blank screen: this is how a menu looks while someone writes it.
           case Method.call_entity(location, "get_text", [entity], nil, immediate: true) do
             :nomethod -> nil
+            :noresult -> nil
+            :traceback -> Client.send(entity, "This menu could not be displayed.")
             text -> Client.send(entity, text)
           end
         rescue
