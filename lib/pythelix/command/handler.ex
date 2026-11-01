@@ -55,7 +55,7 @@ defmodule Pythelix.Command.Handler do
                       refine_method,
                       entity_positional_args(refine_method, owner_entity || client),
                       Dict.new(relevant_vars),
-                      "#{command_key}, method refine"
+                      Method.label(refine_method, command_key, "refine")
                     )
                     |> then(fn {method_script, namespace} ->
                       Method.write_arguments(method_script, Enum.to_list(namespace))
@@ -66,7 +66,10 @@ defmodule Pythelix.Command.Handler do
                     {__MODULE__, :handle_refine_completion,
                      [command, client, start_time, owner_entity]}
 
-                  Runner.run(refine_script, refine_method.code, "#{command_key}, method refine",
+                  Runner.run(
+                    refine_script,
+                    refine_method.code,
+                    Method.label(refine_method, command_key, "refine"),
                     step: step,
                     sync: true
                   )
@@ -124,14 +127,14 @@ defmodule Pythelix.Command.Handler do
             method,
             entity_positional_args(method, owner_entity || client),
             Dict.new(relevant_vars),
-            "#{command.key}, method #{method_name}"
+            Method.label(method, command, method_name)
           )
           |> then(fn {method_script, namespace} ->
             Method.write_arguments(method_script, Enum.to_list(namespace))
           end)
           |> Script.write_variable("self", command)
 
-        Runner.run(script, method.code, "#{command.key}, method #{method_name}",
+        Runner.run(script, method.code, Method.label(method, command, method_name),
           step: step,
           sync: true
         )
@@ -225,13 +228,13 @@ defmodule Pythelix.Command.Handler do
           method,
           entity_positional_args(method, entity_for_script),
           Dict.new(keyword_vars),
-          "#{command.key}, method parse_error"
+          Method.label(method, command, "parse_error")
         )
         |> then(fn {method_script, namespace} ->
           Method.write_arguments(method_script, Enum.to_list(namespace))
         end)
         |> Script.write_variable("self", command)
-        |> Runner.run(method.code, "parse_error", sync: true)
+        |> Runner.run(method.code, Method.label(method, command, "parse_error"), sync: true)
     end
   end
 
@@ -252,13 +255,13 @@ defmodule Pythelix.Command.Handler do
           method,
           entity_positional_args(method, entity_for_script),
           Dict.new(keyword_vars),
-          "#{command.key}, method refine_error"
+          Method.label(method, command, "refine_error")
         )
         |> then(fn {method_script, namespace} ->
           Method.write_arguments(method_script, Enum.to_list(namespace))
         end)
         |> Script.write_variable("self", command)
-        |> Runner.run(method.code, "refine_error", sync: true)
+        |> Runner.run(method.code, Method.label(method, command, "refine_error"), sync: true)
     end
   end
 
@@ -285,10 +288,12 @@ defmodule Pythelix.Command.Handler do
 
           error_method ->
             # Execute run_error method asynchronously
-            %Script{id: Store.new_script(), bytecode: error_method.bytecode}
+            Method.fetch_script(error_method)
             |> Script.write_variable("client", entity_for_script)
             |> Script.write_variable("args", args)
-            |> Runner.run(error_method.code, "run_error", sync: true)
+            |> Runner.run(error_method.code, Method.label(error_method, command, "run_error"),
+              sync: true
+            )
         end
     end
   end

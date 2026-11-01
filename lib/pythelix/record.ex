@@ -652,6 +652,8 @@ defmodule Pythelix.Record do
 
   * `:new`: only set the method if it doesn't exist.
   * `:cache`: just cache the method (never store it into the database).
+  * `:file` and `:line`: the worldlet the method comes from and the line of
+    its first body line there, so that tracebacks can point at it.
   """
   @spec set_method(integer() | binary(), list(), binary(), binary(), [atom()]) ::
           Entity.t() | :invalid_entity
@@ -883,12 +885,12 @@ defmodule Pythelix.Record do
     entity
   end
 
-  defp set_entity_method(%Entity{id: :virtual} = entity, name, args, code, _opts) do
+  defp set_entity_method(%Entity{id: :virtual} = entity, name, args, code, opts) do
     method =
       if code == nil do
         args
       else
-        Method.new(args, code)
+        Method.new(args, code, nil, file: opts[:file], line: opts[:line])
       end
 
     Cache.cache_entity_method(entity.key, name, method)
@@ -911,14 +913,14 @@ defmodule Pythelix.Record do
     end
   end
 
-  defp set_entity_method_code(%Entity{} = entity, name, args, code, _opts) do
+  defp set_entity_method_code(%Entity{} = entity, name, args, code, opts) do
     id_or_key = Entity.get_id_or_key(entity)
 
     method =
       if code == nil do
         args
       else
-        Method.new(args, code)
+        Method.new(args, code, nil, file: opts[:file], line: opts[:line])
       end
 
     Cache.cache_entity_method(id_or_key, name, method)
@@ -926,8 +928,11 @@ defmodule Pythelix.Record do
     to_store =
       Cache.get_cached_entity_methods(entity, raw_parents: true)
       |> Enum.map(fn
-        {_, {:parent, _}} -> nil
-        {name, method} -> {name, {method.args, method.code, method.bytecode}}
+        {_, {:parent, _}} ->
+          nil
+
+        {name, method} ->
+          {name, {method.args, method.code, method.bytecode, method.file, method.line}}
       end)
       |> Enum.reject(&(&1 == nil))
       |> Map.new()

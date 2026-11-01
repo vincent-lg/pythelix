@@ -64,10 +64,7 @@ defmodule Pythelix.World do
             if worldlet == :static do
               "static"
             else
-              case :os.type() do
-                {:win32, _} -> String.replace(worldlet, "/", "\\")
-                _ -> worldlet
-              end
+              Pythelix.Paths.display(worldlet)
             end
 
           {:ok, worldlet, length(entities)}
@@ -509,10 +506,12 @@ defmodule Pythelix.World do
               attributes = Map.put(attributes, "parent", parent)
               {:cont, {:ok, acc ++ [%{entity | attributes: attributes}]}}
 
-            {:error, reason} ->
+            {:error, traceback} ->
+              reason = Pythelix.Scripting.Traceback.format(traceback)
+
               {:halt,
                {:error,
-                "error evaluating parent '#{parent}' for entity '#{entity.key}': #{reason}"}}
+                "error evaluating parent '#{parent}' for entity '#{entity.key}':\n#{reason}"}}
           end
       end
     end)
@@ -726,13 +725,25 @@ defmodule Pythelix.World do
         end
 
       try do
-        Record.set_method(entity.key, name, args, code)
+        Record.set_method(entity.key, name, args, code, method_location(entity, name))
       rescue
         e ->
           file = Map.get(entity, :file, "unknown file")
 
           raise "#{file}: syntax error in method '#{name}' of entity '#{entity.key}': #{Exception.message(e)}"
       end
+    end
+  end
+
+  # Where a method is defined, for tracebacks: the worldlet relative to the
+  # game directory and the line of the method's first body line (the `def` is
+  # on the line before). Entities the engine adds itself have neither.
+  defp method_location(entity, name) do
+    with file when is_binary(file) and file != "<string>" <- Map.get(entity, :file),
+         def_line when is_integer(def_line) <- get_in(entity, [:method_lines, name]) do
+      [file: Pythelix.Paths.relative(file), line: def_line + 1]
+    else
+      _ -> []
     end
   end
 

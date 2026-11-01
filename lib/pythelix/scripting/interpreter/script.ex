@@ -32,7 +32,8 @@ defmodule Pythelix.Scripting.Interpreter.Script do
     step: nil,
     code: "",
     name: "unknown",
-    immediate: false
+    immediate: false,
+    origin: nil
   ]
 
   @typedoc "a script with bytecode"
@@ -53,7 +54,8 @@ defmodule Pythelix.Scripting.Interpreter.Script do
           step: nil | {atom(), atom(), list()},
           code: String.t(),
           name: String.t(),
-          immediate: boolean()
+          immediate: boolean(),
+          origin: nil | %{file: String.t(), line: pos_integer()}
         }
 
   @doc """
@@ -146,7 +148,11 @@ defmodule Pythelix.Scripting.Interpreter.Script do
   end
 
   defp run_next_bytecode(_, %{error: %Traceback{} = traceback} = script, code, owner) do
-    Traceback.associate(traceback, code, owner)
+    # The script in the traceback was captured when the error was raised. For
+    # an error raised while checking the arguments, that was before the script
+    # knew its parent or its name, so refresh it: this script is at the same
+    # line, since the error stopped it there.
+    Traceback.associate(traceback, %{script | error: nil}, code, owner)
     |> then(&%{script | error: &1})
   end
 

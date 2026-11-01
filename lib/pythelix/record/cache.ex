@@ -471,14 +471,30 @@ defmodule Pythelix.Record.Cache do
   @spec cache_stored_entity_methods(map(), map()) :: map()
   def cache_stored_entity_methods(%Record.Entity{} = entity, methods) do
     methods
-    |> Enum.each(fn {name, {args, code, bytecode}} ->
-      cache_entity_method(entity.gen_id, name, Method.new(args, code, bytecode))
+    |> Enum.each(fn
+      {name, {args, code, bytecode, file, line}} ->
+        cache_entity_method(
+          entity.gen_id,
+          name,
+          Method.new(args, code, bytecode, file: file, line: line)
+        )
+
+      # Stored before methods remembered their worldlet.
+      {name, {args, code, bytecode}} ->
+        cache_entity_method(entity.gen_id, name, Method.new(args, code, bytecode))
     end)
 
     entity
   end
 
   def cache_entity_method(id_or_key, name, method) do
+    # The method remembers which entity defines it, for tracebacks.
+    method =
+      case method do
+        %Method{} -> %{method | entity: id_or_key}
+        other -> other
+      end
+
     Cachex.put(:px_cache, {:method, id_or_key, name}, method)
 
     Cachex.get_and_update(:px_cache, {:methods, id_or_key}, fn

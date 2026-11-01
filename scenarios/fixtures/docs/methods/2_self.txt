@@ -1,0 +1,7 @@
+# docs/methods.md — "Accessing the entity with self"
+
+!generic/npc!
+name = "stranger"
+
+def greet(self, character):
+    character.msg(f"{self.name} says: Hello, traveler.")

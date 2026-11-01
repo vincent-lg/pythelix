@@ -1,0 +1,55 @@
+# docs/methods.md, played step by step, up to "Inheritance". The last two
+# sections start from a fresh world, in methods_chain.txt: see there why.
+#
+# Each fixture under fixtures/docs/methods/ is one snippet from the guide, in
+# the order the guide shows them, so the guide and this scenario say the same
+# thing. The guide is tested here, not the engine: if a line below fails,
+# either the guide or the game is wrong, and both are worth knowing.
+#
+# The tracebacks are checked through `py`, an administrator command whose job
+# is to show the administrator what went wrong. What a *player* sees when a
+# command of theirs fails is a separate matter and not asserted here.
+
+apply docs/admin.txt
+given Alice in !room/bakery!
+
+# A simple NPC entity
+apply docs/methods/1_simple_npc.txt
+
+Alice> py npc = !generic/npc!
+Alice> py npc.greet(self)
+Alice sees "A stranger looks at you and nods silently."
+
+Alice> py npc.greet()
+Alice sees "TypeError: expected positional argument character"
+
+Alice> py npc.greet(1, 2, 3)
+Alice sees "TypeError: expected at most 1 arguments, got 3"
+
+# Accessing the entity with self
+apply docs/methods/2_self.txt
+
+Alice> py npc = !generic/npc!
+Alice> py npc.greet(self)
+Alice sees "stranger says: Hello, traveler."
+
+# Typed arguments
+apply docs/methods/3_typed.txt
+
+Alice> py npc = !generic/npc!
+Alice> py npc.greet(5)
+Alice sees "TypeError: argument character expects an entity inheriting from !generic/character!"
+
+Alice> py npc.greet(self)
+Alice sees "stranger says: Hello, traveler."
+
+# Inheritance
+apply docs/methods/4_merchant.txt
+
+Alice> py merchant = !npc/merchant!
+Alice> py merchant.greet(self)
+Alice sees "merchant says: Welcome! Care to browse my wares?"
+
+Alice> py npc = !generic/npc!
+Alice> py npc.greet(self)
+Alice sees "stranger says: Hello, traveler."

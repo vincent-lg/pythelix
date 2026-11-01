@@ -1,0 +1,33 @@
+# docs/methods.md, "Chain of calls" and "Reading a traceback".
+#
+# These two sections rewrite !npc/merchant! without its own `greet`. Applying
+# a worldlet never removes a method, so a world that played the "Inheritance"
+# section would keep the merchant's old `greet` and the chain of calls would
+# never be exercised. The guide warns the reader about this; the scenario
+# simply starts from a world that has not seen the earlier merchant.
+
+apply docs/admin.txt
+given Alice in !room/bakery!
+
+# Chain of calls
+apply docs/methods/5_chain.txt
+
+Alice> py npc = !generic/npc!
+Alice> py npc.greet(self)
+Alice sees "stranger says: Hello, traveler."
+
+Alice> py merchant = !npc/merchant!
+Alice> py merchant.greet(self)
+Alice sees "merchant says: Welcome! Care to browse my wares?"
+
+Alice> py guard = !npc/guard!
+Alice> py guard.greet(self)
+Alice sees "guard says: Move along, citizen."
+
+# Reading a traceback
+apply docs/methods/6_traceback.txt
+
+Alice> py merchant.greet(self)
+Alice sees "!generic/npc!.greet, defined in"
+Alice sees "!npc/merchant!.greeting, defined in"
+Alice sees "AttributeError: !npc/merchant! has no attribute 'shop_name'"

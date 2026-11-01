@@ -442,6 +442,8 @@ defmodule Pythelix.Scripting.Namespace do
   defp check_arg_type(%Entity{} = entity, :entity), do: entity
   defp check_arg_type(_, :entity), do: {:error, "an entity"}
 
+  # Whatever was passed, the message states the whole contract: someone who
+  # passed a number learns that an entity is needed, and which kind.
   defp check_arg_type(entity, {:entity, parent_key}) when is_binary(parent_key) do
     case entity do
       %Entity{} ->
@@ -450,11 +452,11 @@ defmodule Pythelix.Scripting.Namespace do
         if Enum.any?(ancestors, &(&1.key == parent_key)) do
           entity
         else
-          {:error, "an entity inhering from !#{parent_key}!"}
+          {:error, "an entity inheriting from !#{parent_key}!"}
         end
 
       _ ->
-        {:error, "an entity"}
+        {:error, "an entity inheriting from !#{parent_key}!"}
     end
   end
 

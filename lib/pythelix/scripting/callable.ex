@@ -61,8 +61,8 @@ defmodule Pythelix.Scripting.Callable do
 
   def call(%Script{immediate: true} = script, %Callable.Method{} = method, args, kwargs) do
     kwargs = (kwargs == nil && Dict.new()) || kwargs
-    name = "!#{method.entity}! mhetod #{method.name}"
     entity = Record.get_entity(method.entity)
+    name = Method.label(method.method, entity, method.name)
 
     inner_script =
       Method.fetch_script(method.method, owner: script.id, immediate: true)
@@ -88,8 +88,8 @@ defmodule Pythelix.Scripting.Callable do
 
   def call(%Script{} = script, %Callable.Method{} = method, args, kwargs) do
     kwargs = (kwargs == nil && Dict.new()) || kwargs
-    name = "!#{method.entity}! method #{method.name}"
     entity = Record.get_entity(method.entity)
+    name = Method.label(method.method, entity, method.name)
 
     inner_script =
       Method.fetch_script(method.method, owner: script.id)

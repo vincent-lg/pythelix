@@ -1,0 +1,7 @@
+# docs/methods.md — "Typed arguments"
+
+!generic/npc!
+name = "stranger"
+
+def greet(self, character: Entity["generic/character"]):
+    character.msg(f"{self.name} says: Hello, traveler.")

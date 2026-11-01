@@ -1,0 +1,8 @@
+# docs/methods.md — "Inheritance"
+
+!npc/merchant!
+parent = "generic/npc"
+name = "merchant"
+
+def greet(self, character: Entity["generic/character"]):
+    character.msg(f"{self.name} says: Welcome! Care to browse my wares?")

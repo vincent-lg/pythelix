@@ -67,4 +67,41 @@ defmodule Pythelix.Paths do
   """
   @spec base_path() :: binary()
   def base_path, do: Application.get_env(:pythelix, :base_path) || File.cwd!()
+
+  @doc """
+  Say where a file is, relative to the game's root when it lives there.
+
+  Tracebacks name the worldlet a method comes from. `worldlets/farm/barn.txt`
+  is what a builder recognises; the absolute path the server globbed is noise
+  and differs from one machine to the next. The result always uses forward
+  slashes, so it can be stored and compared whatever the platform; `display/1`
+  turns it back into the platform's own separators when it is shown.
+  """
+  @spec relative(binary()) :: binary()
+  def relative(path) when is_binary(path) do
+    path = normalize(path)
+
+    case Path.type(path) do
+      :absolute -> Path.relative_to(path, normalize(base_path()))
+      _ -> path
+    end
+  end
+
+  def relative(path), do: path
+
+  @doc """
+  Write a path with the separators of the running platform.
+
+  Paths are kept with forward slashes internally; a Windows user reading a
+  traceback expects `worldlets\farm\barn.txt`.
+  """
+  @spec display(binary()) :: binary()
+  def display(path) when is_binary(path) do
+    case :os.type() do
+      {:win32, _} -> String.replace(path, "/", "\\")
+      _ -> path
+    end
+  end
+
+  def display(path), do: path
 end

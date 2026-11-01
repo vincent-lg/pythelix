@@ -172,6 +172,14 @@ defmodule Pythelix.Scripting.Format.String do
     |> Enum.map(fn
       {:format, code, conv, spec_str} ->
         case Scripting.eval(code, script: script) do
+          # An expression may itself produce an f-string, such as a method
+          # returning one: format it before it is used as text.
+          {:ok, %Format.String{} = nested} ->
+            nested
+            |> format()
+            |> apply_conversion(conv, script)
+            |> format_with_spec(spec_str)
+
           {:ok, value} ->
             value
             |> apply_conversion(conv, script)
@@ -211,6 +219,18 @@ defmodule Pythelix.Scripting.Format.String do
                 |> format_with_spec(spec_str)
 
               {[display | parts], entities}
+
+            # A nested f-string is formatted for the same viewer, and the
+            # entities it names count as named here.
+            {:ok, %Format.String{} = nested} ->
+              {text, nested_entities} = format_for(nested, viewer)
+
+              display =
+                text
+                |> apply_conversion(conv, script)
+                |> format_with_spec(spec_str)
+
+              {[display | parts], MapSet.union(entities, nested_entities)}
 
             {:ok, value} ->
               display =

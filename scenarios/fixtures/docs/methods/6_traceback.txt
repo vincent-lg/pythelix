@@ -1,0 +1,8 @@
+# docs/methods.md — "Reading a traceback"
+
+!npc/merchant!
+parent = "generic/npc"
+name = "merchant"
+
+def greeting(self):
+    return "Welcome to " + self.shop_name + "!"

@@ -71,7 +71,7 @@ defmodule Pythelix.Scripting.Runner do
         :nomethod
 
       method ->
-        opts = Keyword.put(opts, :name, name)
+        opts = Keyword.put(opts, :name, Method.label(method, entity, name))
         run_method(method, args, kwargs, opts)
     end
   end

@@ -58,7 +58,7 @@ What happens if we call the method with no argument?
 ```
 > py npc.greet()
 Traceback most recent call last:
-  <stdin>, line 1
+  <console>, line 1
     npc.greet()
 
 TypeError: expected positional argument character
@@ -69,7 +69,7 @@ Pythelix tells us explicitly: the method expects a `character` argument. Same th
 ```
 > py npc.greet(1, 2, 3)
 Traceback most recent call last:
-  <stdin>, line 1
+  <console>, line 1
     npc.greet(1, 2, 3)
 
 TypeError: expected at most 1 arguments, got 3
@@ -147,10 +147,10 @@ If you apply it and try passing the wrong type:
 > py npc = !generic/npc!
 > py npc.greet(5)
 Traceback most recent call last:
-  <stdin>, line 1
+  <console>, line 1
     npc.greet(5)
 
-TypeError: argument character expects value of type entity inheriting from "generic/character"
+TypeError: argument character expects an entity inheriting from !generic/character!
 ```
 
 With `self` (our character, which inherits from `generic/character`), the call succeeds as expected.
@@ -219,13 +219,16 @@ Let's refactor. The generic NPC will have two methods: `greet` handles the commo
 name = "stranger"
 
 def greet(self, character: Entity["generic/character"]):
-    character.msg(f"{self.name} says: {self.greeting()}")
+    greeting = self.greeting()
+    character.msg(f"{self.name} says: {greeting}")
 
 def greeting(self):
     return "Hello, traveler."
 ```
 
-Now the merchant only needs to override `greeting` — it inherits `greet` from the parent for free:
+Now the merchant only needs to override `greeting` — it inherits `greet` from the parent for free.
+
+> If you have been following along, your merchant still has the `greet` method from the previous section: applying a worldlet adds and updates, it never removes. Delete the entity with `py del !npc/merchant!` and apply the worldlet again, so the merchant is rebuilt from the file below.
 
 ```
 !npc/merchant!
@@ -270,3 +273,38 @@ Here's what happens when you call `merchant.greet(self)`:
 5. Back in `greet`, the result is formatted and sent to the character.
 
 This is the chain of calls: the parent's `greet` method delegates to `greeting`, which each child can override independently. You write the shared logic once and only customize what differs. As your game grows, this pattern saves a lot of repetition.
+
+## Reading a traceback
+
+Sooner or later a method fails while someone is playing. Say the merchant's `greeting` was edited to use an attribute that doesn't exist:
+
+```
+!npc/merchant!
+parent = "generic/npc"
+name = "merchant"
+
+def greeting(self):
+    return "Welcome to " + self.shop_name + "!"
+```
+
+Calling `merchant.greet(self)` now logs a traceback:
+
+```
+Traceback most recent call last:
+  <console>, line 1
+    merchant.greet(self)
+  !generic/npc!.greet, defined in worldlets/npc.txt, line 5
+    greeting = self.greeting()
+  !npc/merchant!.greeting, defined in worldlets/npc.txt, line 25
+    return "Welcome to " + self.shop_name + "!"
+
+AttributeError: !npc/merchant! has no attribute 'shop_name'
+```
+
+Read it from the bottom: the last frame is where the error happened, the ones above it are the calls that led there. Each frame tells you three things:
+
+- **Which method**, as `!key!.name`. The entity named is the one that *defines* the method, not the one it was called on: `greet` was called on the merchant, but it is `generic/npc`'s method, so that is what the frame says. An entity without a key is shown by its ID instead, as `#12.name`.
+- **Which worldlet**, relative to your game directory, written with your operating system's path separators.
+- **Which line of that worldlet**, so you can open the file and go straight to it. This is the line in the file, not the line within the method.
+
+A method that doesn't come from a worldlet (one set from the console, for instance) has no file to point at, so its frame only shows the line within the method: `!npc/merchant!.greeting, line 2`.

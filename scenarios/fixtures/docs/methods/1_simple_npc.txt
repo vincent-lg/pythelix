@@ -1,0 +1,6 @@
+# docs/methods.md — "A simple NPC entity"
+
+!generic/npc!
+
+def greet(character):
+    character.msg("A stranger looks at you and nods silently.")

@@ -61,7 +61,14 @@ defmodule Pythelix.Scripting.Traceback do
     end
 
     [{%Script{} = script, _, _} | _] = traceback.chain
-    parents = get_parents.(script)
+
+    # A script that never ran failed while its arguments were being checked:
+    # the mistake is in the call, so the caller's frame is the one to show,
+    # as Python does for a TypeError on arguments.
+    parents =
+      script
+      |> get_parents.()
+      |> Enum.reject(&(&1.cursor == 0))
 
     Enum.reduce(parents, start, fn script, traceback ->
       script = %{script | error: nil, parent: nil}
@@ -70,17 +77,21 @@ defmodule Pythelix.Scripting.Traceback do
   end
 
   @doc """
-  Associate code and owner to the last link.
+  Associate code and owner to the last link, optionally replacing its script
+  with a more complete one at the same line.
 
   Args:
 
   * traceback (Traceback): the traceback.
+  * script (Script, optional): the script to keep in the link.
   * code (string): the code to be used.
   * owner (string): the owner of the code.
   """
-  @spec associate(t(), String.t(), String.t()) :: t()
-  def associate(%{chain: [{chain_script, _, _} | rest]} = traceback, code, owner) do
-    %{traceback | chain: [{chain_script, code, owner} | rest]}
+  @spec associate(t(), Script.t() | nil, String.t(), String.t()) :: t()
+  def associate(traceback, script \\ nil, code, owner)
+
+  def associate(%{chain: [{chain_script, _, _} | rest]} = traceback, script, code, owner) do
+    %{traceback | chain: [{script || chain_script, code, owner} | rest]}
   end
 
   @doc """
@@ -103,11 +114,23 @@ defmodule Pythelix.Scripting.Traceback do
   @doc """
   Return a string representing the traceback.
 
+  Each frame names the method (`!key!.name`, or `#id.name` for an entity
+  without a key) and, when the method was applied from a worldlet, the
+  worldlet and the line in it where the failing statement is:
+
+      Traceback most recent call last:
+        !command/pet!.run, defined in worldlets/commands/general.txt, line 112
+          dog.bark()
+        !dog!.bark, defined in worldlets/animals/dog.txt, line 18
+          self.greet()
+
+      ValueError: ...
+
   Args:
 
   * traceback (Traceback: the full traceback.
   """
-  @spec format(t()) :: Sting.t()
+  @spec format(t()) :: String.t()
   def format(traceback) do
     chain =
       traceback.chain
@@ -127,12 +150,23 @@ defmodule Pythelix.Scripting.Traceback do
     "#{header}\n#{chain}\n\n#{type}: #{message}"
   end
 
+  # One frame. A method applied from a worldlet says which file and which
+  # line of that file, since that is where the builder will go to fix it; a
+  # script with no file (the console, a method set from code) can only say its
+  # own line.
   defp format_call({script, _, nil}) do
-    "Unknown, line #{script.line}"
+    format_call({script, nil, "Unknown"})
   end
 
   defp format_call({script, _, owner}) do
-    "#{owner}, line #{script.line}"
+    case Map.get(script, :origin) do
+      %{file: file, line: first_line} when is_binary(file) and is_integer(first_line) ->
+        line = first_line + script.line - 1
+        "#{owner}, defined in #{Pythelix.Paths.display(file)}, line #{line}"
+
+      _ ->
+        "#{owner}, line #{script.line}"
+    end
   end
 
   defp format_code({_script, nil, _}) do

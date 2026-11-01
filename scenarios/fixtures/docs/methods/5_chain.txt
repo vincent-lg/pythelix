@@ -1,0 +1,25 @@
+# docs/methods.md — "Chain of calls"
+
+!generic/npc!
+name = "stranger"
+
+def greet(self, character: Entity["generic/character"]):
+    greeting = self.greeting()
+    character.msg(f"{self.name} says: {greeting}")
+
+def greeting(self):
+    return "Hello, traveler."
+
+!npc/merchant!
+parent = "generic/npc"
+name = "merchant"
+
+def greeting(self):
+    return "Welcome! Care to browse my wares?"
+
+!npc/guard!
+parent = "generic/npc"
+name = "guard"
+
+def greeting(self):
+    return "Move along, citizen."

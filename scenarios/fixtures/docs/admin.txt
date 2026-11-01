@@ -1,0 +1,6 @@
+# Scenarios play as ordinary players, and the `py` command the guides use is
+# an administrator command. Applying this makes every player in the scenario
+# an administrator. The world is thrown away afterwards, so nothing leaks.
+
+!generic/player!
+permissions = {"player", "admin"}
