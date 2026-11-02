@@ -55,6 +55,21 @@ defmodule Pythelix.Scripting.Parser.ExpressionTest do
     assert ast == {:**, [{:var, "variable"}, 3]}
   end
 
+  test "test modulo numbers" do
+    ast = eval_ok("17 % 5")
+    assert ast == {:%, [17, 5]}
+  end
+
+  test "% has more precedence than +" do
+    ast = eval_ok("1 + 17 % 5")
+    assert ast == {:+, [1, {:%, [17, 5]}]}
+  end
+
+  test "% has the same precedence as *, left associative" do
+    ast = eval_ok("2 * 17 % 5")
+    assert ast == {:%, [{:*, [2, 17]}, 5]}
+  end
+
   test "* has more precedence than +, left" do
     ast = eval_ok("1 + 2 * 3")
     assert ast == {:+, [1, {:*, [2, 3]}]}

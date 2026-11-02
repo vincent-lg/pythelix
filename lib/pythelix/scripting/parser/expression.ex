@@ -5,7 +5,7 @@ defmodule Pythelix.Scripting.Parser.Expression do
   Grammar:
     <nested> ::= "(" <expr> ")" | <value>
     <expr>  ::= <term0> {"+" | "-" <term0>}
-    <term0>   ::= <term1> {"*" | "/" <term1>}
+    <term0>   ::= <term1> {"*" | "/" | "%" <term1>}
     <term1>     ::= <term2> {<eq_op> <term2>}
     <term2>      ::= <term3> {<ord_op> <term3>}
     <term3>  ::= <term4> {<or> <term4>}
@@ -216,7 +216,7 @@ defmodule Pythelix.Scripting.Parser.Expression do
     :term_mul,
     parsec(:term_pow)
     |> repeat(
-      choice([mul(), div()])
+      choice([mul(), div(), mod()])
       |> parsec(:term_pow)
     )
     |> reduce(:fold_infixl)

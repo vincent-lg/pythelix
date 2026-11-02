@@ -7,7 +7,7 @@ defmodule Pythelix.Scripting.Interpreter.AST.Assignments do
   alias Pythelix.Scripting.Interpreter.AST
   import Utils, only: [add: 2, replace: 3, length_code: 1]
 
-  @eq_op %{"+=": :+, "-=": :-, "*=": :*, "/=": :/}
+  @eq_op %{"+=": :+, "-=": :-, "*=": :*, "/=": :/, "%=": :%}
 
   def read_ast(code, {:=, names, value, {line, _}}) do
     before = make_ref()
@@ -86,7 +86,7 @@ defmodule Pythelix.Scripting.Interpreter.AST.Assignments do
   end
 
   def read_ast(code, {eq_op, names, value, {line, _}})
-      when eq_op in [:"+=", :"-=", :"*=", :"/="] do
+      when eq_op in [:"+=", :"-=", :"*=", :"/=", :"%="] do
     op = Map.get(@eq_op, eq_op)
 
     before = make_ref()

@@ -102,7 +102,7 @@ defmodule Pythelix.Scripting.Parser.Statement do
     |> tag(:nested)
     |> line()
     |> concat(
-      choice([equal, plus_eq(), minus_eq(), mul_eq(), div_eq()])
+      choice([equal, plus_eq(), minus_eq(), mul_eq(), div_eq(), mod_eq()])
       |> parsec({Pythelix.Scripting.Parser.Expression, :expr})
     )
     |> reduce(:reduce_assign)

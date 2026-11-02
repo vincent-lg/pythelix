@@ -84,4 +84,14 @@ defmodule Pythelix.Scripting.IncrementTest do
 
     assert script.variables == %{"value" => 6}
   end
+
+  test "mod a single number" do
+    script =
+      run("""
+      value = 370
+      value %= 360
+      """)
+
+    assert script.variables == %{"value" => 10}
+  end
 end

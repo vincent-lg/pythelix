@@ -34,6 +34,13 @@ defmodule Pythelix.Scripting.Parser.Operator do
     |> isolate(check: false, allow_newline: true)
   end
 
+  def mod do
+    ascii_char([?%])
+    |> replace(:%)
+    |> label("%")
+    |> isolate(check: false, allow_newline: true)
+  end
+
   def pow do
     string("**")
     |> replace(:**)
@@ -168,6 +175,12 @@ defmodule Pythelix.Scripting.Parser.Operator do
   def div_eq do
     string("/=")
     |> replace(:"/=")
+    |> isolate(check: false, allow_newline: true)
+  end
+
+  def mod_eq do
+    string("%=")
+    |> replace(:"%=")
     |> isolate(check: false, allow_newline: true)
   end
 

@@ -14,6 +14,7 @@ defmodule Pythelix.Scripting.Interpreter.VM.Math do
     -: &-/2,
     *: &*/2,
     /: &//2,
+    %: &Math.modulo/2,
     **: &Math.over_pow/2
   }
 
@@ -21,7 +22,8 @@ defmodule Pythelix.Scripting.Interpreter.VM.Math do
     +: "__add__",
     -: "__sub__",
     *: "__mul__",
-    /: "__div__"
+    /: "__div__",
+    %: "__mod__"
   }
 
   def add(script, nil) do
@@ -40,6 +42,10 @@ defmodule Pythelix.Scripting.Interpreter.VM.Math do
     apply_op(script, :/)
   end
 
+  def mod(script, nil) do
+    apply_op(script, :%)
+  end
+
   def pow(script, nil) do
     apply_op(script, :**)
   end
@@ -48,11 +54,16 @@ defmodule Pythelix.Scripting.Interpreter.VM.Math do
     {script, value2} = Script.get_stack(script)
     {script, value1} = Script.get_stack(script)
 
-    if is_number(value1) and is_number(value2) do
-      operation = @operations[op]
-      script |> Script.put_stack(operation.(value1, value2))
-    else
-      call_magic_method(script, op, value1, value2)
+    cond do
+      op == :% and value2 == 0 and is_number(value1) ->
+        Script.raise(script, ZeroDivisionError, "modulo by zero")
+
+      is_number(value1) and is_number(value2) ->
+        operation = @operations[op]
+        script |> Script.put_stack(operation.(value1, value2))
+
+      true ->
+        call_magic_method(script, op, value1, value2)
     end
   end
 
@@ -89,6 +100,17 @@ defmodule Pythelix.Scripting.Interpreter.VM.Math do
           Script.raise(script, TypeError, "unsupported operand type(s) for #{op}")
         end
     end
+  end
+
+  @doc """
+  Python-style modulo: the result has the sign of the divisor.
+  """
+  def modulo(dividend, divisor) when is_integer(dividend) and is_integer(divisor) do
+    Integer.mod(dividend, divisor)
+  end
+
+  def modulo(dividend, divisor) do
+    dividend - divisor * Float.floor(dividend / divisor)
   end
 
   def over_pow(number, power) do

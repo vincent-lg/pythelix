@@ -87,7 +87,7 @@ defmodule Pythelix.Scripting.Interpreter.AST.Core do
   def read_ast(code, :line), do: code
 
   # Delegate to specialized modules
-  def read_ast(code, {op, _} = ast) when op in [:+, :-, :*, :/, :**] do
+  def read_ast(code, {op, _} = ast) when op in [:+, :-, :*, :/, :%, :**] do
     Expressions.read_ast(code, ast)
   end
 
@@ -168,7 +168,7 @@ defmodule Pythelix.Scripting.Interpreter.AST.Core do
   end
 
   def read_ast(code, {eq_op, _, _, _} = ast)
-      when eq_op in [:"+=", :"-=", :"*=", :"/="] do
+      when eq_op in [:"+=", :"-=", :"*=", :"/=", :"%="] do
     Assignments.read_ast(code, ast)
   end
 
