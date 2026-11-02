@@ -25,7 +25,7 @@ defmodule Pythelix.Scripting.Interpreter.AST.Assignments do
 
     Enum.reduce(Enum.with_index(names), code, fn
       {[{:getitem, [expr | items]}], index}, code when index == length(names) - 1 ->
-        Enum.reduce(Enum.with_index(items), AST.Core.read_ast(code, expr), fn
+        Enum.reduce(Enum.with_index(items), read_item_owner(code, expr, index), fn
           {item, i_index}, code
           when length(items) - 1 == i_index and length(names) - 1 == index ->
             code
@@ -46,8 +46,8 @@ defmodule Pythelix.Scripting.Interpreter.AST.Assignments do
             |> add({:call, 1})
         end)
 
-      {[{:getitem, [expr | items]}], _}, code ->
-        Enum.reduce(items, AST.Core.read_ast(code, expr), fn item, code ->
+      {[{:getitem, [expr | items]}], index}, code ->
+        Enum.reduce(items, read_item_owner(code, expr, index), fn item, code ->
           code
           |> add({:getattr, "__getitem__"})
           |> add({:dict, :no_reference})
@@ -101,8 +101,8 @@ defmodule Pythelix.Scripting.Interpreter.AST.Assignments do
 
     code =
       Enum.reduce(Enum.with_index(names), code, fn
-        {[{:getitem, [expr | items]}], _}, code ->
-          Enum.reduce(items, AST.Core.read_ast(code, expr), fn item, code ->
+        {[{:getitem, [expr | items]}], index}, code ->
+          Enum.reduce(items, read_item_owner(code, expr, index), fn item, code ->
             code
             |> add({:getattr, "__getitem__"})
             |> add({:dict, :no_reference})
@@ -127,7 +127,7 @@ defmodule Pythelix.Scripting.Interpreter.AST.Assignments do
 
     Enum.reduce(Enum.with_index(names), code, fn
       {[{:getitem, [expr | items]}], index}, code when index == length(names) - 1 ->
-        Enum.reduce(Enum.with_index(items), AST.Core.read_ast(code, expr), fn
+        Enum.reduce(Enum.with_index(items), read_item_owner(code, expr, index), fn
           {item, i_index}, code
           when length(items) - 1 == i_index and length(names) - 1 == index ->
             code
@@ -148,8 +148,8 @@ defmodule Pythelix.Scripting.Interpreter.AST.Assignments do
             |> add({:call, 1})
         end)
 
-      {[{:getitem, [expr | items]}], _}, code ->
-        Enum.reduce(items, AST.Core.read_ast(code, expr), fn item, code ->
+      {[{:getitem, [expr | items]}], index}, code ->
+        Enum.reduce(items, read_item_owner(code, expr, index), fn item, code ->
           code
           |> add({:getattr, "__getitem__"})
           |> add({:dict, :no_reference})
@@ -172,4 +172,11 @@ defmodule Pythelix.Scripting.Interpreter.AST.Assignments do
     |> replace({:unset, before}, fn _code -> false end)
     |> replace({:unset, after_ref}, fn _code -> false end)
   end
+
+  # Push the object being subscripted in an assignment target.
+  # At the start of the chain (`items[0] = ...`), it is read on its own.
+  # Further down (`e.items[0] = ...`), it is an attribute of the object
+  # already on the stack, so read it from there.
+  defp read_item_owner(code, expr, 0), do: AST.Core.read_ast(code, expr)
+  defp read_item_owner(code, expr, _index), do: Utils.read_nested_ast(code, expr)
 end
