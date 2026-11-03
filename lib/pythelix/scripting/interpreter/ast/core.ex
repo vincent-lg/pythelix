@@ -99,7 +99,7 @@ defmodule Pythelix.Scripting.Interpreter.AST.Core do
     Expressions.read_ast(code, ast)
   end
 
-  def read_ast(code, {logical, _} = ast) when logical in [:and, :or, :not] do
+  def read_ast(code, {logical, _} = ast) when logical in [:and, :or, :not, :neg] do
     Expressions.read_ast(code, ast)
   end
 

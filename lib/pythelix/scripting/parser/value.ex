@@ -6,10 +6,10 @@ defmodule Pythelix.Scripting.Parser.Value do
     <value>      ::= <globals> | <number> | <id_value> | <str>
     <globals>  ::= "true" | "false"
     <number>   ::= <int> | <float>
-    <int>      ::= ["-"]<digit>{<digit>}
-    <float>    ::= ["-"]<digit>{<digit>}"."<digit>{<digit>}
+    <int>      ::= <digit>{<digit>}
+    <float>    ::= <digit>{<digit>}"."<digit>{<digit>}
     <id>       ::= <letter> {<letter> | <valid_ct>}
-    <id_value> ::= ["-"]<id>
+    <id_value> ::= <id>
     <str>      ::= <single> | <double>
     <single>   ::= "'" <any letter> "'"
     <double>   ::= \""" <any letter> \"""
@@ -42,8 +42,7 @@ defmodule Pythelix.Scripting.Parser.Value do
     |> label("digits")
 
   int =
-    optional(string("-"))
-    |> concat(digits)
+    digits
     |> isolate(allow_newline: true)
     |> reduce(:to_integer)
     |> label("integer")
@@ -51,8 +50,7 @@ defmodule Pythelix.Scripting.Parser.Value do
   defp to_integer(acc), do: acc |> Enum.join() |> String.to_integer(10)
 
   float =
-    optional(string("-"))
-    |> concat(digits)
+    digits
     |> ascii_string([?.], 1)
     |> concat(digits)
     |> isolate(allow_newline: true)
@@ -251,8 +249,6 @@ defmodule Pythelix.Scripting.Parser.Value do
       number,
       parsec(:formatted_string),
       parsec(:string) |> isolate(allow_newline: true),
-      ignore(string("-")) |> concat(parsec(:function)) |> tag(:neg),
-      ignore(string("-")) |> concat(id()) |> tag(:neg),
       parsec(:function),
       parsec(:entity),
       parsec(:getitem),

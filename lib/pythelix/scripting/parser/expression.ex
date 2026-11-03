@@ -5,13 +5,14 @@ defmodule Pythelix.Scripting.Parser.Expression do
   Grammar:
     <nested> ::= "(" <expr> ")" | <value>
     <expr>  ::= <term0> {"+" | "-" <term0>}
-    <term0>   ::= <term1> {"*" | "/" | "%" <term1>}
+    <term0>   ::= <unary> {"*" | "/" | "%" <unary>}
     <term1>     ::= <term2> {<eq_op> <term2>}
     <term2>      ::= <term3> {<ord_op> <term3>}
     <term3>  ::= <term4> {<or> <term4>}
     <term4>   ::= <term5> {<and> <term5>}
     <term5> ::= <not> <term5> | <term_pow>
-    <term_pow> ::= <nested> {"**" <term_pow>}
+    <unary>  ::= "-" <unary> | <term_pow>
+    <term_pow> ::= <nested> ["**" <unary>]
     <ord_op>    ::= > | >= | < | <=
     <eq_op>     ::= != | ==
     <or>     ::= '||'
@@ -214,20 +215,33 @@ defmodule Pythelix.Scripting.Parser.Expression do
 
   defcombinatorp(
     :term_mul,
-    parsec(:term_pow)
+    parsec(:term_unary)
     |> repeat(
       choice([mul(), div(), mod()])
-      |> parsec(:term_pow)
+      |> parsec(:term_unary)
     )
     |> reduce(:fold_infixl)
   )
 
+  # Unary minus binds tighter than * but looser than **, as in Python:
+  # -x ** 2 is -(x ** 2) and 2 ** -x is 2 ** (-x).
+  defcombinatorp(
+    :term_unary,
+    choice([
+      ignore(neg()) |> parsec(:term_unary) |> reduce(:reduce_neg),
+      parsec(:term_pow)
+    ])
+  )
+
+  defp reduce_neg([number]) when is_number(number), do: -number
+  defp reduce_neg([ast]), do: {:neg, [ast]}
+
   defcombinatorp(
     :term_pow,
     parsec(:nested)
-    |> repeat(
+    |> optional(
       pow()
-      |> parsec(:term_pow)
+      |> parsec(:term_unary)
     )
     |> reduce(:fold_infixr)
   )

@@ -50,6 +50,16 @@ defmodule Pythelix.Scripting.Interpreter.VM.Math do
     apply_op(script, :**)
   end
 
+  def neg(script, nil) do
+    {script, value} = Script.get_stack(script)
+
+    if is_number(value) do
+      Script.put_stack(script, -value)
+    else
+      call_method(script, value, "__neg__", [], "bad operand type for unary -")
+    end
+  end
+
   defp apply_op(script, op) do
     {script, value2} = Script.get_stack(script)
     {script, value1} = Script.get_stack(script)
@@ -82,23 +92,33 @@ defmodule Pythelix.Scripting.Interpreter.VM.Math do
             {value1, value2}
           end
 
-        resolved = Store.get_value(self, recursive: false)
-        module = Namespace.locate(resolved)
-        name = String.to_atom("m_#{method_name}")
+        call_method(
+          script,
+          self,
+          method_name,
+          [other],
+          "unsupported operand type(s) for #{op}"
+        )
+    end
+  end
 
-        if function_exported?(module, name, 4) do
-          callable = %Callable{module: module, object: self, name: name}
+  defp call_method(script, self, method_name, args, type_error) do
+    resolved = Store.get_value(self, recursive: false)
+    module = Namespace.locate(resolved)
+    name = String.to_atom("m_#{method_name}")
 
-          case Callable.call(script, callable, [other]) do
-            {%Script{error: error} = script, _} when error != nil ->
-              script
+    if function_exported?(module, name, 4) do
+      callable = %Callable{module: module, object: self, name: name}
 
-            {script, value} ->
-              Script.put_stack(script, Store.get_value(value))
-          end
-        else
-          Script.raise(script, TypeError, "unsupported operand type(s) for #{op}")
-        end
+      case Callable.call(script, callable, args) do
+        {%Script{error: error} = script, _} when error != nil ->
+          script
+
+        {script, value} ->
+          Script.put_stack(script, Store.get_value(value))
+      end
+    else
+      Script.raise(script, TypeError, type_error)
     end
   end
 

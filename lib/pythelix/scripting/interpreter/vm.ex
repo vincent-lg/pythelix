@@ -15,6 +15,7 @@ defmodule Pythelix.Scripting.Interpreter.VM do
     /: {VM.Math, :div},
     %: {VM.Math, :mod},
     **: {VM.Math, :pow},
+    neg: {VM.Math, :neg},
     <: {VM.Cmp, :lt},
     >: {VM.Cmp, :gt},
     <=: {VM.Cmp, :le},

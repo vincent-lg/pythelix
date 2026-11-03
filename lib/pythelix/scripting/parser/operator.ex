@@ -13,10 +13,18 @@ defmodule Pythelix.Scripting.Parser.Operator do
     |> isolate(check: false, allow_newline: true)
   end
 
+  # A binary minus has to be on the same line as its left operand:
+  # a line starting with "-" begins a new statement (see `neg/0`).
   def minus do
     ascii_char([?-])
     |> replace(:-)
     |> label("-")
+    |> isolate(check: false)
+  end
+
+  def neg do
+    ascii_char([?-])
+    |> label("unary -")
     |> isolate(check: false, allow_newline: true)
   end
 

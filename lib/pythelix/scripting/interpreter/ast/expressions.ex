@@ -67,6 +67,12 @@ defmodule Pythelix.Scripting.Interpreter.AST.Expressions do
     |> add({:not, nil})
   end
 
+  def read_ast(code, {:neg, [ast]}) do
+    code
+    |> AST.Core.read_ast(ast)
+    |> add({:neg, nil})
+  end
+
   def read_ast(code, {:getitem, [expr | items]}) do
     code
     |> AST.Core.read_ast(expr)

@@ -244,4 +244,59 @@ defmodule Pythelix.Scripting.Parser.ExpressionTest do
     ast = eval_ok("a == b is c")
     assert ast == {:is, [{:==, [{:var, "a"}, {:var, "b"}]}, {:var, "c"}]}
   end
+
+  describe "unary minus" do
+    test "on a number literal folds into the number" do
+      assert eval_ok("-3") == -3
+      assert eval_ok("-2.5") == -2.5
+    end
+
+    test "on a variable" do
+      assert eval_ok("-x") == {:neg, [{:var, "x"}]}
+    end
+
+    test "on an attribute" do
+      assert eval_ok("-a.b") == {:neg, [[{:var, "a"}, {:nested, [[{:var, "b"}]]}]]}
+    end
+
+    test "on a function call" do
+      assert eval_ok("-f()") == {:neg, [{:function, "f", [], %{}}]}
+    end
+
+    test "on a parenthesized expression" do
+      assert eval_ok("-(a + b)") == {:neg, [{:+, [{:var, "a"}, {:var, "b"}]}]}
+    end
+
+    test "twice" do
+      assert eval_ok("--x") == {:neg, [{:neg, [{:var, "x"}]}]}
+    end
+
+    test "binds tighter than *" do
+      assert eval_ok("2 * -x") == {:*, [2, {:neg, [{:var, "x"}]}]}
+      assert eval_ok("-x * 2") == {:*, [{:neg, [{:var, "x"}]}, 2]}
+    end
+
+    test "binds looser than **" do
+      assert eval_ok("-x ** 2") == {:neg, [{:**, [{:var, "x"}, 2]}]}
+      assert eval_ok("-2 ** 2") == {:neg, [{:**, [2, 2]}]}
+    end
+
+    test "in an exponent" do
+      assert eval_ok("2 ** -x") == {:**, [2, {:neg, [{:var, "x"}]}]}
+    end
+
+    test "after binary minus" do
+      assert eval_ok("a - -b") == {:-, [{:var, "a"}, {:neg, [{:var, "b"}]}]}
+    end
+
+    test "in function arguments" do
+      # Positional arguments are stored in reverse order.
+      assert eval_ok("Vector(-side.y, side.x)") ==
+               {:function, "Vector",
+                [
+                  [{:var, "side"}, {:nested, [[{:var, "x"}]]}],
+                  {:neg, [[{:var, "side"}, {:nested, [[{:var, "y"}]]}]]}
+                ], %{}}
+    end
+  end
 end
