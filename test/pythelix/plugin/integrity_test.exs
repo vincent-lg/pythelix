@@ -351,7 +351,7 @@ defmodule Pythelix.Plugin.IntegrityTest do
       plugin(dir, "exits", depends: ~s({"rooms": "*"}))
 
       assert {:error, output} = command(["remove", "rooms", "-f"])
-      assert output =~ "exits depend on it"
+      assert output =~ "needed by exits"
       assert File.exists?(directory)
     end
 
@@ -457,7 +457,7 @@ defmodule Pythelix.Plugin.IntegrityTest do
       plugin(dir, "exits", depends: ~s({"rooms": "*"}))
 
       assert {:error, output} = command(["eject", "rooms"])
-      assert output =~ "exits depend on it"
+      assert output =~ "needed by exits"
       assert File.exists?(Plugin.path("rooms"))
     end
 

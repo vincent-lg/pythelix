@@ -206,7 +206,7 @@ defmodule Pythelix.Task.Plugin do
     with_installed(key, fn entries ->
       case {dependents(key), removal_risk(key, entries[key])} do
         {[_ | _] = dependents, _risk} ->
-          fail("Cannot remove #{key}: #{Enum.join(dependents, ", ")} depend on it.")
+          fail("Cannot remove #{key}: it is needed by #{Enum.join(dependents, ", ")}.")
 
         {[], risk} when risk != nil and not is_map_key(opts, :force) ->
           fail("#{risk} Add -f to remove it anyway.")
@@ -260,7 +260,7 @@ defmodule Pythelix.Task.Plugin do
           end
 
         dependents ->
-          fail("Cannot eject #{key}: #{Enum.join(dependents, ", ")} depend on it.")
+          fail("Cannot eject #{key}: it is needed by #{Enum.join(dependents, ", ")}.")
       end
     end)
   end
