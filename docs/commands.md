@@ -693,3 +693,14 @@ As said, matching is a complex topic and this is just an overview. To learn more
   </details>
 
 This covers the basics of creating and handling commands in Pythelix, including attributes, methods, syntax, argument parsing, and refinements. For more detailed scripting, see the [scripting documentation](./scripting.md). You might also want to check the [documentation on methods](./methods.md) which explains in greater details the concept of method signature and default arguments.
+
+## Turning a command off
+
+A command you don't want, whether it comes from a [plugin](./plugins.md) or not, can be turned off from your own worldlets by giving it no name:
+
+```
+!command/give!
+name = None
+```
+
+The command is no longer added to any menu, so nobody can type it and `help` doesn't list it. Its aliases are ignored too. The entity itself still exists, so anything referring to it keeps working: only what players can see goes away. Give it a name again (or remove your override) and apply, and it comes back.

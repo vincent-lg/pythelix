@@ -1,0 +1,5 @@
+# Where new characters appear in this game.
+!menu/new/character!
+
+def start_location(client):
+    return !farm/room/road!

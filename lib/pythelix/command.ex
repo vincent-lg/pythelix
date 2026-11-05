@@ -30,11 +30,21 @@ defmodule Pythelix.Command do
         []
 
       command ->
-        [Record.get_attribute(command, "name", "")]
-        |> Enum.concat(Record.get_attribute(command, "aliases", []))
-        |> Enum.reject(fn name -> name == nil end)
-        |> Enum.uniq()
+        command
+        |> Record.get_attribute("name", "")
+        |> names_of(command)
     end)
+  end
+
+  # `name = None` turns a command off, whatever aliases it would otherwise answer
+  # to: the entity still exists, and it just isn't exposed.
+  defp names_of(name, _command) when name in [nil, :none], do: []
+
+  defp names_of(name, command) do
+    [name]
+    |> Enum.concat(Record.get_attribute(command, "aliases", []))
+    |> Enum.reject(&is_nil/1)
+    |> Enum.uniq()
   end
 
   def build_syntax_pattern(key) do

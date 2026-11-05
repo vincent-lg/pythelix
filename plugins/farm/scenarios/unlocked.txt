@@ -1,0 +1,10 @@
+# Once the builder has made the fix, the way south opens. The fixture stands for
+# the edit the tutorial asks for.
+
+apply unlocked_gate.txt
+
+given Alice in !farm/room/gate!
+
+Alice> south
+Alice sees "The Farmyard"
+Alice does not see "The gate is locked"

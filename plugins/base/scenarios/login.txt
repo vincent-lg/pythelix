@@ -1,0 +1,19 @@
+# The whole front door: from a fresh connection to a character in the world.
+
+connect Newcomer
+Newcomer sees "Welcome to the Pythelix Engine"
+Newcomer sees "Enter your username"
+
+Newcomer> nosuchaccount
+Newcomer sees "doesn't exist"
+
+Newcomer> new
+Newcomer sees "Enter your new username"
+
+Newcomer> newcomer
+Newcomer> a fine password
+
+# Nothing tells base where a game begins, so new characters arrive in its own
+# empty room. A game overrides `start_location` on !menu/new/character!.
+Newcomer> Alice
+Newcomer sees "Nowhere in particular"

@@ -8,6 +8,7 @@ defmodule Pythelix.Task.Scenario do
   and destroy anything without touching a real game.
   """
 
+  alias Pythelix.Plugin
   alias Pythelix.Scenario
   alias Pythelix.Scenario.{Failure, Runner}
 
@@ -70,6 +71,33 @@ defmodule Pythelix.Task.Scenario do
   end
 
   @doc """
+  Play a plugin's own scenarios, in a world holding only that plugin and what it
+  depends on.
+
+  The game's overrides are allowed to change how a plugin behaves, so playing
+  against them would report expected changes as failures. Whether the game still
+  behaves as intended with its overrides is for its own scenarios to say.
+  """
+  @spec run_plugin(binary()) :: :ok | :error
+  def run_plugin(key) do
+    directory = key |> Plugin.path() |> Path.join("scenarios")
+
+    case files(directory) do
+      [] ->
+        IO.puts("The plugin #{key} has no scenarios.")
+
+        :ok
+
+      files ->
+        world = [source: {:plugin, key}, fixtures: Path.join(directory, "fixtures")]
+
+        files
+        |> Enum.map(&play(&1, world))
+        |> report()
+    end
+  end
+
+  @doc """
   Play every scenario under `path` (a file or a directory).
   """
   @spec run(binary() | nil) :: :ok | :error
@@ -129,8 +157,10 @@ defmodule Pythelix.Task.Scenario do
     Application.get_env(:pythelix, :scenarios_path, Path.join(File.cwd!(), "scenarios"))
   end
 
-  defp play(file) do
+  defp play(file, world \\ []) do
     name = Path.relative_to_cwd(file)
+    source = Keyword.get(world, :source, :all)
+    runner_opts = Keyword.take(world, [:fixtures])
 
     case Scenario.parse_file(file) do
       {:error, errors} ->
@@ -142,8 +172,8 @@ defmodule Pythelix.Task.Scenario do
       {:ok, scenario} ->
         Enum.each(scenario.notices, &IO.puts("  note  #{&1}"))
 
-        in_clean_world(fn ->
-          case Runner.run(scenario) do
+        in_clean_world(source, fn ->
+          case Runner.run(scenario, runner_opts) do
             {:ok, steps} ->
               IO.puts("  ok    #{name} (#{steps} steps)")
 
@@ -160,19 +190,19 @@ defmodule Pythelix.Task.Scenario do
   end
 
   # A world of its own for each scenario: a fresh database transaction that is
-  # rolled back afterwards, an empty cache, and the game's own worldlets
-  # applied. One scenario can therefore never leave anything behind that
-  # another depends on — or trips over.
-  defp in_clean_world(fun) do
+  # rolled back afterwards, an empty cache, and the source's worldlets applied.
+  # One scenario can therefore never leave anything behind that another depends
+  # on — or trips over.
+  defp in_clean_world(source, fun) do
     owner = Ecto.Adapters.SQL.Sandbox.start_owner!(Pythelix.Repo, shared: true)
 
     try do
       Pythelix.Record.Cache.clear()
       Pythelix.Scripting.Store.init()
 
-      case Pythelix.World.apply(:all) do
+      case Pythelix.World.apply(source) do
         {:error, reason} ->
-          IO.puts("  FAIL  could not apply the game's worldlets:\n#{reason}")
+          IO.puts("  FAIL  could not apply the worldlets:\n#{reason}")
 
           {:error, "worldlets"}
 

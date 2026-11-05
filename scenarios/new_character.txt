@@ -1,0 +1,10 @@
+# The game's choice, not the base plugin's: new characters start on the farm road.
+
+connect Newcomer
+
+Newcomer> new
+Newcomer> newcomer
+Newcomer> a fine password
+Newcomer> Alice
+Newcomer sees "A Dirt Road"
+Newcomer does not see "Nowhere in particular"

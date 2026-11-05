@@ -1,0 +1,19 @@
+# The commands every game starts with.
+
+given Alice in !base/room/start!
+given Bob in !base/room/start!
+
+Alice> look
+Alice sees "Nowhere in particular"
+
+Alice> say is anyone here
+Alice sees "is anyone here"
+Bob sees "is anyone here"
+
+Bob> help
+Bob sees "look"
+Bob sees "say"
+
+Bob> xyzzy
+Bob sees "Command not found"
+Alice does not see "Command not found"

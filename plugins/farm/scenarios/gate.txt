@@ -1,0 +1,10 @@
+# The tutorial's first lesson: the gate is locked until the builder fixes it.
+
+given Alice in !farm/room/gate!
+
+Alice> south
+Alice sees "The gate is locked"
+Alice does not see "The Farmyard"
+
+Alice> hint
+Alice sees "locked = False"

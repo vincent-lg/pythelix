@@ -1,0 +1,13 @@
+# Turning a command off from the game's worldlets: it no longer answers, nor does
+# its name appear in the help. The command next to it is unaffected.
+
+apply no_give.txt
+
+given Alice in !room/bakery!
+
+Alice> give
+Alice sees "Command not found"
+
+Alice> help
+Alice sees "look"
+Alice does not see "give"

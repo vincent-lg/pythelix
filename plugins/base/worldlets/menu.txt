@@ -163,6 +163,10 @@ parent = "generic/menu"
 text = "To create a character in this account, enter the character's name"
 prompt = "Enter the character's name:"
 
+def start_location(client):
+    """Where a new character appears. Override this in your game."""
+    return !base/room/start!
+
 def unknown_input(client, input):
     account = client.account
     has_players = len(!generic/player!.children) > 0
@@ -176,7 +180,7 @@ def unknown_input(client, input):
         player.permissions.add("admin")
     endif
 
-    player.former_location = !farm/room/road!
+    player.former_location = !menu/new/character!.start_location(client)
     client.player = player
     client.location = !menu/near_game!
 

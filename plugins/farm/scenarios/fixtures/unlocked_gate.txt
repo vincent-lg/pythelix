@@ -1,0 +1,2 @@
+!farm/room/gate!
+locked = False

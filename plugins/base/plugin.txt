@@ -1,0 +1,6 @@
+!plugin/base!
+parent = "generic/plugin"
+name = "Base"
+version = "1.0.0"
+pythelix = ">=0.6"
+description = "What most games start from: generic entities, common commands and the login menus."

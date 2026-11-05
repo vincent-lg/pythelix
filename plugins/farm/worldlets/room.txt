@@ -25,7 +25,7 @@ def enter(self, character: Entity):
             This zone helps you understand building on Pythelix and will present
             you challenges to fix in most rooms.
             If you get stuck, try the HINT command. And to fix things, you'll
-            need to edit the files in the worldlets/farm directory, then type
+            need to edit the files in the plugins/farm/worldlets directory, then type
             APPLY in the game. Need help? Head to https://pythelix.org/start.html
     """)
 
@@ -43,7 +43,7 @@ the verge where boots have trodden the weeds flat.
 $gate_state.
 """)
 hint = """
-    The gate is locked. Open worldlets/farm/room.txt, find farm/room/gate,
+    The gate is locked. Open plugins/farm/worldlets/room.txt, find farm/room/gate,
     and change 'locked = True' to 'locked = False'. Then type APPLY.
 """
 exits = [
@@ -91,7 +91,7 @@ broad red flank of a barn rises against the sky. Above, $sky.
 The farmhouse door carries an old combination lock. A note tacked
 to the gatepost reads: "Combination is sunflower." $lock_state.
 """)
-hint = "The combination should be 'sunflower' but the combination attribute has a typo ('sunflwer'). Fix the spelling in worldlets/farm/room.txt and APPLY."
+hint = "The combination should be 'sunflower' but the combination attribute has a typo ('sunflwer'). Fix the spelling in plugins/farm/worldlets/room.txt and APPLY."
 exits = [
     Exit("north", !farm/room/gate!),
     Exit("inside", !farm/room/kitchen!),
@@ -149,7 +149,7 @@ weight, light first -- or the chain-check jams the latch."
 
 $pot_rack.
 """)
-hint = "The three pots are hung in the wrong order. Edit the pot_order list in worldlets/farm/room.txt so the values read, from first to last: 'light', 'medium', 'heavy'. Then APPLY."
+hint = "The three pots are hung in the wrong order. Edit the pot_order list in plugins/farm/worldlets/room.txt so the values read, from first to last: 'light', 'medium', 'heavy'. Then APPLY."
 exits = [
     Exit("outside", !farm/room/yard!),
     Exit("north", !farm/room/hallway!),
@@ -197,7 +197,7 @@ $bedroom_door_state.
 At the far end, a wooden staircase climbs toward the loft.
 $staircase_state.
 """)
-hint = "The staircase needs at least 5 repaired steps. Change 'repaired_steps = 3' to 'repaired_steps = 5' (or higher) in worldlets/farm/room.txt and APPLY. The bedroom door to the west is blocked out of propriety -- you can remove that restriction by changing 'bedroom_private = True' to 'bedroom_private = False' if you're curious."
+hint = "The staircase needs at least 5 repaired steps. Change 'repaired_steps = 3' to 'repaired_steps = 5' (or higher) in plugins/farm/worldlets/room.txt and APPLY. The bedroom door to the west is blocked out of propriety -- you can remove that restriction by changing 'bedroom_private = True' to 'bedroom_private = False' if you're curious."
 exits = [
     Exit("south", !farm/room/kitchen!),
     Exit("up", !farm/room/loft!),
@@ -283,7 +283,7 @@ $mechanism_state.
 """)
 hint = """
     Both conditions are met (lever pulled, gears oiled), but the trapdoor won't open.
-    Read the can_leave method in worldlets/farm/room.txt carefully
+    Read the can_leave method in plugins/farm/worldlets/room.txt carefully
     -- there's a small word that inverts the logic.
 """
 exits = [
@@ -342,7 +342,7 @@ hint = """
     only at night.
     If you're stuck, head over to https://pytelix.org/farm.html
 
-    Bramble the dog is chained here too: in worldlets/farm/npc.txt,
+    Bramble the dog is chained here too: in plugins/farm/worldlets/npc.txt,
     change 'freed = False' to 'freed = True' on farm/npc/bramble.
     Then APPLY.
 """
@@ -384,7 +384,7 @@ hint = """
     You've done it -- you've fixed up the Maplewood Farm and found
     young Clem. Along the way, you've edited strings, booleans,
     numbers, lists, and fixed a method. The farm is yours to keep
-    tinkering with, or you can remove the worldlets/farm directory
+    tinkering with, or you can run "bin/plugin remove farm"
     to start fresh with your own world.
 """
 exits = [

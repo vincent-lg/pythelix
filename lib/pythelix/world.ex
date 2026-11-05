@@ -6,6 +6,8 @@ defmodule Pythelix.World do
 
   """
 
+  require Logger
+
   @motd_menu "menu/motd"
   @game_menu "menu/game"
 
@@ -22,10 +24,19 @@ defmodule Pythelix.World do
   def init() do
     if Application.get_env(:pythelix, :worldlets) do
       apply(:all)
+      |> tap(&report_notices/1)
     else
       :ok
     end
   end
+
+  # At startup nobody is reading the result of applying, so what deserves
+  # attention goes to the log.
+  defp report_notices({:ok, _path, _number, notices}) do
+    Enum.each(notices, &Logger.warning/1)
+  end
+
+  defp report_notices(_result), do: :ok
 
   @doc """
   Apply a worldlet, a directory or a single file path.
@@ -52,7 +63,7 @@ defmodule Pythelix.World do
 
   defp do_apply(_source, :nofile), do: :nofile
 
-  defp do_apply(source, {:error, reason}), do: {:error, explain(source, reason)}
+  defp do_apply(_source, {:error, reason}), do: {:error, reason}
 
   defp do_apply(source, {:ok, files}) do
     case process_worldlets(files, source) do
@@ -140,6 +151,7 @@ defmodule Pythelix.World do
     |> add_base_client_entity()
     |> add_base_character_entity()
     |> add_base_rangen_entity()
+    |> add_base_plugin_entity()
     |> Command.add_base_command_entity()
   end
 
@@ -410,6 +422,27 @@ defmodule Pythelix.World do
     ]
   end
 
+  # What a plugin's manifest inherits from. Its children are virtual too: they
+  # come from `plugin.txt` at every start, so Pythello can ask a plugin's version
+  # and they are never saved.
+  defp add_base_plugin_entity(entities) do
+    [
+      %{
+        virtual: true,
+        key: "generic/plugin",
+        attributes: %{
+          "name" => "\"\"",
+          "version" => "\"\"",
+          "pythelix" => "\"*\"",
+          "depends" => "{}",
+          "description" => "\"\""
+        },
+        methods: %{}
+      }
+      | entities
+    ]
+  end
+
   defp add_base_menu_entity(entities) do
     [
       %{
@@ -633,9 +666,7 @@ defmodule Pythelix.World do
         record = Record.get_entity(entity.key)
 
         if Record.has_parent?(record, Generic.command()) do
-          has_name = Map.has_key?(entity.attributes, "name")
-
-          if has_name and Record.get_location_entity(record) == nil do
+          if exposes_name?(entity) and Record.get_location_entity(record) == nil do
             place_entity(record, default_location)
           end
         end
@@ -654,6 +685,11 @@ defmodule Pythelix.World do
     rescue
       e -> {:error, Exception.format(:error, e, __STACKTRACE__)}
     end
+  end
+
+  # A command with `name = None` is turned off: it stays out of the menus.
+  defp exposes_name?(entity) do
+    Map.has_key?(entity.attributes, "name") and entity.attributes["name"] != "None"
   end
 
   defp create_entity(entity, opts \\ []) do

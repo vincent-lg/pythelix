@@ -11,7 +11,7 @@ defmodule Pythelix.Scenario.RunnerTest do
   alias Pythelix.Scenario.Runner
 
   setup do
-    {:ok, _path, _number, _notices} = Pythelix.World.apply(Path.expand("worldlets"))
+    {:ok, _path, _number, _notices} = Pythelix.World.apply(:all)
 
     :ok
   end

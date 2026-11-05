@@ -249,9 +249,15 @@ defmodule Pythelix.World.LayersTest do
   describe "sources" do
     setup %{tmp_dir: dir} do
       worldlets = Path.join(dir, "worldlets")
-      previous = Application.get_env(:pythelix, :worldlets_path)
+      previous_worldlets = Application.get_env(:pythelix, :worldlets_path)
+      previous_plugins = Application.get_env(:pythelix, :plugins_path)
       Application.put_env(:pythelix, :worldlets_path, worldlets)
-      on_exit(fn -> Application.put_env(:pythelix, :worldlets_path, previous) end)
+      Application.put_env(:pythelix, :plugins_path, Path.join(dir, "plugins"))
+
+      on_exit(fn ->
+        Application.put_env(:pythelix, :worldlets_path, previous_worldlets)
+        Application.put_env(:pythelix, :plugins_path, previous_plugins)
+      end)
 
       {:ok, worldlets: worldlets}
     end

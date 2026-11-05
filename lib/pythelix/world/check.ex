@@ -39,6 +39,7 @@ defmodule Pythelix.World.Check do
 
     case Sources.files(source) do
       {:ok, [_ | _] = files} -> {:ok, Enum.reduce(files, %__MODULE__{}, &check_file/2)}
+      {:error, reason} -> {:ok, %__MODULE__{diagnostics: [plugin_problem(reason)]}}
       _nothing -> :nofile
     end
   end
@@ -70,6 +71,20 @@ defmodule Pythelix.World.Check do
     # Explaining a failure must never itself fail: the original error is the
     # one worth reporting.
     _error -> nil
+  end
+
+  # Plugins that can't be loaded together stop the check before any file is read.
+  defp plugin_problem(reason) do
+    %Diagnostic{
+      file: Pythelix.Plugin.directory(),
+      context: nil,
+      line: nil,
+      column: nil,
+      message: reason,
+      hint: nil,
+      doc: "plugins.md",
+      source: nil
+    }
   end
 
   defp check_file(path, result) do

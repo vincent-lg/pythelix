@@ -26,7 +26,11 @@ defmodule Pythelix.Scenario.Runner do
   # paid in full when an expectation is about to fail anyway.
   @settle 300
 
-  defstruct players: %{}, next_id: 1, failures: [], steps: 0
+  # What `given <Name> in ...` builds a player from: this belongs to the game's
+  # worldlets or a plugin, not to the engine.
+  @player_entities ["generic/player", "generic/account", "menu/near_game"]
+
+  defstruct players: %{}, next_id: 1, failures: [], steps: 0, fixtures: nil
 
   @doc """
   Play a scenario and report what didn't hold.
@@ -35,10 +39,14 @@ defmodule Pythelix.Scenario.Runner do
   failures}`. Playing continues past a failed expectation: one wrong message
   rarely invalidates the rest of the transcript, and seeing every failure at
   once is worth more than seeing only the first.
+
+  Give `fixtures:` for scenarios whose fixtures aren't the game's: a plugin keeps
+  its own beside its scenarios.
   """
-  @spec run(Scenario.t()) :: {:ok, non_neg_integer()} | {:failed, [Failure.t()]}
-  def run(%Scenario{} = scenario) do
-    state = Enum.reduce(scenario.steps, %__MODULE__{}, &play/2)
+  @spec run(Scenario.t(), keyword()) :: {:ok, non_neg_integer()} | {:failed, [Failure.t()]}
+  def run(%Scenario{} = scenario, opts \\ []) do
+    initial = %__MODULE__{fixtures: Keyword.get(opts, :fixtures, fixtures_directory())}
+    state = Enum.reduce(scenario.steps, initial, &play/2)
 
     Enum.each(state.players, fn {_name, player} -> Collector.stop(player.collector) end)
 
@@ -51,7 +59,7 @@ defmodule Pythelix.Scenario.Runner do
   # Steps
 
   defp play(%Step{kind: :apply, text: path} = step, state) do
-    case Pythelix.World.apply(fixture_path(path)) do
+    case Pythelix.World.apply(fixture_path(path, state.fixtures)) do
       {:ok, _path, _number, _notices} ->
         count(state)
 
@@ -70,6 +78,14 @@ defmodule Pythelix.Scenario.Runner do
 
       Record.get_entity(strip_key(room)) == nil ->
         fail(state, step, "there is no entity with the key #{room}")
+
+      missing = Enum.find(@player_entities, &(Record.get_entity(&1) == nil)) ->
+        fail(
+          state,
+          step,
+          "there is no !#{missing}! to log a player in with; in a plugin's " <>
+            "scenarios, this comes from depending on the base plugin"
+        )
 
       true ->
         state |> connect(name, room) |> count()
@@ -269,8 +285,8 @@ defmodule Pythelix.Scenario.Runner do
   # `apply` names a fixture relative to the fixtures directory, so a scenario
   # says `apply combat/goblins.txt` rather than repeating where fixtures live.
   # A path that resolves as given still works, for a worldlet kept elsewhere.
-  defp fixture_path(path) do
-    fixture = Path.join(fixtures_directory(), path)
+  defp fixture_path(path, fixtures) do
+    fixture = Path.join(fixtures, path)
 
     # The fixtures directory first, then the game's root — never the directory
     # the command happened to be launched from, which is `bin` as often as not.

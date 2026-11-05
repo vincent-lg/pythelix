@@ -1,0 +1,7 @@
+!plugin/farm!
+parent = "generic/plugin"
+name = "Maplewood Farm"
+version = "1.0.0"
+pythelix = ">=0.6"
+depends = {"base": ">=1.0"}
+description = "A tutorial zone teaching how to build, by fixing what's broken in it."

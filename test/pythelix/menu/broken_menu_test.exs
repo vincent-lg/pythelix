@@ -15,7 +15,7 @@ defmodule Pythelix.Menu.BrokenMenuTest do
   @moduletag :tmp_dir
 
   setup do
-    {:ok, _path, _number, _notices} = Pythelix.World.apply(Path.expand("worldlets"))
+    {:ok, _path, _number, _notices} = Pythelix.World.apply(:all)
 
     :ok
   end

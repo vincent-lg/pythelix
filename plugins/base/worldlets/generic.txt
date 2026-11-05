@@ -327,3 +327,12 @@ def match_name(self, person: Entity, message: str):
     done
 
     return False
+
+!base/room/start!
+parent = "generic/room"
+title = "Nowhere in particular"
+description = Description("""
+Nothing has been built here yet. This is where new characters appear until the
+game says otherwise, by overriding the start_location method of
+!menu/new/character!.
+""")
