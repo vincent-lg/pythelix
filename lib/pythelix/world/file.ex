@@ -46,11 +46,23 @@ defmodule Pythelix.World.File do
       %{error: message} when message != nil ->
         {:error, "#{path}: #{message}"}
 
+      # Entities accumulate newest first: put them back in reading order, since
+      # a later declaration of the same key is meant to win over an earlier one.
       %{entities: entities} ->
-        entities = Enum.map(entities, &Map.put(&1, :file, path))
-
-        {:ok, entities}
+        {:ok, entities |> Enum.reverse() |> Enum.map(&with_origin(&1, path))}
     end
+  end
+
+  # Entities declared several times are merged, possibly across files. Each
+  # attribute and method remembers the file it was written in, so that an error
+  # or a traceback names the right one.
+  defp with_origin(entity, path) do
+    origin = fn definitions -> Map.new(definitions, fn {name, _} -> {name, path} end) end
+
+    entity
+    |> Map.put(:file, path)
+    |> Map.put(:attribute_files, origin.(entity.attributes))
+    |> Map.put(:method_files, origin.(entity.methods))
   end
 
   defp parse_lines(_lines, state = %{error: message}) when message != nil do

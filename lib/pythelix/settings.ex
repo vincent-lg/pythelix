@@ -116,6 +116,7 @@ defmodule Pythelix.Settings do
     # Where the game's files are.
     DATABASE_PATH=#{get.("DATABASE_PATH", "pythelix.db")}
     WORLDLETS_PATH=#{get.("WORLDLETS_PATH", "worldlets")}
+    PLUGINS_PATH=#{get.("PLUGINS_PATH", "plugins")}
     SCENARIOS_PATH=#{get.("SCENARIOS_PATH", "scenarios")}
     TASKS_PATH=#{get.("TASKS_PATH", "tasks")}
 

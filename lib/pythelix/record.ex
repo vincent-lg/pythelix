@@ -417,7 +417,7 @@ defmodule Pythelix.Record do
 
   defp maybe_change_parent({:error, _} = error, _), do: error
 
-  defp maybe_change_parent({:ok, %Entity{} = entity}, %Entity{} = parent) do
+  defp maybe_change_parent({:ok, %Entity{} = entity}, parent) do
     if entity.id != :virtual do
       parent_id = (parent && parent.id) || nil
       Diff.add({:update, entity.id, :parent_id, parent_id})

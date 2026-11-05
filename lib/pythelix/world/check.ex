@@ -14,8 +14,7 @@ defmodule Pythelix.World.Check do
 
   alias Pythelix.Scripting.Diagnostic
   alias Pythelix.World.File, as: WorldletFile
-
-  @worldlet_pattern "*.txt"
+  alias Pythelix.World.Sources
 
   defstruct files: [], entities: 0, diagnostics: [], notices: []
 
@@ -34,17 +33,13 @@ defmodule Pythelix.World.Check do
   parse. `:notices` are worth showing even then: a file that wasn't UTF-8 and
   was read with the fallback encoding, for instance.
   """
-  @spec run(binary() | :all) :: {:ok, t()} | :nofile
-  def run(:all) do
-    Application.get_env(:pythelix, :worldlets_path, Path.join(Elixir.File.cwd!(), "worldlets"))
-    |> String.replace("\\", "/")
-    |> run()
-  end
+  @spec run(Sources.source()) :: {:ok, t()} | :nofile
+  def run(source) do
+    source = if is_binary(source), do: Pythelix.Paths.resolve(source), else: source
 
-  def run(path) do
-    case files(path) do
-      [] -> :nofile
-      files -> {:ok, Enum.reduce(files, %__MODULE__{}, &check_file/2)}
+    case Sources.files(source) do
+      {:ok, [_ | _] = files} -> {:ok, Enum.reduce(files, %__MODULE__{}, &check_file/2)}
+      _nothing -> :nofile
     end
   end
 
@@ -60,7 +55,7 @@ defmodule Pythelix.World.Check do
   Returns `nil` when the failure isn't something the checker can explain (a
   cyclic parent, a database error), leaving the original message to stand.
   """
-  @spec explain(binary() | :all) :: binary() | nil
+  @spec explain(Sources.source()) :: binary() | nil
   def explain(path) do
     case run(path) do
       {:ok, %{diagnostics: [_ | _] = diagnostics}} ->
@@ -75,23 +70,6 @@ defmodule Pythelix.World.Check do
     # Explaining a failure must never itself fail: the original error is the
     # one worth reporting.
     _error -> nil
-  end
-
-  # Windows gives us backslashes, and `Path.wildcard/1` treats a backslash as an
-  # escape character, so a real directory silently matches nothing. Normalise
-  # before globbing (see `Pythelix.Paths`).
-  defp glob(directory, pattern) do
-    Path.wildcard("#{Pythelix.Paths.normalize(directory)}/#{pattern}")
-  end
-
-  defp files(path) do
-    path = Pythelix.Paths.resolve(path)
-
-    cond do
-      not Elixir.File.exists?(path) -> []
-      Elixir.File.dir?(path) -> glob(path, "**/#{@worldlet_pattern}")
-      true -> [path]
-    end
   end
 
   defp check_file(path, result) do

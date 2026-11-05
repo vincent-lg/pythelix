@@ -10,15 +10,13 @@ defmodule Pythelix.World do
   @game_menu "menu/game"
 
   alias Pythelix.Generic
-  @worldlet_dir "worldlets"
-  @worldlet_pattern "*.txt"
 
   alias Pythelix.Command
   alias Pythelix.Game.{Epoch, Modes, TickManager}
   alias Pythelix.Record
   alias Pythelix.Scripting
   alias Pythelix.Scripting.Namespace.Extended
-  alias Pythelix.World.Check
+  alias Pythelix.World.{Check, Sources}
   alias Extended.Menu, as: ExtendedMenu
 
   def init() do
@@ -40,42 +38,29 @@ defmodule Pythelix.World do
   sentences worth showing the builder even though the worldlet applied (a
   file that wasn't UTF-8, say).
   """
-  @spec apply(String.t() | :all) ::
+  @spec apply(Sources.source() | :static) ::
           {:ok, String.t(), integer(), [String.t()]} | {:error, String.t()} | :nofile
-  def apply(:all) do
-    result =
-      Application.get_env(:pythelix, :worldlets_path, Path.join(File.cwd!(), "worldlets"))
-      |> String.replace("\\", "/")
-      |> apply()
+  def apply(:static = worldlet), do: do_apply(worldlet, {:ok, []})
 
-    case result do
-      {:error, _} = error -> error
-      other -> other
-    end
+  def apply(worldlet) when is_binary(worldlet) do
+    worldlet = Pythelix.Paths.resolve(worldlet)
+
+    do_apply(worldlet, Sources.files(worldlet))
   end
 
-  def apply(:static = worldlet), do: do_apply(worldlet)
+  def apply(source), do: do_apply(source, Sources.files(source))
 
-  def apply(worldlet), do: worldlet |> Pythelix.Paths.resolve() |> do_apply()
+  defp do_apply(_source, :nofile), do: :nofile
 
-  defp do_apply(worldlet) do
-    if worldlet == :static or File.exists?(worldlet) do
-      case process_worldlets(worldlet) do
-        {:error, reason} ->
-          {:error, explain(worldlet, reason)}
+  defp do_apply(source, {:error, reason}), do: {:error, explain(source, reason)}
 
-        {entities, notices} ->
-          worldlet =
-            if worldlet == :static do
-              "static"
-            else
-              Pythelix.Paths.display(worldlet)
-            end
+  defp do_apply(source, {:ok, files}) do
+    case process_worldlets(files, source) do
+      {:error, reason} ->
+        {:error, explain(source, reason)}
 
-          {:ok, worldlet, length(entities), notices}
-      end
-    else
-      :nofile
+      {entities, notices} ->
+        {:ok, Sources.label(source), length(entities), notices}
     end
   end
 
@@ -99,29 +84,7 @@ defmodule Pythelix.World do
   defp readable(reason) when is_binary(reason), do: reason
   defp readable(reason), do: inspect(reason)
 
-  # Windows gives us backslashes, and `Path.wildcard/1` treats a backslash as an
-  # escape character, so a real directory silently matches nothing. Normalise
-  # before globbing (see `Pythelix.Paths`).
-  defp glob(directory, pattern) do
-    Path.wildcard("#{Pythelix.Paths.normalize(directory)}/#{pattern}")
-  end
-
-  defp process_worldlets(path) do
-    files =
-      cond do
-        path == nil ->
-          glob(@worldlet_dir, "**/#{@worldlet_pattern}")
-
-        path == :static ->
-          []
-
-        File.dir?(path) ->
-          glob(path, "**/#{@worldlet_pattern}")
-
-        true ->
-          [path]
-      end
-
+  defp process_worldlets(files, source) do
     files
     |> Enum.map(&Pythelix.World.File.parse_file/1)
     |> Enum.reduce_while({[], []}, fn
@@ -137,7 +100,7 @@ defmodule Pythelix.World do
 
       {entities, notices} ->
         {:ok, entities}
-        |> maybe_add_base_entities()
+        |> maybe_add_base_entities(source)
         |> maybe_deduce_parents()
         |> maybe_sort_entities()
         |> maybe_create_entities()
@@ -148,25 +111,36 @@ defmodule Pythelix.World do
   defp with_notices({:error, _} = error, _notices), do: error
   defp with_notices(entities, notices), do: {entities, notices}
 
-  defp maybe_add_base_entities({:ok, entities}) do
-    {:ok,
-     entities
-     |> add_sub_entity()
-     |> add_client_controls()
-     |> add_game_time_base_unit()
-     |> add_game_time_unit()
-     |> add_game_time_cyclic_unit()
-     |> add_game_time_boundary()
-     |> add_game_time_property()
-     |> add_game_time_default()
-     |> add_base_calendar_entity()
-     |> add_motd_menu_entity()
-     |> add_game_menu_entity()
-     |> add_base_menu_entity()
-     |> add_base_client_entity()
-     |> add_base_character_entity()
-     |> add_base_rangen_entity()
-     |> Command.add_base_command_entity()}
+  defp maybe_add_base_entities({:ok, entities}, source) do
+    {:ok, base_entities(source) ++ entities}
+  end
+
+  # A single path applied on its own is a partial update of a world that
+  # already exists. Bringing the built-ins back with their default values would
+  # silently undo whatever a worldlet or a plugin overrode on them, and only the
+  # next full apply would restore it. So they are only added if missing.
+  defp base_entities(source) when is_binary(source) do
+    Enum.reject(base_entities(:all), &Record.get_entity(&1.key))
+  end
+
+  defp base_entities(_source) do
+    []
+    |> add_sub_entity()
+    |> add_client_controls()
+    |> add_game_time_base_unit()
+    |> add_game_time_unit()
+    |> add_game_time_cyclic_unit()
+    |> add_game_time_boundary()
+    |> add_game_time_property()
+    |> add_game_time_default()
+    |> add_base_calendar_entity()
+    |> add_motd_menu_entity()
+    |> add_game_menu_entity()
+    |> add_base_menu_entity()
+    |> add_base_client_entity()
+    |> add_base_character_entity()
+    |> add_base_rangen_entity()
+    |> Command.add_base_command_entity()
   end
 
   defp add_sub_entity(entities) do
@@ -511,7 +485,8 @@ defmodule Pythelix.World do
         parent ->
           case Scripting.eval(parent) do
             {:ok, parent} ->
-              attributes = Map.put(attributes, "parent", parent)
+              # `parent = None` is a parent like another: it means "no parent".
+              attributes = Map.put(attributes, "parent", if(parent != :none, do: parent))
               {:cont, {:ok, acc ++ [%{entity | attributes: attributes}]}}
 
             {:error, traceback} ->
@@ -556,12 +531,12 @@ defmodule Pythelix.World do
       end)
       |> Map.new()
 
+    # From the merged entities, not the declarations: an override rarely repeats
+    # `parent`, and it must not erase the dependency the first declaration gave.
     graph =
-      for entity <- entities, into: %{} do
-        parent_key = entity.attributes["parent"]
-
-        {entity.key, List.wrap(parent_key)}
-      end
+      Map.new(entity_map, fn {key, entity} ->
+        {key, List.wrap(entity.attributes["parent"])}
+      end)
 
     case topo_sort(graph) do
       {:ok, sorted_keys} ->
@@ -701,8 +676,23 @@ defmodule Pythelix.World do
         {:ok, _record} = Record.create_entity(opts)
         :ok
 
-      _record ->
-        :ok
+      record ->
+        maybe_change_parent(record, entity, parent)
+    end
+  end
+
+  # `parent` is an ordinary attribute: declaring another one re-parents an entity
+  # that already exists. Leaving it out says nothing and changes nothing.
+  defp maybe_change_parent(record, entity, parent) do
+    parent_id = parent && Pythelix.Entity.get_id_or_key(parent)
+
+    if Map.has_key?(entity.attributes, "parent") and record.parent_id != parent_id do
+      case Record.change_parent(record, parent) do
+        {:error, reason} -> raise "cannot change the parent of !#{entity.key}!: #{reason}"
+        _changed -> :ok
+      end
+    else
+      :ok
     end
   end
 
@@ -736,7 +726,7 @@ defmodule Pythelix.World do
         Record.set_method(entity.key, name, args, code, method_location(entity, name))
       rescue
         e ->
-          file = Map.get(entity, :file, "unknown file")
+          file = method_file(entity, name) || "unknown file"
 
           raise "#{file}: syntax error in method '#{name}' of entity '#{entity.key}': #{Exception.message(e)}"
       end
@@ -747,13 +737,15 @@ defmodule Pythelix.World do
   # game directory and the line of the method's first body line (the `def` is
   # on the line before). Entities the engine adds itself have neither.
   defp method_location(entity, name) do
-    with file when is_binary(file) and file != "<string>" <- Map.get(entity, :file),
+    with file when is_binary(file) and file != "<string>" <- method_file(entity, name),
          def_line when is_integer(def_line) <- get_in(entity, [:method_lines, name]) do
       [file: Pythelix.Paths.relative(file), line: def_line + 1]
     else
       _ -> []
     end
   end
+
+  defp method_file(entity, name), do: get_in(entity, [:method_files, name])
 
   def link_commands() do
     Record.get_entity(Generic.menu())

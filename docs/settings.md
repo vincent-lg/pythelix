@@ -31,6 +31,7 @@ The file is read the same way worldlets are, so CRLF line endings, a byte-order 
 |---|---|---|
 | `DATABASE_PATH` | `pythelix.db` | The SQLite database holding the game. |
 | `WORLDLETS_PATH` | `worldlets` | The directory of [worldlets](./worldlets.md). |
+| `PLUGINS_PATH` | `plugins` | The directory of installed [plugins](./plugins.md). |
 | `SCENARIOS_PATH` | `scenarios` | The directory of [scenarios](./scenarios.md). |
 | `TASKS_PATH` | `tasks` | Where persistent tasks are stored. |
 | `TELNET_PORT` | `4000` | The port players connect to with a MUD client. |

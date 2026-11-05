@@ -80,6 +80,7 @@ config :pythelix,
   # they mean the same thing wherever a command happens to be run from.
   base_path: File.cwd!(),
   worldlets_path: Path.join(File.cwd!(), "worldlets"),
+  plugins_path: Path.join(File.cwd!(), "plugins"),
   scenarios_path: Path.join(File.cwd!(), "scenarios"),
   tasks_path: Path.join(File.cwd!(), "tasks"),
   # Default encoding for new TCP client connections.

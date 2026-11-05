@@ -97,6 +97,16 @@ if generic_overrides != [] do
   config :pythelix, :generic_entities, Keyword.merge(existing, generic_overrides)
 end
 
+# Where plugins are, for a command run from source: the registry's CI validates
+# plugins kept in its own repository rather than in this one.
+if config_env() != :prod do
+  plugins_path = setting.(["PLUGINS_PATH"], nil)
+
+  if plugins_path do
+    config :pythelix, plugins_path: Path.expand(plugins_path)
+  end
+end
+
 if config_env() == :prod do
   # Resolve a path setting. Absolute paths are used as-is; relative paths are
   # joined with the game's root.
@@ -112,12 +122,14 @@ if config_env() == :prod do
 
   database_path = resolve_path.("DATABASE_PATH", "pythelix.db")
   worldlets_path = resolve_path.("WORLDLETS_PATH", "worldlets")
+  plugins_path = resolve_path.("PLUGINS_PATH", "plugins")
   scenarios_path = resolve_path.("SCENARIOS_PATH", "scenarios")
   tasks_path = resolve_path.("TASKS_PATH", "tasks")
 
   config :pythelix,
     base_path: base_dir,
     worldlets_path: worldlets_path,
+    plugins_path: plugins_path,
     scenarios_path: scenarios_path,
     tasks_path: tasks_path,
     telnet_port: String.to_integer(setting.(["TELNET_PORT"], "4000"))

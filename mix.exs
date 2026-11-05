@@ -128,6 +128,14 @@ defmodule Pythelix.MixProject do
       File.cp_r!("scenarios", Path.join(release.path, "scenarios"))
     end
 
+    if File.dir?("plugins") do
+      File.cp_r!("plugins", Path.join(release.path, "plugins"))
+    end
+
+    if File.exists?("plugins.lock") do
+      File.cp!("plugins.lock", Path.join(release.path, "plugins.lock"))
+    end
+
     release
   end
 end
