@@ -16,7 +16,7 @@ defmodule Pythelix.World.Sources do
   """
 
   alias Pythelix.{Paths, Plugin}
-  alias Pythelix.Plugin.Manifest
+  alias Pythelix.Plugin.{Integrity, Manifest}
 
   @worldlet_pattern "**/*.txt"
 
@@ -69,6 +69,14 @@ defmodule Pythelix.World.Sources do
       {:ok, Plugin.files(manifest)}
     end
   end
+
+  @doc """
+  What deserves saying about a source, even though it loads. A plugin's isolated
+  world is about the plugin as written, so only the whole game gets this.
+  """
+  @spec notices(source() | :static) :: [binary()]
+  def notices(:all), do: Integrity.notices()
+  def notices(_source), do: []
 
   @doc """
   Name a source for a message to the builder.

@@ -38,9 +38,16 @@ defmodule Pythelix.World.Check do
     source = if is_binary(source), do: Pythelix.Paths.resolve(source), else: source
 
     case Sources.files(source) do
-      {:ok, [_ | _] = files} -> {:ok, Enum.reduce(files, %__MODULE__{}, &check_file/2)}
-      {:error, reason} -> {:ok, %__MODULE__{diagnostics: [plugin_problem(reason)]}}
-      _nothing -> :nofile
+      {:ok, [_ | _] = files} ->
+        result = Enum.reduce(files, %__MODULE__{}, &check_file/2)
+
+        {:ok, %{result | notices: result.notices ++ Sources.notices(source)}}
+
+      {:error, reason} ->
+        {:ok, %__MODULE__{diagnostics: [plugin_problem(reason)]}}
+
+      _nothing ->
+        :nofile
     end
   end
 

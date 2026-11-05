@@ -34,6 +34,12 @@ defmodule Pythelix.Plugin do
   def path(key), do: Path.join(directory(), key)
 
   @doc """
+  Whether a string can be a plugin's key, and so the name of a directory.
+  """
+  @spec valid_key?(term()) :: boolean()
+  def valid_key?(key), do: Manifest.valid_key?(key)
+
+  @doc """
   The directories in `plugins/`, sorted. Hidden ones are left out: they are
   where an install prepares its files.
   """
@@ -57,7 +63,7 @@ defmodule Pythelix.Plugin do
   """
   @spec manifest(binary()) :: {:ok, Manifest.t()} | {:error, binary()}
   def manifest(key) do
-    if File.dir?(path(key)) do
+    if valid_key?(key) and File.dir?(path(key)) do
       Manifest.read(path(key))
     else
       {:error, "There is no plugin called #{inspect(key)} in #{Paths.display(directory())}."}

@@ -71,7 +71,7 @@ defmodule Pythelix.World do
         {:error, explain(source, reason)}
 
       {entities, notices} ->
-        {:ok, Sources.label(source), length(entities), notices}
+        {:ok, Sources.label(source), length(entities), notices ++ Sources.notices(source)}
     end
   end
 

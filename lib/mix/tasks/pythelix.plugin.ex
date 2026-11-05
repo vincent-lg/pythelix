@@ -9,7 +9,7 @@ defmodule Mix.Tasks.Pythelix.Plugin do
       mix pythelix.plugin install <key>[@version]
       mix pythelix.plugin update [key] [-f]
       mix pythelix.plugin remove <key> [-f]
-      mix pythelix.plugin eject <key> [-f]
+      mix pythelix.plugin eject <key>
       mix pythelix.plugin package <key>
       mix pythelix.plugin scenario <key>
 

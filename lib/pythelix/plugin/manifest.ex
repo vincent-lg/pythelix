@@ -44,6 +44,12 @@ defmodule Pythelix.Plugin.Manifest do
   def file_name, do: @file_name
 
   @doc """
+  Whether a string can be a plugin's key.
+  """
+  @spec valid_key?(term()) :: boolean()
+  def valid_key?(key), do: is_binary(key) and key =~ @key_format
+
+  @doc """
   Whether a directory holds a plugin.
   """
   @spec present?(binary()) :: boolean()
@@ -83,7 +89,7 @@ defmodule Pythelix.Plugin.Manifest do
 
   defp key("plugin/" <> key, expected, path) do
     cond do
-      not (key =~ @key_format) ->
+      not valid_key?(key) ->
         {:error,
          "#{path}: #{inspect(key)} is not a valid plugin key " <>
            "(lowercase letters, digits, - and _)."}
