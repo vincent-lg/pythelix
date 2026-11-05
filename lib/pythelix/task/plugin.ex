@@ -39,7 +39,17 @@ defmodule Pythelix.Task.Plugin do
   what to do about it.
   """
   @spec run(binary() | [binary()]) :: :ok | :error
-  def run(args) when is_binary(args), do: run(OptionParser.split(args))
+  # What a release's script hands over as one line. A Windows path has backslashes,
+  # which `OptionParser.split/1` would take for escape characters.
+  def run(args) when is_binary(args) do
+    args
+    |> Paths.normalize()
+    |> OptionParser.split()
+    |> run()
+  rescue
+    # There is no other way to know: this is how `OptionParser.split/1` says it.
+    RuntimeError -> fail("A quote isn't closed in: #{args}")
+  end
 
   def run(args) do
     {opts, words, invalid} =

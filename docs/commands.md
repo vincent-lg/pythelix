@@ -48,7 +48,7 @@ In reality, Pythelix automatically creates one (and only one) command entity: `"
 
 > Then, why did we use `"generic/char_command"`?
 
-In your default worldlet, you have a few different sub-types of commands. If you open the "worldlets/command/generic.txt" file, at the very top, you should see:
+In your default worldlet, you have a few different sub-types of commands. If you open the "plugins/base/worldlets/command/generic.txt" file, at the very top, you should see:
 
 ```
 !generic/char_command!
@@ -83,7 +83,7 @@ Commands don't only run in the game after a character has connected. They can al
 
 Pythelix makes as few assumptions about your game as possible. Perhaps you want a completely different permission system. Perhaps you don't even want characters. Perhaps you want commands to be run by vehicles and the game to connect to these instead. So only `"generic/command"` is actually defined by Pythelix. The rest can be changed however you want.
 
-Also notice that we don't just define three entities — two of them also override the `can_run` method. This method checks that the character can indeed run the command. We check for `character.permissions`, which is set on all characters. You can see it in `worldlets/character.txt`.
+Also notice that we don't just define three entities — two of them also override the `can_run` method. This method checks that the character can indeed run the command. We check for `character.permissions`, which is set on all characters. You can see it in `plugins/base/worldlets/character.txt`.
 
 ## Command attributes
 
@@ -97,11 +97,10 @@ Also notice that we don't just define three entities — two of them also overri
 
 `"char_command"` also provides the attributes `category` (the command category name) and `help` (the command help text) but these are actually dependent on the way you set up your game. You might want a different help system. This is just a default.
 
-> **Tip:** Want to disable command abbreviations globally without repeating `can_shorten = False` in every command? Easy. You could add the attribute to the `"generic/char_command"` in your worldlet file. For instance, modify in your `worldlets/command/generic.txt` the `"generic/char_command"` entry:
+> **Tip:** Want to disable command abbreviations globally without repeating `can_shorten = False` in every command? Easy. You could add the attribute to `"generic/char_command"`. It comes from the base [plugin](./plugins.md), so declare it again in one of your own worldlets, with only what changes:
 
 ```
 !generic/char_command!
-parent = "generic/command"
 can_shorten = False
 ```
 

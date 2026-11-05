@@ -6,7 +6,7 @@ defmodule Pythelix.Scenario do
   each of them then sees — and running it checks that the game really behaves
   that way:
 
-      apply worldlets/farm
+      apply worldlets/quests
 
       given Alice in !farm/room/field!
       given Bob in !farm/room/field!

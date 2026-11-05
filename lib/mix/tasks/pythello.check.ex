@@ -6,7 +6,7 @@ defmodule Mix.Tasks.Pythello.Check do
 
       mix pythello.check                    # every worldlet in the worldlets directory
       mix pythello.check worldlets/room.txt # one file
-      mix pythello.check worldlets/farm     # one directory, recursively
+      mix pythello.check worldlets/quests   # one directory, recursively
       mix pythello.check --json             # machine-readable, for editors and tools
 
   Nothing is created, updated or saved, and no server has to be running: this

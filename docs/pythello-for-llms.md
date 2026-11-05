@@ -265,7 +265,7 @@ Some method names are called by the engine: `run` for a command, `on_tick` / `on
 
 ```
 mix pythello.check                    # every worldlet
-mix pythello.check worldlets/farm     # one directory
+mix pythello.check worldlets/quests   # one directory
 mix pythello.check --json             # for editors and tools
 ```
 

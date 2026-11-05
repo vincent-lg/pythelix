@@ -15,6 +15,7 @@ only the lines that matter.
 |---|---|
 | `../worldlets/` | The world: rooms, objects, NPCs, commands, menus. **Edit these.** |
 | `../scenarios/` | Transcripts proving the game behaves as intended. **Edit these.** |
+| `../plugins/` | Features others maintain, `base` among them (generic entities, common commands, login). **Don't edit these:** to change one, redeclare the entity with the same key in `../worldlets/`. See `../docs/plugins.md`. |
 | `../docs/` | The documentation. **Read these.** |
 | `bin/`, `lib/`, `releases/`, `erts-*/` | The engine itself. **Never edit.** |
 
@@ -52,6 +53,7 @@ On Windows use the `.bat` form of the same name (`check.bat`, `scenario.bat`).
 | `./apply` | Apply the worldlets to the running game | **Yes** |
 | `./server` | Start the game | — |
 | `./script` | A Pythello console, for trying one line | **Yes** |
+| `./plugin` | Install, update and inspect plugins (`list`, `install`, `update`...) | No |
 
 `./check` and `./scenario` with no argument already look in `../worldlets` and
 `../scenarios`. You only pass a path to narrow the run:

@@ -68,7 +68,13 @@ defmodule Pythelix.Plugin.InstallerTest do
 
     previous = for {key, _} <- settings, do: {key, Application.get_env(:pythelix, key)}
     Application.put_all_env(pythelix: settings)
-    on_exit(fn -> Application.put_all_env(pythelix: previous) end)
+
+    on_exit(fn ->
+      Enum.each(previous, fn
+        {key, nil} -> Application.delete_env(:pythelix, key)
+        {key, value} -> Application.put_env(:pythelix, key, value)
+      end)
+    end)
 
     {:ok, game: game, registry: registry, base_url: base_url}
   end

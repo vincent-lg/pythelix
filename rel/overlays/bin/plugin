@@ -2,4 +2,4 @@
 set -eu
 
 cd -P -- "$(dirname -- "$0")"
-exec ./pythelix eval "Pythelix.Task.Plugin.main(~s{$*})"
+exec ./pythelix eval "Pythelix.Task.Plugin.main(~S{$*})"

@@ -15,6 +15,8 @@ only the lines that matter.
 |---|---|
 | `worldlets/` | The world: rooms, objects, NPCs, commands, menus. **Edit these.** |
 | `scenarios/` | Transcripts proving the game behaves as intended. **Edit these.** |
+| `plugins/` | Features others maintain, `base` among them (generic entities, common commands, login). **Don't edit these:** to change one, redeclare the entity with the same key in `worldlets/`. See `docs/plugins.md`. |
+| `plugins.lock` | What was installed. Written by `bin/plugin` only. |
 | `docs/` | The documentation. **Read these.** |
 | `settings.txt` | Ports, paths, encodings, generic entities. Generated on first start; see `docs/settings.md`. |
 | `bin/` | The commands to run — see `bin/AGENTS.md` |
@@ -50,6 +52,7 @@ form of the same name.
 | `bin/apply` | Apply the worldlets to the running game | **Yes** |
 | `bin/server` | Start the game | — |
 | `bin/script` | A Pythello console, for trying one line | **Yes** |
+| `bin/plugin` | Install, update and inspect plugins (`list`, `install`, `update`...) | No |
 
 `bin/check` and `bin/scenario` find `worldlets/` and `scenarios/` on their own,
 wherever you run them from. Pass a path only to narrow the run. Neither touches

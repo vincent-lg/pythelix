@@ -26,7 +26,13 @@ defmodule Pythelix.Plugin.IntegrityTest do
 
     previous = for {key, _} <- settings, do: {key, Application.get_env(:pythelix, key)}
     Application.put_all_env(pythelix: settings)
-    on_exit(fn -> Application.put_all_env(pythelix: previous) end)
+
+    on_exit(fn ->
+      Enum.each(previous, fn
+        {key, nil} -> Application.delete_env(:pythelix, key)
+        {key, value} -> Application.put_env(:pythelix, key, value)
+      end)
+    end)
 
     :ok
   end
@@ -464,6 +470,31 @@ defmodule Pythelix.Plugin.IntegrityTest do
       assert File.exists?(Path.join(Plugin.path("rooms"), "worldlets/room.txt"))
       assert File.exists?(Path.join(Plugin.path("rooms"), "scenarios/fixtures/extra.txt"))
       assert {:ok, %{"rooms" => _}} = Lock.read()
+    end
+  end
+
+  describe "a command given as one line, as a release does" do
+    test "is split into words", %{tmp_dir: dir} do
+      plugin(dir, "rooms")
+      lock("rooms")
+
+      assert {:ok, output} = command("verify rooms")
+      assert output =~ "rooms: as installed"
+    end
+
+    test "says so when a quote isn't closed" do
+      assert {:error, output} = command("verify 'rooms")
+      assert output =~ "quote"
+    end
+
+    test "survives a Windows path", %{tmp_dir: dir} do
+      plugin(dir, "rooms")
+      write(dir, "plugins/rooms/docs/README.md", "# Rooms
+")
+      output = dir |> Path.join("dist") |> String.replace("/", "\\")
+
+      assert {:ok, _} = command("package rooms --no-scenarios --output #{output}")
+      assert File.exists?(Path.join(dir, "dist/rooms-1.0.0.tar.gz"))
     end
   end
 

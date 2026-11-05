@@ -294,7 +294,7 @@ defmodule Pythelix.Scenario.Runner do
   end
 
   defp fixtures_directory do
-    Application.get_env(:pythelix, :scenarios_path, Path.join(File.cwd!(), "scenarios"))
+    (Application.get_env(:pythelix, :scenarios_path) || Path.join(File.cwd!(), "scenarios"))
     |> Path.join("fixtures")
   end
 

@@ -243,7 +243,7 @@ def check(self, text):
     return not text.startswith("0600")
 ```
 
-In `worldlets/command/general.txt`:
+In `worldlets/commands.txt`:
 
 ```
 !command/subscribe!

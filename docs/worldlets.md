@@ -56,11 +56,13 @@ Worldlets are located in the server code under the `worldlets` directory. This d
 
 By default, the directory includes some example files:
 
-- `command`: worldlet directory containing your commands. It has been split into multiple files.
 - `room.txt`: worldlet containing your rooms.
-- `character.txt`: worldlet containing character-related entities.
-- `menu.txt`: worldlet containing menus (login, account creation, etc.).
-- `admin`: directory containing worldlets for administrators.
+- `object.txt` and `object`: worldlets containing your objects.
+- `channel.txt`: worldlet containing your communication channels.
+- `time.txt`: worldlet containing your calendars.
+- `start.txt`: worldlet saying where new characters appear.
+
+The rest (generic entities, commands, login menus) comes from [plugins](./plugins.md), in the `plugins` directory. You can read those to see how things are done, and adjust them from your own worldlets.
 
 Your game world consists of [entities](./entities.md). An entity is a single piece of information (a room, item, character, vehicle, etc.). Entities can be practical or logical (e.g., a race, event, skill, or spell).
 
@@ -241,6 +243,17 @@ endif
 That's why closing keywords (like `endif` and `done`) are necessary. The indentation in Pythello is not required.
 
 See [the methods documentation](./methods.md) for more details on syntax.
+
+## Declaring an entity again
+
+An entity declared again with the same key is merged into the earlier declaration: the attributes and methods given replace the earlier ones, and everything else is kept. Later files win, and [plugins](./plugins.md) load before your worldlets, so this is how you adjust an entity without touching the file defining it:
+
+```
+!farm/room/road!
+title = "A Muddy Road"
+```
+
+`parent` is an ordinary attribute: there's no need to repeat it, and changing it re-parents the entity (`parent = None` detaches it).
 
 ## Reapplying worldlets
 

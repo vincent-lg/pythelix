@@ -14,6 +14,7 @@ If you're new to Pythelix and want to learn by doing, [head over to the getting 
 - [Worldlets](./worldlets.md) are a great way to build alone or in collaboration.
 - [Commands](./command.md) are simply [scripts](./scripting.md) written in a friendly, Python-like language that you can learn as you go. [Menus](./menus.md) behave similarly.
 - Already know Python, or building with an AI assistant? [Pythello for Python programmers](./pythello-for-llms.md) lists every difference on one page.
+- [Plugins](./plugins.md) let you install features others wrote, in one command, and adjust them without forking.
 - [Scenarios](./scenarios.md) let you write what should happen when someone plays, as a transcript, and have the engine check it.
 - Pythelix is maintaing by a game designer and developer, so that important feature have been considered:
 

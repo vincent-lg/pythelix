@@ -53,13 +53,13 @@ We'll comeback to the question at the end of the document, because it's not a si
 
 Pythelix offers the concept of [menus](../menus.md). Menus are entities (virtual entities to be precise, so they're not stored in your database). Each menu entity describes a step in the connection process.
 
-All menus have been grouped in `worldlets/menus.txt`. You can, of course, adopt a different strategy (put them in a directory).
+All menus have been grouped in `plugins/base/worldlets/menu.txt`. You can, of course, adopt a different strategy (put them in a directory).
 
 First of all: how does Pythelix know what to do when a client connects to `localhost:4000`:
 
 It calls a menu. but which menu? By default, Pythelix tries to find a menu with a key of `menu/motd` (Message Of The Day).
 
-And at the top of your `worldlets/menus.txt` file, you should see it:
+And at the top of your `plugins/base/worldlets/menu.txt` file, you should see it:
 
 ```
 !menu/motd!

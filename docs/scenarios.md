@@ -61,12 +61,12 @@ That is the whole language. There are no variables, no conditions and no express
 Apply a worldlet file or directory before playing:
 
 ```
-apply worldlets/farm
+apply worldlets/quests
 ```
 
 Optional and repeatable. **Your game's own worldlets are always applied first**, so you never `apply` the thing you are testing — only extra worldlets.
 
-The path is resolved inside `scenarios/fixtures/` first, so `apply combat/goblins.txt` finds `scenarios/fixtures/combat/goblins.txt`. Otherwise it is resolved against your game's root — so `apply worldlets/farm` means the same thing whether you run the command from the game directory or from inside `bin`.
+The path is resolved inside `scenarios/fixtures/` first, so `apply combat/goblins.txt` finds `scenarios/fixtures/combat/goblins.txt`. Otherwise it is resolved against your game's root — so `apply worldlets/quests` means the same thing whether you run the command from the game directory or from inside `bin`.
 
 ### `given <Name> in !<key>!`
 
@@ -205,6 +205,18 @@ Playing continues past a failure, so one wrong line doesn't hide the other four.
 ## Isolation
 
 Every scenario gets a world of its own: a fresh database that is thrown away afterwards, an empty cache, and your worldlets applied from scratch. Scenarios can create, break and destroy anything, in any order, without affecting each other or any real game. Nothing you run here can touch your live database.
+
+## Plugins
+
+A [plugin](./plugins.md) carries its own scenarios, in its `scenarios` directory, with its fixtures in `scenarios/fixtures`. Play them with:
+
+```
+bin/plugin scenario rooms
+```
+
+They play on the engine, the plugin's dependencies and the plugin, without your worldlets or any other plugin. Your overrides are allowed to change how a plugin behaves, so playing against them would report expected changes as failures.
+
+Whether your game still behaves as you intend, overrides included, is for your own scenarios to say. `bin/scenario` plays those on the full stack, and doesn't play the plugins' scenarios.
 
 ## Where to go next
 
