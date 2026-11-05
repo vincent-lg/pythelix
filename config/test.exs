@@ -23,7 +23,9 @@ config :pythelix,
   # Each `mix test --partitions N` process listens on its own telnet port so
   # partitions can run in parallel OS processes (see `mix test.par`).
   telnet_port: 4000 + String.to_integer(System.get_env("MIX_TEST_PARTITION") || "0"),
-  game_hub: Pythelix.Test.HubStub
+  game_hub: Pythelix.Test.HubStub,
+  # Nothing is listening here: a test wanting a registry starts its own.
+  plugin_index_url: "http://127.0.0.1:1/index.json"
 
 # We don't run a server during test. If one is required,
 # you can enable the server option below.

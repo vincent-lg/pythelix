@@ -107,6 +107,12 @@ if config_env() != :prod do
   end
 end
 
+plugin_index_url = setting.(["PLUGIN_INDEX_URL"], nil)
+
+if plugin_index_url do
+  config :pythelix, plugin_index_url: plugin_index_url
+end
+
 if config_env() == :prod do
   # Resolve a path setting. Absolute paths are used as-is; relative paths are
   # joined with the game's root.
